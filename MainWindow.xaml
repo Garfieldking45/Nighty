@@ -1,0 +1,112 @@
+﻿<Window x:Class="Nighty.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Nighty.ViewModels"
+        xmlns:v="clr-namespace:Nighty.Views"
+        xmlns:c="clr-namespace:Nighty.Controls"
+        Title="Nighty" Icon="Assets/Nighty.ico" Width="1200" Height="800" MinWidth="940" MinHeight="620"
+        Background="{StaticResource BgBrush}" FontFamily="{StaticResource UiFont}"
+        WindowStartupLocation="CenterScreen" UseLayoutRounding="True" SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Ideal" Topmost="{Binding General.AlwaysOnTop}">
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type vm:CombatViewModel}"><v:CombatView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:GamingViewModel}"><v:GamingView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:UtilityViewModel}"><v:UtilityView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ModsViewModel}"><v:ModsView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ExtrasViewModel}"><v:ExtrasView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:MacrosViewModel}"><v:MacrosView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:OverlaysViewModel}"><v:OverlaysView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><v:SettingsView/></DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="228"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ===== Sidebar ===== -->
+        <Border Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+            <DockPanel Margin="14,18,14,14">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,0,0,22">
+                    <Border Width="30" Height="30" CornerRadius="8" Background="{StaticResource PremiumBrush}">
+                        <TextBlock Text="&#xE708;" Style="{StaticResource Icon}" Foreground="White" FontSize="15"/>
+                    </Border>
+                    <TextBlock Text="Nighty" FontSize="18" FontWeight="SemiBold" Margin="11,0,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- bottom block -->
+                <StackPanel DockPanel.Dock="Bottom">
+                    <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <c:StatusDot Kind="{Binding RobloxKind}"/>
+                                <TextBlock Grid.Column="1" Text="Roblox" Margin="9,0,0,0" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                            </Grid>
+                            <TextBlock Text="{Binding RobloxText}" Margin="17,1,0,8" FontSize="12.5"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <c:StatusDot Kind="{Binding ClickerKind}"/>
+                                <TextBlock Grid.Column="1" Text="Clicker" Margin="9,0,0,0" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                            </Grid>
+                            <TextBlock Text="{Binding ClickerText}" Margin="17,1,0,8" FontSize="12.5"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <c:StatusDot Kind="{Binding GameKind}"/>
+                                <TextBlock Grid.Column="1" Text="Game Mode" Margin="9,0,0,0" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+                            </Grid>
+                            <TextBlock Text="{Binding GameText}" Margin="17,1,0,0" FontSize="12.5"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                    <TextBox x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Padding="30,7,28,7"
+                             AutomationProperties.Name="Search" KeyDown="SearchBox_KeyDown"/>
+                    <TextBlock Text="&#xE721;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource MutedBrush}"
+                               HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False"/>
+                    <TextBlock Text="Search" Foreground="{StaticResource MutedBrush}" FontSize="13" Margin="31,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"
+                               Visibility="{Binding IsSearching, Converter={StaticResource BoolVisible}, ConverterParameter=!}"/>
+                    <Button Content="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="10" Padding="6" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,3,0"
+                            Command="{Binding ClearSearchCommand}" AutomationProperties.Name="Clear search" BorderThickness="0" Background="Transparent"
+                            Visibility="{Binding IsSearching, Converter={StaticResource BoolVisible}}"/>
+                </Grid>
+
+                <ListBox ItemsSource="{Binding SearchResults}" Background="Transparent" BorderThickness="0" ItemContainerStyle="{StaticResource NavItem}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Search results"
+                         Visibility="{Binding IsSearching, Converter={StaticResource BoolVisible}}" SelectionChanged="SearchResults_SelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Label}" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding PageTitle}" Foreground="{StaticResource MutedBrush}" FontSize="11.5"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock Text="No matches" Style="{StaticResource Muted}" Margin="12,6,0,0"
+                           Visibility="{Binding NoResults, Converter={StaticResource BoolVisible}}"/>
+
+                <ListBox ItemsSource="{Binding Items}"
+                         Visibility="{Binding IsSearching, Converter={StaticResource BoolVisible}, ConverterParameter=!}" SelectedItem="{Binding Selected}" Background="Transparent" BorderThickness="0"
+                         ItemContainerStyle="{StaticResource NavItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         AutomationProperties.Name="Navigation">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Glyph}" Style="{StaticResource Icon}" Width="22" FontSize="15"/>
+                                <TextBlock Text="{Binding Title}" Margin="12,0,0,0" FontSize="13.5" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- ===== Content ===== -->
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+            <ContentControl Content="{Binding Current}" Margin="34,28,34,32" MaxWidth="1080" HorizontalAlignment="Stretch" IsTabStop="False"/>
+        </ScrollViewer>
+    </Grid>
+</Window>

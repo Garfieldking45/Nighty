@@ -1,0 +1,118 @@
+<UserControl x:Class="Nighty.Views.ExtrasView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Nighty.Controls">
+    <StackPanel>
+        <Grid Margin="0,0,0,20">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="Extras" Style="{StaticResource PageTitle}"/>
+                <TextBlock Text="Quick-action helpers for fights. Tune each delay until it feels right." Style="{StaticResource PageSubtitle}"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Bow Switch" Foreground="{StaticResource MutedBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                <CheckBox IsChecked="{Binding Bow.Enabled}" AutomationProperties.Name="Enable Bow Switch"/>
+            </StackPanel>
+        </Grid>
+
+        <c:InfoBanner Kind="Info" Text="{Binding Summary}"/>
+
+        <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <StackPanel>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Trigger" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="How the switch is started." Style="{StaticResource Muted}" Margin="0,3,0,12"/>
+                        <UniformGrid Rows="1" Columns="2" Margin="0,0,0,12">
+                            <RadioButton Style="{StaticResource OptionCard}" GroupName="bowmode" Margin="0,0,8,0"
+                                         IsChecked="{Binding Bow.Mode, Converter={StaticResource Eq}, ConverterParameter=Auto}">
+                                <StackPanel>
+                                    <TextBlock Text="Automatic" FontWeight="SemiBold"/>
+                                    <TextBlock Text="No key needed" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton Style="{StaticResource OptionCard}" GroupName="bowmode"
+                                         IsChecked="{Binding Bow.Mode, Converter={StaticResource Eq}, ConverterParameter=Hotkey}">
+                                <StackPanel>
+                                    <TextBlock Text="Hotkey" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Run on a key or side button" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </UniformGrid>
+                        <StackPanel Visibility="{Binding Bow.Mode, Converter={StaticResource Eq}, ConverterParameter=Hotkey}">
+                            <c:SettingRow Title="Hotkey" Description="Click, then press a key or side button.">
+                                <c:HotkeyBox Vk="{Binding Bow.HotkeyVk, Mode=TwoWay}" Mods="{Binding Bow.HotkeyMods, Mode=TwoWay}"/>
+                            </c:SettingRow>
+                        </StackPanel>
+                        <StackPanel Visibility="{Binding Bow.Mode, Converter={StaticResource Eq}, ConverterParameter=Auto}">
+                            <TextBlock Text="CROSSBOW COOLDOWN" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <c:ValueStepper Value="{Binding Bow.CooldownMs, Mode=TwoWay}" Minimum="100" Maximum="5000" Step="50" Suffix=" ms"/>
+                            <c:SettingRow Title="Only while fighting" Description="Runs only while the auto clicker is clicking. Manual clicks never trigger it." Margin="0,10,0,0">
+                                <CheckBox IsChecked="{Binding Bow.OnlyWhileFighting}"/>
+                            </c:SettingRow>
+                        </StackPanel>
+                        <c:SettingRow Title="Only while Roblox is focused">
+                            <CheckBox IsChecked="{Binding Bow.OnlyWhenRobloxFocused}"/>
+                        </c:SettingRow>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Bow slot" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="Which hotbar number (1-9) your bow is in." Style="{StaticResource Muted}" Margin="0,3,0,14"/>
+                        <c:ValueStepper Value="{Binding Bow.BowSlot, Mode=TwoWay}" Minimum="1" Maximum="9" Step="1"/>
+                        <TextBlock Text="DELAY BEFORE SHOOTING" Style="{StaticResource Label}" Margin="0,18,0,6"/>
+                        <c:ValueStepper Value="{Binding Bow.SwitchDelayMs, Mode=TwoWay}" Minimum="0" Maximum="1000" Step="5" Suffix=" ms"/>
+                        <TextBlock Style="{StaticResource Muted}" Margin="0,8,0,0" Text="Time to wait after selecting the bow. Too short and the shot may not register; this is the value to tune against the equip cooldown."/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <c:SettingRow Title="Shoot automatically" Description="Click once after the delay. Turn off to only switch.">
+                            <CheckBox IsChecked="{Binding Bow.Shoot}"/>
+                        </c:SettingRow>
+                        <StackPanel IsEnabled="{Binding Bow.Shoot}">
+                            <Border Style="{StaticResource Divider}"/>
+                            <TextBlock Text="SHOOT BUTTON" Style="{StaticResource Label}" Margin="0,0,0,8"/>
+                            <UniformGrid Rows="1" Columns="2">
+                                <RadioButton Style="{StaticResource OptionCard}" GroupName="bowbtn" Margin="0,0,8,0" Content="Left"
+                                             IsChecked="{Binding Bow.ShootButton, Converter={StaticResource Eq}, ConverterParameter=Left}"/>
+                                <RadioButton Style="{StaticResource OptionCard}" GroupName="bowbtn" Content="Right"
+                                             IsChecked="{Binding Bow.ShootButton, Converter={StaticResource Eq}, ConverterParameter=Right}"/>
+                            </UniformGrid>
+                            <TextBlock Text="HOLD TIME" Style="{StaticResource Label}" Margin="0,16,0,6"/>
+                            <c:ValueStepper Value="{Binding Bow.HoldMs, Mode=TwoWay}" Minimum="10" Maximum="1000" Step="10" Suffix=" ms"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <c:SettingRow Title="Switch back afterwards" Description="Return to your weapon slot after the shot.">
+                            <CheckBox IsChecked="{Binding Bow.ReturnToSlot}"/>
+                        </c:SettingRow>
+                        <StackPanel IsEnabled="{Binding Bow.ReturnToSlot}">
+                            <Border Style="{StaticResource Divider}"/>
+                            <TextBlock Text="RETURN TO SLOT" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <c:ValueStepper Value="{Binding Bow.ReturnSlot, Mode=TwoWay}" Minimum="1" Maximum="9" Step="1"/>
+                            <TextBlock Text="DELAY BEFORE SWITCHING BACK" Style="{StaticResource Label}" Margin="0,16,0,6"/>
+                            <c:ValueStepper Value="{Binding Bow.ReturnDelayMs, Mode=TwoWay}" Minimum="0" Maximum="2000" Step="10" Suffix=" ms"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Try it" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="Starts after 3 seconds so you can click into Roblox first." Style="{StaticResource Muted}" Margin="0,3,0,12"/>
+                        <Button Content="Test in 3 s" Command="{Binding TestCommand}" HorizontalAlignment="Left" MinWidth="110"/>
+                        <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="0,10,0,0" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+                        <TextBlock Text="{Binding LastRun}" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+        <TextBlock Style="{StaticResource Muted}" Text="Nighty only sends the same key presses and clicks you would. Check the rules of the game or server you play on before using automation. The emergency-stop hotkey (Settings) cancels a run."/>
+    </StackPanel>
+</UserControl>

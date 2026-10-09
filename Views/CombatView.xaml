@@ -1,0 +1,173 @@
+﻿<UserControl x:Class="Nighty.Views.CombatView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Nighty.Controls">
+    <StackPanel>
+        <!-- Header -->
+        <Grid Margin="0,0,0,20">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="Combat" Style="{StaticResource PageTitle}"/>
+                <TextBlock Text="Configure the auto-clicker, then arm it and use your hotkey in game." Style="{StaticResource PageSubtitle}"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,7" Margin="0,0,14,0">
+                    <StackPanel Orientation="Horizontal">
+                        <c:StatusDot Kind="{Binding StateKind}"/>
+                        <TextBlock Text="{Binding StateText}" Margin="9,0,0,0" FontSize="12.5"/>
+                        <TextBlock Text="{Binding MeasuredCps}" Margin="12,0,0,0" FontWeight="SemiBold" Foreground="{StaticResource AccentHoverBrush}"/>
+                    </StackPanel>
+                </Border>
+                <TextBlock Text="Clicker" Foreground="{StaticResource MutedBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                <CheckBox IsChecked="{Binding Settings.Enabled}" AutomationProperties.Name="Enable clicker" ToolTip="Arm or disarm the clicker hotkey"/>
+            </StackPanel>
+        </Grid>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ===== Left column ===== -->
+            <StackPanel>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Click speed" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="Clicks per second (CPS) the clicker aims for." Style="{StaticResource Muted}" Margin="0,3,0,14"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <RadioButton Style="{StaticResource TabButton}" GroupName="speedmode" Content="Exact"
+                                         IsChecked="{Binding Settings.UseRange, Converter={StaticResource Eq}, ConverterParameter=False}"/>
+                            <RadioButton Style="{StaticResource TabButton}" GroupName="speedmode" Content="Range"
+                                         IsChecked="{Binding Settings.UseRange, Converter={StaticResource Eq}, ConverterParameter=True}"/>
+                        </StackPanel>
+                        <StackPanel Visibility="{Binding Settings.UseRange, Converter={StaticResource Eq}, ConverterParameter=False}">
+                            <TextBlock Text="CPS" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <c:ValueStepper Value="{Binding Settings.Cps, Mode=TwoWay}" Minimum="1" Maximum="35" Step="0.5" Decimals="1"/>
+                        </StackPanel>
+                        <StackPanel Visibility="{Binding Settings.UseRange, Converter={StaticResource Eq}, ConverterParameter=True}">
+                            <TextBlock Text="MINIMUM CPS" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <c:ValueStepper Value="{Binding Settings.MinCps, Mode=TwoWay}" Minimum="1" Maximum="35" Step="0.5" Decimals="1"/>
+                            <TextBlock Text="MAXIMUM CPS" Style="{StaticResource Label}" Margin="0,14,0,6"/>
+                            <c:ValueStepper Value="{Binding Settings.MaxCps, Mode=TwoWay}" Minimum="1" Maximum="35" Step="0.5" Decimals="1"/>
+                            <TextBlock Style="{StaticResource Muted}" Margin="0,10,0,0" Text="Each click picks a new random speed between the two values."/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Mouse button" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="Which button the clicker presses." Style="{StaticResource Muted}" Margin="0,3,0,14"/>
+                        <UniformGrid Rows="1" Columns="3">
+                            <RadioButton Style="{StaticResource OptionCard}" GroupName="btn" Margin="0,0,8,0" AutomationProperties.Name="Left button"
+                                         IsChecked="{Binding Settings.Button, Converter={StaticResource Eq}, ConverterParameter=Left}">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="&#xE962;" Style="{StaticResource Icon}" FontSize="20" Margin="0,0,0,6"/>
+                                    <TextBlock Text="Left" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton Style="{StaticResource OptionCard}" GroupName="btn" Margin="0,0,8,0" AutomationProperties.Name="Middle button"
+                                         IsChecked="{Binding Settings.Button, Converter={StaticResource Eq}, ConverterParameter=Middle}">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="&#xE962;" Style="{StaticResource Icon}" FontSize="20" Margin="0,0,0,6"/>
+                                    <TextBlock Text="Middle" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton Style="{StaticResource OptionCard}" GroupName="btn" AutomationProperties.Name="Right button"
+                                         IsChecked="{Binding Settings.Button, Converter={StaticResource Eq}, ConverterParameter=Right}">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="&#xE962;" Style="{StaticResource Icon}" FontSize="20" Margin="0,0,0,6"/>
+                                    <TextBlock Text="Right" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Duty cycle" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="How long the button stays pressed within each click." Style="{StaticResource Muted}" Margin="0,3,0,12"/>
+                        <Border Background="{StaticResource Panel2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Margin="0,0,0,14">
+                            <c:DutyWaveform Height="104" DutyCycle="{Binding Settings.DutyCycle}"/>
+                        </Border>
+                        <c:ValueStepper Value="{Binding Settings.DutyCycle, Mode=TwoWay}" Minimum="5" Maximum="95" Step="5" Suffix="%"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- ===== Right column ===== -->
+            <StackPanel Grid.Column="2">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Activation" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="How the hotkey starts and stops clicking." Style="{StaticResource Muted}" Margin="0,3,0,14"/>
+                        <UniformGrid Rows="1" Columns="2">
+                            <RadioButton Style="{StaticResource OptionCard}" GroupName="act" Margin="0,0,8,0"
+                                         IsChecked="{Binding Settings.Mode, Converter={StaticResource Eq}, ConverterParameter=Toggle}">
+                                <StackPanel>
+                                    <TextBlock Text="Toggle" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Press once to start, again to stop" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton Style="{StaticResource OptionCard}" GroupName="act"
+                                         IsChecked="{Binding Settings.Mode, Converter={StaticResource Eq}, ConverterParameter=Hold}">
+                                <StackPanel>
+                                    <TextBlock Text="Hold" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Click only while the key is held" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </UniformGrid>
+                        <Border Style="{StaticResource Divider}"/>
+                        <c:SettingRow Title="Hotkey" Description="Click, then press a key or a mouse side button. Backspace clears it.">
+                            <c:HotkeyBox Vk="{Binding Settings.HotkeyVk, Mode=TwoWay}" Mods="{Binding Settings.HotkeyMods, Mode=TwoWay}"/>
+                        </c:SettingRow>
+                        <c:SettingRow Title="Only while Roblox is focused" Description="Pauses clicking when another window is in front.">
+                            <CheckBox IsChecked="{Binding Settings.OnlyWhenRobloxFocused}"/>
+                        </c:SettingRow>
+                        <c:InfoBanner Kind="Info" Text="{Binding HotkeyHint}" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Presets" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="Save the current speed, button, duty cycle and hotkey setup." Style="{StaticResource Muted}" Margin="0,3,0,12"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding PresetName, UpdateSourceTrigger=PropertyChanged}" MaxLength="40" AutomationProperties.Name="Preset name"/>
+                            <Button Grid.Column="1" Content="Save" Command="{Binding SavePreset}" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"/>
+                        </Grid>
+                        <TextBlock Text="{Binding PresetMessage}" Style="{StaticResource Muted}" Margin="0,8,0,0"
+                                   Visibility="{Binding PresetMessage, Converter={StaticResource NullVisible}}"/>
+                        <TextBlock Text="No presets yet. Name the current setup and press Save." Style="{StaticResource Muted}" Margin="0,12,0,0"
+                                   Visibility="{Binding Presets.Count, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                        <ItemsControl ItemsSource="{Binding Presets}" Margin="0,10,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{StaticResource Panel2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,9" Margin="0,0,0,6">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Summary}" Style="{StaticResource Muted}" FontSize="11.5" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Content="Load" Padding="12,5" Margin="8,0,6,0"
+                                                    Command="{Binding DataContext.LoadPreset, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                            <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Delete preset" AutomationProperties.Name="Delete preset"
+                                                    Command="{Binding DataContext.DeletePreset, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </StackPanel>
+</UserControl>

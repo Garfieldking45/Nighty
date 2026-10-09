@@ -1,0 +1,17 @@
+<Window x:Class="Nighty.Views.DialogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" SizeToContent="Height" Width="440"
+        WindowStartupLocation="CenterOwner" Background="{StaticResource PanelBrush}" FontFamily="{StaticResource UiFont}">
+    <Border BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1" Padding="24,22,24,20" MouseLeftButtonDown="OnDrag">
+        <StackPanel>
+            <TextBlock x:Name="TitleText" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/>
+            <TextBlock x:Name="MessageText" Style="{StaticResource Muted}" FontSize="13" Margin="0,10,0,0" LineHeight="19"/>
+            <ContentControl x:Name="ExtraHost" Margin="0,16,0,0"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
+                <Button x:Name="CancelButton" Content="Cancel" MinWidth="88" Margin="0,0,10,0" IsCancel="True" Click="OnCancel"/>
+                <Button x:Name="OkButton" Style="{StaticResource PrimaryButton}" MinWidth="104" IsDefault="True" Click="OnOk"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

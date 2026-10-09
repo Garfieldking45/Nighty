@@ -1,0 +1,57 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Design tokens: every colour, radius and font used by the app is defined here. -->
+    <Color x:Key="BgColor">#0A0A0C</Color>
+    <Color x:Key="SidebarColor">#0D0D10</Color>
+    <Color x:Key="PanelColor">#131317</Color>
+    <Color x:Key="Panel2Color">#1A1A20</Color>
+    <Color x:Key="Panel3Color">#23232B</Color>
+    <Color x:Key="BorderColor">#26262E</Color>
+    <Color x:Key="BorderStrongColor">#34343E</Color>
+    <Color x:Key="TextColor">#F4F4F7</Color>
+    <Color x:Key="MutedColor">#8B8B97</Color>
+    <Color x:Key="DimColor">#5E5E69</Color>
+    <Color x:Key="AccentColor">#3B82F6</Color>
+    <Color x:Key="AccentHoverColor">#5B97F8</Color>
+    <Color x:Key="AccentPressedColor">#2A6FDB</Color>
+    <Color x:Key="PurpleColor">#7C5CFF</Color>
+    <Color x:Key="SuccessColor">#22C55E</Color>
+    <Color x:Key="WarningColor">#F59E0B</Color>
+    <Color x:Key="DangerColor">#EF4444</Color>
+
+    <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}"/>
+    <SolidColorBrush x:Key="SidebarBrush" Color="{StaticResource SidebarColor}"/>
+    <SolidColorBrush x:Key="PanelBrush" Color="{StaticResource PanelColor}"/>
+    <SolidColorBrush x:Key="Panel2Brush" Color="{StaticResource Panel2Color}"/>
+    <SolidColorBrush x:Key="Panel3Brush" Color="{StaticResource Panel3Color}"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
+    <SolidColorBrush x:Key="BorderStrongBrush" Color="{StaticResource BorderStrongColor}"/>
+    <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}"/>
+    <SolidColorBrush x:Key="DimBrush" Color="{StaticResource DimColor}"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentHoverColor}"/>
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="{StaticResource AccentPressedColor}"/>
+    <SolidColorBrush x:Key="PurpleBrush" Color="{StaticResource PurpleColor}"/>
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}"/>
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#1A3B82F6"/>
+
+    <!-- Restrained blue→violet premium gradient -->
+    <LinearGradientBrush x:Key="PremiumBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#2F5FD0" Offset="0"/>
+        <GradientStop Color="#6A4FE0" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="PremiumSoftBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#162447" Offset="0"/>
+        <GradientStop Color="#1E1A3F" Offset="1"/>
+    </LinearGradientBrush>
+
+    <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+    <CornerRadius x:Key="RadiusCard">10</CornerRadius>
+    <CornerRadius x:Key="RadiusControl">6</CornerRadius>
+</ResourceDictionary>

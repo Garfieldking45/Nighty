@@ -1,0 +1,9 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:m="clr-namespace:Nighty.Mvvm">
+    <m:BoolInverseConverter x:Key="Not"/>
+    <m:BoolToVisibilityConverter x:Key="BoolVisible"/>
+    <m:NullToVisibilityConverter x:Key="NullVisible"/>
+    <m:EqualsConverter x:Key="Eq"/>
+    <m:StatusBrushConverter x:Key="StatusBrush"/>
+</ResourceDictionary>

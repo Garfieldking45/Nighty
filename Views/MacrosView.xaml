@@ -1,0 +1,143 @@
+<UserControl x:Class="Nighty.Views.MacrosView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Nighty.Controls"
+             xmlns:m="clr-namespace:Nighty.Models">
+    <UserControl.Resources>
+        <!-- Value editor chosen by step type -->
+        <DataTemplate x:Key="KeyEditor">
+            <c:HotkeyBox Vk="{Binding Value, Mode=TwoWay}" AllowModifiers="False" MinWidth="130"/>
+        </DataTemplate>
+        <DataTemplate x:Key="ClickEditor">
+            <ComboBox ItemsSource="{Binding DataContext.ClickNames, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                      SelectedIndex="{Binding Value, Mode=TwoWay}" MinWidth="130"/>
+        </DataTemplate>
+        <DataTemplate x:Key="WaitEditor">
+            <StackPanel Orientation="Horizontal">
+                <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}" Width="90" TextAlignment="Right" AutomationProperties.Name="Wait milliseconds"/>
+                <TextBlock Text="ms" Style="{StaticResource Muted}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <StackPanel Margin="0,0,0,18">
+            <TextBlock Text="Macros" Style="{StaticResource PageTitle}"/>
+            <TextBlock Text="Build sequences of key presses, clicks and waits, and play them with a hotkey." Style="{StaticResource PageSubtitle}"/>
+        </StackPanel>
+
+        <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="250"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+
+            <!-- Macro list -->
+            <Border Style="{StaticResource Card}" VerticalAlignment="Top">
+                <StackPanel>
+                    <Grid Margin="0,0,0,10">
+                        <TextBlock Text="Your macros" Style="{StaticResource CardTitle}" VerticalAlignment="Center"/>
+                        <Button Style="{StaticResource IconButton}" Content="&#xE710;" HorizontalAlignment="Right" Command="{Binding AddMacro}" ToolTip="New macro" AutomationProperties.Name="New macro"/>
+                    </Grid>
+                    <TextBlock Text="No macros yet. Press + to create one." Style="{StaticResource Muted}" Visibility="{Binding Macros.Count, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                    <ListBox ItemsSource="{Binding Macros}" SelectedItem="{Binding Selected}" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource NavItem}"/>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Style="{StaticResource Muted}" FontSize="11.5">
+                                        <Run Text="{Binding Steps.Count, Mode=OneWay}"/><Run Text=" steps"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+
+            <!-- Editor -->
+            <StackPanel Grid.Column="2">
+                <Border Style="{StaticResource Card}" Visibility="{Binding HasSelection, Converter={StaticResource BoolVisible}, ConverterParameter=!}">
+                    <TextBlock Text="Select or create a macro to edit it." Style="{StaticResource Muted}"/>
+                </Border>
+
+                <StackPanel Visibility="{Binding HasSelection, Converter={StaticResource BoolVisible}}">
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel DataContext="{Binding Selected}">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" FontSize="15" FontWeight="SemiBold" MaxLength="40" AutomationProperties.Name="Macro name"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0" DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                    <Button Content="{Binding RunLabel}" Command="{Binding RunCommand}" Style="{StaticResource PrimaryButton}" MinWidth="104"/>
+                                    <Button Style="{StaticResource IconButton}" Content="&#xE74D;" Command="{Binding DeleteMacro}" Margin="8,0,0,0" ToolTip="Delete macro" AutomationProperties.Name="Delete macro"/>
+                                </StackPanel>
+                            </Grid>
+                            <Border Style="{StaticResource Divider}"/>
+                            <c:SettingRow Title="Hotkey" Description="Press to start the macro; press again to stop it.">
+                                <c:HotkeyBox Vk="{Binding HotkeyVk, Mode=TwoWay}" Mods="{Binding HotkeyMods, Mode=TwoWay}"/>
+                            </c:SettingRow>
+                            <c:SettingRow Title="Hotkey enabled">
+                                <CheckBox IsChecked="{Binding HotkeyEnabled}"/>
+                            </c:SettingRow>
+                            <c:SettingRow Title="Repeat" Description="0 repeats until you stop it (or press the emergency stop hotkey).">
+                                <TextBox Text="{Binding Repeat, UpdateSourceTrigger=LostFocus}" Width="80" TextAlignment="Right" AutomationProperties.Name="Repeat count"/>
+                            </c:SettingRow>
+                            <TextBlock Text="{Binding DataContext.Message, RelativeSource={RelativeSource AncestorType=UserControl}}" Style="{StaticResource Muted}" Margin="0,6,0,0"
+                                       Visibility="{Binding DataContext.Message, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NullVisible}}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="Steps" Style="{StaticResource CardTitle}" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button Content="+ Key" Command="{Binding AddStep}" CommandParameter="KeyPress" Padding="10,5"/>
+                                    <Button Content="+ Click" Command="{Binding AddStep}" CommandParameter="Click" Margin="6,0,0,0" Padding="10,5"/>
+                                    <Button Content="+ Wait" Command="{Binding AddStep}" CommandParameter="Wait" Margin="6,0,0,0" Padding="10,5"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="This macro has no steps. Add one above." Style="{StaticResource Muted}" Visibility="{Binding Selected.Steps.Count, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                            <ItemsControl ItemsSource="{Binding Selected.Steps}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource Panel2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,6">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/><ColumnDefinition Width="170"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="&#xE700;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource DimBrush}" Margin="2,0,10,0"/>
+                                                <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.StepTypes, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                          DisplayMemberPath="Label" SelectedValuePath="Type" SelectedValue="{Binding Type, Mode=TwoWay}" Margin="0,0,10,0" AutomationProperties.Name="Step type"/>
+                                                <ContentControl Grid.Column="2" Content="{Binding}" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                                    <ContentControl.Style>
+                                                        <Style TargetType="ContentControl">
+                                                            <Setter Property="ContentTemplate" Value="{StaticResource KeyEditor}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Type}" Value="Click"><Setter Property="ContentTemplate" Value="{StaticResource ClickEditor}"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding Type}" Value="Wait"><Setter Property="ContentTemplate" Value="{StaticResource WaitEditor}"/></DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </ContentControl.Style>
+                                                </ContentControl>
+                                                <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                                    <Button Style="{StaticResource IconButton}" Content="&#xE70E;" ToolTip="Move up" AutomationProperties.Name="Move step up" Margin="0,0,4,0"
+                                                            Command="{Binding DataContext.MoveUp, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                                    <Button Style="{StaticResource IconButton}" Content="&#xE70D;" ToolTip="Move down" AutomationProperties.Name="Move step down" Margin="0,0,4,0"
+                                                            Command="{Binding DataContext.MoveDown, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                                    <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Remove step" AutomationProperties.Name="Remove step"
+                                                            Command="{Binding DataContext.RemoveStep, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+    </StackPanel>
+</UserControl>

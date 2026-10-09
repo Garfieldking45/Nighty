@@ -1,0 +1,64 @@
+<UserControl x:Class="Nighty.Views.ModsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Nighty.Controls">
+    <StackPanel>
+        <StackPanel Margin="0,0,0,18">
+            <TextBlock Text="Mods" Style="{StaticResource PageTitle}"/>
+            <TextBlock Text="Swap cosmetic Roblox assets (cursors, sounds, fonts, textures) with your own files — fully reversible." Style="{StaticResource PageSubtitle}"/>
+        </StackPanel>
+
+        <c:InfoBanner Kind="Warning" Text="Mods only copy whitelisted asset files (png, jpg, ogg, mp3, ttf, otf, ktx, tga) into Roblox's content folder. Nothing is injected into Roblox. Originals are backed up first, Roblox updates may reset your changes, and you use mods at your own risk."/>
+
+        <Border Style="{StaticResource Card}">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding InstallText}" FontWeight="Medium"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding AppliedText}" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="Apply mods" Command="{Binding ApplyCommand}" Style="{StaticResource PrimaryButton}" MinWidth="104"/>
+                    <Button Content="Revert" Command="{Binding RevertCommand}" Margin="10,0,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <c:InfoBanner Kind="{Binding Kind}" Text="{Binding Message}" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Your mods" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="Each mod is a folder whose files mirror Roblox's content folder (for example content\textures\ArrowCursor.png)." Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Add mod folder" Command="{Binding AddCommand}" VerticalAlignment="Top"/>
+                </Grid>
+                <TextBlock Text="No mods added yet." Style="{StaticResource Muted}" Margin="0,16,0,0" Visibility="{Binding Rows.Count, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                <ItemsControl ItemsSource="{Binding Rows}" Margin="0,14,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{StaticResource Panel2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14,11" Margin="0,0,0,8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,0,14,0">
+                                        <TextBlock Text="{Binding Entry.Name}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Entry.SourcePath}" Style="{StaticResource Muted}" FontSize="11.5" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                                        <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" FontSize="11.5"/>
+                                    </StackPanel>
+                                    <CheckBox Grid.Column="1" IsChecked="{Binding Entry.Enabled}" Margin="0,0,12,0" ToolTip="Include when applying" AutomationProperties.Name="Enable mod"/>
+                                    <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Remove mod from list" AutomationProperties.Name="Remove mod"
+                                            Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

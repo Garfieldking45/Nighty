@@ -1,0 +1,68 @@
+<UserControl x:Class="Nighty.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Nighty.Controls">
+    <StackPanel>
+        <StackPanel Margin="0,0,0,18">
+            <TextBlock Text="Settings" Style="{StaticResource PageTitle}"/>
+            <TextBlock Text="General preferences, safety controls, and app data." Style="{StaticResource PageSubtitle}"/>
+        </StackPanel>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <TextBlock Text="General" Style="{StaticResource CardTitle}" Margin="0,0,0,6"/>
+                <c:SettingRow Title="Start with Windows" Description="Launch Nighty when you sign in.">
+                    <CheckBox IsChecked="{Binding StartWithWindows}"/>
+                </c:SettingRow>
+                <Border Style="{StaticResource Divider}"/>
+                <c:SettingRow Title="Keep window on top" Description="Keeps the Nighty window above other windows.">
+                    <CheckBox IsChecked="{Binding General.AlwaysOnTop}"/>
+                </c:SettingRow>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <TextBlock Text="Safety" Style="{StaticResource CardTitle}" Margin="0,0,0,6"/>
+                <c:SettingRow Title="Emergency stop hotkey" Description="Instantly stops the clicker and all running macros, from anywhere.">
+                    <c:HotkeyBox Vk="{Binding General.StopHotkeyVk, Mode=TwoWay}" Mods="{Binding General.StopHotkeyMods, Mode=TwoWay}"/>
+                </c:SettingRow>
+                <Border Style="{StaticResource Divider}"/>
+                <c:SettingRow Title="Restore system changes" Description="Turns Game Mode off and restores keyboard and pointer settings. DNS, QoS and mods are restored from their own pages.">
+                    <Button Content="Restore now" Command="{Binding RestoreAllCommand}"/>
+                </c:SettingRow>
+                <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="0,8,0,0" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <TextBlock Text="Permissions" Style="{StaticResource CardTitle}" Margin="0,0,0,6"/>
+                <c:SettingRow Title="{Binding AdminText}" Description="Nighty runs without administrator rights. It asks for approval only for DNS, QoS and the FPS overlay.">
+                    <Button Content="Restart as administrator" Command="{Binding RelaunchAdmin}"/>
+                </c:SettingRow>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <TextBlock Text="Data" Style="{StaticResource CardTitle}" Margin="0,0,0,6"/>
+                <c:SettingRow Title="App data folder" Description="{Binding SettingsPath}">
+                    <Button Content="Open" Command="{Binding OpenDataFolder}"/>
+                </c:SettingRow>
+                <Border Style="{StaticResource Divider}"/>
+                <c:SettingRow Title="Logs" Description="Diagnostic logs for troubleshooting.">
+                    <Button Content="Open logs folder" Command="{Binding OpenLogsFolder}"/>
+                </c:SettingRow>
+                <Border Style="{StaticResource Divider}"/>
+                <c:SettingRow Title="Reset everything" Description="Restores system changes, deletes presets, macros and layout, and restarts.">
+                    <Button Content="Reset all settings" Style="{StaticResource DangerButton}" Command="{Binding ResetCommand}"/>
+                </c:SettingRow>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Style="{StaticResource Muted}" Margin="2,2,0,0">
+            <Run Text="Nighty"/><Run Text=" "/><Run Text="{Binding Version, Mode=OneWay}"/>
+        </TextBlock>
+    </StackPanel>
+</UserControl>
