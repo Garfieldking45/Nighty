@@ -48,6 +48,8 @@ public sealed class CombatViewModel : ObservableObject
             PresetMessage = $"Deleted “{pr.Name}”.";
         });
 
+        Svc.Clicker.KeepClicking = () => Settings.Mode != ActivationMode.Hold
+            || HotkeyService.IsDown((Settings.HotkeyVk, Settings.HotkeyMods));
         Svc.Hotkeys.Register("clicker", () => (Settings.HotkeyVk, Settings.HotkeyMods), OnHotkey);
         Settings.PropertyChanged += (_, e) =>
         {

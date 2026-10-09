@@ -69,6 +69,10 @@ public sealed class ClickerService
 
     public ClickerService(ClickerSettings settings) { _s = settings; }
 
+    /// <summary>Hold mode: returns true while the activation key is still down. Checked on the clicker thread so a
+    /// UI stall can never keep it swinging after release.</summary>
+    public Func<bool>? KeepClicking { get; set; }
+
     public bool IsClicking => _cts != null;
     public event Action? StateChanged;
 
@@ -132,6 +136,8 @@ public sealed class ClickerService
 
         while (!ct.IsCancellationRequested)
         {
+            if (KeepClicking is { } keep && !keep()) { Stop(); break; }
+
             // Foreground checks involve process lookups, so refresh them every 40 ms instead of every click.
             if (Wait.Now >= nextCheck)
             {

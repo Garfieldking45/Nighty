@@ -287,7 +287,7 @@ public sealed class HotkeyService
         }
     }
 
-    private static bool IsDown((int Vk, int Mods) k)
+    public static bool IsDown((int Vk, int Mods) k)
     {
         if (k.Vk <= 0) return false;
         if ((NativeMethods.GetAsyncKeyState(k.Vk) & 0x8000) == 0) return false;
