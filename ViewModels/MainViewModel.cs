@@ -119,11 +119,11 @@ public sealed class MainViewModel : ObservableObject
         Add("Combat", "Activation", "Click speed", "Duty cycle", "Hotkey", "Mouse button", "Only while Roblox is focused", "Presets", "Clicker");
         Add("Gaming", "Game Mode", "Cleaner", "Optimizations", "System usage", "What to clean");
         Add("Utility", "Brightness", "Movement Helper", "Tracking Helper", "Best DNS", "Apply the fastest automatically", "QoS Policy", "Disable Sticky Keys shortcut",
-            "Disable Filter Keys shortcut", "Disable Toggle Keys shortcut", "Enhance pointer precision", "Fast key repeat", "Pointer speed", "Network adapter", "Roblox traffic policy");
+            "Disable Filter Keys shortcut", "Disable Toggle Keys shortcut", "Enhance pointer precision", "Fast key repeat", "Pointer speed", "Sensitivity calculator", "Network adapter", "Roblox traffic policy");
         Add("Mods", "Your mods");
         Add("Extras", "Bow slot", "Shoot automatically", "Only while fighting", "Switch back afterwards", "Trigger", "Try it");
         Add("Macros", "Your macros", "Steps", "Repeat", "Hotkey enabled");
-        Add("Overlays", "Ping host", "Preview and position");
+        Add("Overlays", "Ping host", "Preview and position", "Crosshair", "Add crosshair");
         Add("Settings", "Emergency stop hotkey", "Keep window on top", "Start with Windows", "Permissions", "Logs", "App data folder", "Restore system changes", "Reset everything", "Safety");
     }
 
@@ -143,6 +143,8 @@ public sealed class MainViewModel : ObservableObject
         if (_robloxTick++ % 4 == 0) _robloxRunning = Svc.Roblox.IsRunning;   // process scan every 2 s
         RobloxText = _robloxRunning ? "Running" : "Not running";
         RobloxKind = _robloxRunning ? StatusKind.Success : StatusKind.Neutral;
+
+        Svc.Pointer.AutoTick();
 
         var s = Svc.S.Clicker;
         if (Svc.Clicker.IsClicking) { ClickerText = $"Clicking · {Svc.Clicker.MeasuredCps:0} CPS"; ClickerKind = StatusKind.Success; }

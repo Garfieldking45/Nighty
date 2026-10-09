@@ -245,6 +245,33 @@ public sealed class PointerService
         catch (Exception ex) { Log.Error("Pointer apply failed", ex); return ex.Message; }
     }
 
+    private bool _autoApplied;
+
+    /// <summary>Called a couple of times per second. Applies the tracking settings while Roblox is focused and puts Windows' values back afterwards.</summary>
+    public void AutoTick()
+    {
+        var t = Svc.S.Utility.Tracking;
+        bool want = t.ApplyOnlyInRoblox && Svc.Roblox.IsForeground;
+        if (want && !_autoApplied)
+        {
+            _autoApplied = true;
+            Apply(t.PointerSpeed, t.EnhancePointerPrecision);
+        }
+        else if (!want && _autoApplied)
+        {
+            _autoApplied = false;
+            Restore();
+        }
+    }
+
+    /// <summary>Leaves Windows with its own pointer settings if we only applied ours temporarily.</summary>
+    public void AutoRelease()
+    {
+        if (!_autoApplied) return;
+        _autoApplied = false;
+        Restore();
+    }
+
     public string Restore()
     {
         if (!B.HasPointerBackup) return "Nothing to restore — no changes have been made.";

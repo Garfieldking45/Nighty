@@ -123,6 +123,7 @@ public sealed class OverlayWindow : Window
     private readonly TextBlock _text = new() { Foreground = Brushes.White, FontSize = 14, FontWeight = FontWeights.SemiBold };
     private readonly Dictionary<int, Border> _caps = new();
     private readonly ScaleTransform _scale = new(1, 1);
+    private Nighty.Controls.CrosshairVisual? _cross;
 
     public OverlayWindow(OverlayConfig cfg)
     {
@@ -147,6 +148,12 @@ public sealed class OverlayWindow : Window
             LayoutTransform = _scale,
             Child = BuildContent(),
         };
+        if (_cfg.Kind == OverlayKind.Crosshair)
+        {
+            _chrome.Background = Brushes.Transparent;
+            _chrome.BorderThickness = new Thickness(0);
+            _chrome.Padding = new Thickness(0);
+        }
         Content = _chrome;
         SizeChanged += (_, _) => Reposition();
         SourceInitialized += (_, _) =>
@@ -177,6 +184,8 @@ public sealed class OverlayWindow : Window
                 sp.Children.Add(Cap(0x01, "L", 44)); sp.Children.Add(Cap(0x04, "M", 44)); sp.Children.Add(Cap(0x02, "R", 44));
                 return sp;
             }
+            case OverlayKind.Crosshair:
+                return _cross = new Nighty.Controls.CrosshairVisual(_cfg);
             case OverlayKind.Key:
                 return Cap(_cfg.KeyVk, Hotkeys.KeyName(_cfg.KeyVk).ToUpperInvariant(), 44);
             default:
@@ -212,6 +221,7 @@ public sealed class OverlayWindow : Window
     {
         _scale.ScaleX = _scale.ScaleY = _cfg.Scale;
         Opacity = _cfg.Opacity;
+        _cross?.Update();
         Reposition();
     }
 
@@ -220,6 +230,7 @@ public sealed class OverlayWindow : Window
         double sw = SystemParameters.PrimaryScreenWidth, sh = SystemParameters.PrimaryScreenHeight;
         Left = _cfg.X / 100.0 * Math.Max(0, sw - ActualWidth);
         Top = _cfg.Y / 100.0 * Math.Max(0, sh - ActualHeight);
+        if (_cfg.Kind == OverlayKind.Crosshair) { Left = Math.Round(Left); Top = Math.Round(Top); }   // keep the centre on a whole pixel
     }
 
     public void Refresh()

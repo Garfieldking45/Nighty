@@ -58,6 +58,7 @@ public partial class App : Application
                 UpdateService.StopPolling();
                 Svc.StopAllInput();
                 Svc.Socd.Stop();
+                Svc.Pointer.AutoRelease();
                 Svc.GameMode.RestoreOnExit();     // always give the user their original system settings back
                 Svc.Overlays.Shutdown();
                 Svc.Hotkeys.Stop();

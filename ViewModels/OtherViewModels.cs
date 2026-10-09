@@ -220,6 +220,9 @@ public sealed class OverlaysViewModel : ObservableObject
     private string _live = "";
 
     public RelayCommand AddKeyCommand { get; }
+    public RelayCommand AddCrosshairCommand { get; }
+    public IReadOnlyList<CrosshairStyleChoice> CrosshairStyles => CrosshairOptions.Styles;
+    public IReadOnlyList<CrosshairColorChoice> CrosshairColors => CrosshairOptions.Colors;
     public RelayCommand RemoveCommand { get; }
     public RelayCommand ResetPositionsCommand { get; }
     public RelayCommand RelaunchAdminCommand { get; }
@@ -244,6 +247,11 @@ public sealed class OverlaysViewModel : ObservableObject
             if (vk is not int v || v <= 0) return;
             if (Items.Any(i => i.Kind == OverlayKind.Key && i.KeyVk == v)) return;
             Items.Add(new OverlayConfig { Kind = OverlayKind.Key, KeyVk = v, Title = $"Key: {Hotkeys.KeyName(v)}", Enabled = true, X = 50, Y = 30 + (Items.Count * 2 % 40) });
+        });
+        AddCrosshairCommand = new RelayCommand(() =>
+        {
+            int n = Items.Count(i => i.Kind == OverlayKind.Crosshair) + 1;
+            Items.Add(new OverlayConfig { Kind = OverlayKind.Crosshair, Title = n == 1 ? "Crosshair" : $"Crosshair {n}", Enabled = true, X = 50, Y = 50, Opacity = 1 });
         });
         RemoveCommand = new RelayCommand(p => { if (p is OverlayConfig c) Items.Remove(c); });
         ResetPositionsCommand = new RelayCommand(() =>

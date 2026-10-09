@@ -6,7 +6,24 @@ namespace Nighty.Models;
 
 public enum ClickButton { Left, Right, Middle }
 public enum ActivationMode { Toggle, Hold }
-public enum OverlayKind { Cps, Fps, Ping, Wasd, Mouse, Key }
+public enum OverlayKind { Cps, Fps, Ping, Wasd, Mouse, Key, Crosshair }
+public enum CrosshairStyle { Cross, CrossDot, Dot, Circle }
+
+public sealed record CrosshairStyleChoice(string Name, CrosshairStyle Value);
+public sealed record CrosshairColorChoice(string Name, string Hex);
+
+public static class CrosshairOptions
+{
+    public static readonly IReadOnlyList<CrosshairStyleChoice> Styles = new CrosshairStyleChoice[]
+    {
+        new("Cross", CrosshairStyle.Cross), new("Cross with dot", CrosshairStyle.CrossDot), new("Dot", CrosshairStyle.Dot), new("Circle", CrosshairStyle.Circle),
+    };
+    public static readonly IReadOnlyList<CrosshairColorChoice> Colors = new CrosshairColorChoice[]
+    {
+        new("Green", "#00FF55"), new("Red", "#FF3B30"), new("White", "#FFFFFF"), new("Cyan", "#00E5FF"),
+        new("Yellow", "#FFE600"), new("Magenta", "#FF2DDC"), new("Blue", "#3B82F6"), new("Black", "#000000"),
+    };
+}
 public enum SocdMode { LastInput, Neutral, FirstInput }
 public enum MacroStepType { KeyPress, KeyDown, KeyUp, Click, Wait }
 
@@ -95,6 +112,14 @@ public sealed class TrackingSettings : ObservableObject
     private bool _precision = true;
     public int PointerSpeed { get => _speed; set => Set(ref _speed, Math.Clamp(value, 1, 20)); }
     public bool EnhancePointerPrecision { get => _precision; set => Set(ref _precision, value); }
+
+    private bool _onlyRoblox;
+    private int _dpi = 800;
+    private double _sens = 0.5;
+    /// <summary>Use the values above only while Roblox is in front; Windows' own values come back when you leave.</summary>
+    public bool ApplyOnlyInRoblox { get => _onlyRoblox; set => Set(ref _onlyRoblox, value); }
+    public int MouseDpi { get => _dpi; set => Set(ref _dpi, Math.Clamp(value, 100, 32000)); }
+    public double GameSensitivity { get => _sens; set => Set(ref _sens, Math.Clamp(Math.Round(value, 3), 0.01, 100)); }
 }
 
 public sealed class DnsSettings : ObservableObject
@@ -138,9 +163,24 @@ public sealed class OverlayConfig : ObservableObject
     public double Opacity { get => _opacity; set => Set(ref _opacity, Math.Clamp(Math.Round(value, 2), 0.2, 1)); }
     public int KeyVk { get => _vk; set { if (Set(ref _vk, value)) OnPropertyChanged(nameof(Blurb)); } }
 
-    [JsonIgnore] public bool IsCustom => Kind == OverlayKind.Key;
+    // Crosshair appearance (only used when Kind is Crosshair).
+    private CrosshairStyle _style = CrosshairStyle.Cross;
+    private int _arm = 10, _thickness = 2, _gap = 4;
+    private string _color = "#00FF55";
+    private bool _outline = true;
+    public CrosshairStyle Style { get => _style; set => Set(ref _style, value); }
+    /// <summary>Length of each arm (or the ring width for the circle), in pixels.</summary>
+    public int ArmLength { get => _arm; set => Set(ref _arm, Math.Clamp(value, 1, 80)); }
+    public int Thickness { get => _thickness; set => Set(ref _thickness, Math.Clamp(value, 1, 10)); }
+    /// <summary>Empty space around the centre, in pixels.</summary>
+    public int Gap { get => _gap; set => Set(ref _gap, Math.Clamp(value, 0, 60)); }
+    public string Color { get => _color; set => Set(ref _color, value); }
+    public bool Outline { get => _outline; set => Set(ref _outline, value); }
+
+    [JsonIgnore] public bool IsCustom => Kind is OverlayKind.Key or OverlayKind.Crosshair;
     [JsonIgnore] public string Glyph => Kind switch
     {
+        OverlayKind.Crosshair => "",
         OverlayKind.Cps => "", OverlayKind.Fps => "", OverlayKind.Ping => "",
         OverlayKind.Wasd => "", OverlayKind.Mouse => "", _ => "",
     };
@@ -151,6 +191,7 @@ public sealed class OverlayConfig : ObservableObject
         OverlayKind.Ping => "Round-trip time to the ping host set below (ICMP).",
         OverlayKind.Wasd => "W, A, S, D key states.",
         OverlayKind.Mouse => "Left, middle and right mouse button states.",
+        OverlayKind.Crosshair => "A crosshair drawn on top of your screen. Position 50% / 50% is the exact centre.",
         _ => $"Shows when {Hotkeys.KeyName(KeyVk)} is held.",
     };
 }

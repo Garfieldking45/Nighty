@@ -171,6 +171,22 @@ public sealed class TrackingViewModel : ObservableObject
     public RelayCommand ApplyCommand { get; }
     public RelayCommand RestoreCommand { get; }
     public RelayCommand LoadCurrentCommand { get; }
+    public RelayCommand PresetCommand { get; }
+
+    public double Dpi { get => Settings.MouseDpi; set { Settings.MouseDpi = (int)value; OnPropertyChanged(); OnPropertyChanged(nameof(CalcText)); } }
+    public double Sensitivity { get => Settings.GameSensitivity; set { Settings.GameSensitivity = value; OnPropertyChanged(); OnPropertyChanged(nameof(CalcText)); } }
+
+    // Windows' pointer-speed steps: with "Enhance pointer precision" off, this is how far the cursor moves per mouse count.
+    private static readonly double[] SpeedScale = { 0.03125, 0.0625, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5 };
+    public string CalcText
+    {
+        get
+        {
+            double edpi = Settings.MouseDpi * Settings.GameSensitivity;
+            double mult = SpeedScale[Math.Clamp(Settings.PointerSpeed, 1, 20) - 1];
+            return $"eDPI: {edpi:0.##}  ·  Windows cursor moves ×{mult:0.###} per mouse count at pointer speed {Settings.PointerSpeed}";
+        }
+    }
 
     public TrackingViewModel()
     {
@@ -186,6 +202,13 @@ public sealed class TrackingViewModel : ObservableObject
             LoadCurrent();
         }, () => Svc.Pointer.HasBackup);
         LoadCurrentCommand = new RelayCommand(LoadCurrent);
+        PresetCommand = new RelayCommand(o =>
+        {
+            if (o is not string s || !int.TryParse(s, out int v)) return;
+            Speed = v; Settings.EnhancePointerPrecision = false;
+            Message = $"Pointer speed set to {v} with acceleration off. Press Apply to use it."; Kind = StatusKind.Info;
+        });
+        Settings.PropertyChanged += (_, _) => OnPropertyChanged(nameof(CalcText));
         Refresh();
     }
 
