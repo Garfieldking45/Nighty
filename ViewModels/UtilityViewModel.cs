@@ -121,6 +121,7 @@ public sealed class MovementViewModel : ObservableObject
     private string _current = "";
 
     public MovementSettings Settings => Svc.S.Utility.Movement;
+    public SocdSettings Socd => Svc.S.Utility.Socd;
     public string Message { get => _message; private set => Set(ref _message, value); }
     public StatusKind Kind { get => _kind; private set => Set(ref _kind, value); }
     public string CurrentText { get => _current; private set => Set(ref _current, value); }

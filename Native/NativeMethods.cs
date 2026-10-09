@@ -39,6 +39,8 @@ internal static class NativeMethods
 
     // ---------- Low level hooks ----------
     public delegate IntPtr LowLevelProc(int nCode, IntPtr wParam, IntPtr lParam);
+    public const int WH_KEYBOARD_LL = 13, WM_KEYDOWN = 0x100, WM_KEYUP = 0x101, WM_SYSKEYDOWN = 0x104, WM_SYSKEYUP = 0x105;
+    public const uint LLKHF_INJECTED = 0x10;
     public const int WH_MOUSE_LL = 14, WM_LBUTTONDOWN = 0x201, WM_RBUTTONDOWN = 0x204, WM_MBUTTONDOWN = 0x207;
 
     [DllImport("user32.dll", SetLastError = true)]

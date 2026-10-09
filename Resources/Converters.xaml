@@ -4,6 +4,7 @@
     <m:BoolInverseConverter x:Key="Not"/>
     <m:BoolToVisibilityConverter x:Key="BoolVisible"/>
     <m:NullToVisibilityConverter x:Key="NullVisible"/>
+    <m:SocdDescriptionConverter x:Key="SocdDesc"/>
     <m:EqualsConverter x:Key="Eq"/>
     <m:StatusBrushConverter x:Key="StatusBrush"/>
 </ResourceDictionary>

@@ -13,7 +13,41 @@ public static class UpdateService
     private const string Repo = "Garfieldking45/Nighty";
     private const string AssetName = "Nighty.exe";
 
+    private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(30);
+    private static string? _declinedTag;     // don't nag again about a release the user already said no to
+    private static int _checking;
+    private static CancellationTokenSource? _poll;
+
+    /// <summary>Checks now, then keeps checking while Nighty stays open.</summary>
+    public static void StartPolling()
+    {
+        if (_poll != null) return;
+        _poll = new CancellationTokenSource();
+        var token = _poll.Token;
+        _ = Task.Run(async () =>
+        {
+            using var timer = new PeriodicTimer(PollInterval);
+            do { await CheckAsync(); }
+            while (await WaitNextAsync(timer, token));
+        });
+    }
+
+    public static void StopPolling() { _poll?.Cancel(); _poll = null; }
+
+    private static async Task<bool> WaitNextAsync(PeriodicTimer timer, CancellationToken token)
+    {
+        try { return await timer.WaitForNextTickAsync(token); }
+        catch (OperationCanceledException) { return false; }
+    }
+
     public static async Task CheckAsync()
+    {
+        if (Interlocked.Exchange(ref _checking, 1) == 1) return;   // a prompt or download is already in progress
+        try { await CheckCoreAsync(); }
+        finally { Volatile.Write(ref _checking, 0); }
+    }
+
+    private static async Task CheckCoreAsync()
     {
         try
         {
@@ -23,7 +57,7 @@ public static class UpdateService
             string tag = root.GetProperty("tag_name").GetString() ?? "";
             if (!Version.TryParse(tag.TrimStart('v', 'V'), out var latest)) return;
             var current = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 0, 0);
-            if (latest <= current) return;
+            if (latest <= current || tag == _declinedTag) return;
 
             string? url = null;
             foreach (var a in root.GetProperty("assets").EnumerateArray())
@@ -35,7 +69,7 @@ public static class UpdateService
                 Dialogs.Confirm("Update available",
                     $"Nighty {tag.TrimStart('v', 'V')} is available (you have {current.ToString(3)}).\n\nClick Update to download it and restart Nighty.",
                     "Update")).Task.ConfigureAwait(false) ;
-            if (!yes) return;
+            if (!yes) { _declinedTag = tag; return; }
 
             await DownloadAndInstallAsync(http, url);
         }

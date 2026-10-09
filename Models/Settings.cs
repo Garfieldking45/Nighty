@@ -7,6 +7,7 @@ namespace Nighty.Models;
 public enum ClickButton { Left, Right, Middle }
 public enum ActivationMode { Toggle, Hold }
 public enum OverlayKind { Cps, Fps, Ping, Wasd, Mouse, Key }
+public enum SocdMode { LastInput, Neutral, FirstInput }
 public enum MacroStepType { KeyPress, KeyDown, KeyUp, Click, Wait }
 
 public sealed class ClickerSettings : ObservableObject
@@ -77,6 +78,17 @@ public sealed class MovementSettings : ObservableObject
     public bool FastKeyRepeat { get => _repeat; set => Set(ref _repeat, value); }
 }
 
+/// <summary>Resolves opposite directions held together (A+D, W+S) so one of them always wins.</summary>
+public sealed class SocdSettings : ObservableObject
+{
+    private bool _enabled, _leftRight = true, _forwardBack = true;
+    private SocdMode _mode = SocdMode.FirstInput;
+    public bool Enabled { get => _enabled; set => Set(ref _enabled, value); }
+    public SocdMode Mode { get => _mode; set => Set(ref _mode, value); }
+    public bool LeftRight { get => _leftRight; set => Set(ref _leftRight, value); }
+    public bool ForwardBack { get => _forwardBack; set => Set(ref _forwardBack, value); }
+}
+
 public sealed class TrackingSettings : ObservableObject
 {
     private int _speed = 10;
@@ -100,6 +112,7 @@ public sealed class QosSettings : ObservableObject
 public sealed class UtilitySettings : ObservableObject
 {
     public MovementSettings Movement { get; set; } = new();
+    public SocdSettings Socd { get; set; } = new();
     public TrackingSettings Tracking { get; set; } = new();
     public DnsSettings Dns { get; set; } = new();
     public QosSettings Qos { get; set; } = new();

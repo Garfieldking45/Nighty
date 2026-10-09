@@ -39,7 +39,7 @@ public partial class App : Application
         MainWindow = window;
         window.Show();
         Svc.Overlays.Start();
-        _ = UpdateService.CheckAsync();
+        UpdateService.StartPolling();
     }
 
     private void OnUiException(object sender, DispatcherUnhandledExceptionEventArgs e)
@@ -55,7 +55,9 @@ public partial class App : Application
         {
             if (Svc.Settings != null)
             {
+                UpdateService.StopPolling();
                 Svc.StopAllInput();
+                Svc.Socd.Stop();
                 Svc.GameMode.RestoreOnExit();     // always give the user their original system settings back
                 Svc.Overlays.Shutdown();
                 Svc.Hotkeys.Stop();

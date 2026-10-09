@@ -83,6 +83,17 @@ public sealed class BoolToVisibilityConverter : IValueConverter
     public object ConvertBack(object value, Type t, object p, CultureInfo c) => throw new NotSupportedException();
 }
 
+public sealed class SocdDescriptionConverter : IValueConverter
+{
+    public object Convert(object value, Type t, object p, CultureInfo c) => value?.ToString() switch
+    {
+        "LastInput" => "The key you pressed last wins until you let go of it.",
+        "Neutral" => "Holding both keys cancels out, so you stop.",
+        _ => "The key you pressed first wins until you let go of it.",
+    };
+    public object ConvertBack(object value, Type t, object p, CultureInfo c) => throw new NotSupportedException();
+}
+
 public sealed class NullToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type t, object p, CultureInfo c)

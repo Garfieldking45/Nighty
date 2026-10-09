@@ -51,6 +51,50 @@
 
         <!-- ================= Movement helper ================= -->
         <StackPanel Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=1}" DataContext="{Binding Movement}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel DataContext="{Binding Socd}">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="32" Height="32" CornerRadius="8" Background="{StaticResource AccentSoftBrush}">
+                            <TextBlock Text="&#xE7C9;" Style="{StaticResource Icon}" Foreground="{StaticResource AccentBrush}" FontSize="15"/>
+                        </Border>
+                        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="Movement Helper" Style="{StaticResource CardTitle}"/>
+                            <TextBlock Text="What happens when you hold left and right (or forward and back) together" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <Border Style="{StaticResource Divider}" Margin="0,14"/>
+                    <c:SettingRow Title="Turn on" Description="Only one direction counts at a time, so you never stand still by accident.">
+                        <CheckBox IsChecked="{Binding Enabled}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Mode" Description="{Binding Mode, Converter={StaticResource SocdDesc}}">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Style="{StaticResource TabButton}" Content="Last input" GroupName="socd" IsChecked="{Binding Mode, Converter={StaticResource Eq}, ConverterParameter=LastInput}"/>
+                            <RadioButton Style="{StaticResource TabButton}" Content="Neutral" GroupName="socd" IsChecked="{Binding Mode, Converter={StaticResource Eq}, ConverterParameter=Neutral}"/>
+                            <RadioButton Style="{StaticResource TabButton}" Content="First input" GroupName="socd" IsChecked="{Binding Mode, Converter={StaticResource Eq}, ConverterParameter=FirstInput}"/>
+                        </StackPanel>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Left and right" Description="Your strafe keys.">
+                        <StackPanel Orientation="Horizontal">
+                            <Border Style="{StaticResource Chip}" Padding="14,6"><TextBlock Text="A" FontWeight="SemiBold"/></Border>
+                            <TextBlock Text="&#xE7C9;" Style="{StaticResource Icon}" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="10,0" VerticalAlignment="Center"/>
+                            <Border Style="{StaticResource Chip}" Padding="14,6"><TextBlock Text="D" FontWeight="SemiBold"/></Border>
+                            <CheckBox IsChecked="{Binding LeftRight}" Margin="18,0,0,0"/>
+                        </StackPanel>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Forward and back" Description="Your walk keys.">
+                        <StackPanel Orientation="Horizontal">
+                            <Border Style="{StaticResource Chip}" Padding="14,6"><TextBlock Text="W" FontWeight="SemiBold"/></Border>
+                            <TextBlock Text="&#xE7C9;" Style="{StaticResource Icon}" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="10,0" VerticalAlignment="Center"/>
+                            <Border Style="{StaticResource Chip}" Padding="14,6"><TextBlock Text="S" FontWeight="SemiBold"/></Border>
+                            <CheckBox IsChecked="{Binding ForwardBack}" Margin="18,0,0,0"/>
+                        </StackPanel>
+                    </c:SettingRow>
+                    <c:InfoBanner Kind="Warning" Margin="0,14,0,0" Text="If a game runs as administrator, run Nighty as administrator too. Some games don't allow this kind of tool, so check the rules before using it online."/>
+                </StackPanel>
+            </Border>
             <c:InfoBanner Kind="Info" Text="Stops Windows accessibility pop-ups (for example 5× Shift for Sticky Keys) from interrupting WASD movement, and can speed up key repeat. Changes apply immediately; “Restore original” puts back your exact previous values."/>
             <Border Style="{StaticResource Card}">
                 <StackPanel>

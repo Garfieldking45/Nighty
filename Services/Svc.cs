@@ -18,6 +18,7 @@ public static class Svc
     public static CleanerService Cleaner { get; private set; } = null!;
     public static BrightnessService Brightness { get; private set; } = null!;
     public static MovementService Movement { get; private set; } = null!;
+    public static SocdService Socd { get; private set; } = null!;
     public static PointerService Pointer { get; private set; } = null!;
     public static DnsService Dns { get; private set; } = null!;
     public static QosService Qos { get; private set; } = null!;
@@ -58,6 +59,8 @@ public static class Svc
         Cleaner = new CleanerService();
         Brightness = new BrightnessService();
         Movement = new MovementService();
+        Socd = new SocdService(S.Utility.Socd);
+        Socd.Sync();
         Pointer = new PointerService();
         Dns = new DnsService();
         Qos = new QosService();
