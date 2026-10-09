@@ -19,6 +19,7 @@ public static class Svc
     public static BrightnessService Brightness { get; private set; } = null!;
     public static MovementService Movement { get; private set; } = null!;
     public static SocdService Socd { get; private set; } = null!;
+    public static TweaksService Tweaks { get; private set; } = null!;
     public static PointerService Pointer { get; private set; } = null!;
     public static DnsService Dns { get; private set; } = null!;
     public static QosService Qos { get; private set; } = null!;
@@ -61,6 +62,7 @@ public static class Svc
         Movement = new MovementService();
         Socd = new SocdService(S.Utility.Socd);
         Socd.Sync();
+        Tweaks = new TweaksService();
         Pointer = new PointerService();
         Dns = new DnsService();
         Qos = new QosService();
@@ -68,6 +70,7 @@ public static class Svc
         Fps = new FpsService();
         Overlays = new OverlayManager();
         Mods = new ModsService();
+        Tweaks.Reapply();
     }
 
     /// <summary>Stops everything that sends input. Used by the emergency-stop hotkey and on exit.</summary>

@@ -27,6 +27,7 @@ public sealed class GameOptionViewModel : ObservableObject
         get => _get();
         set { if (_get() == value) return; _set(value); OnPropertyChanged(); Changed?.Invoke(this); }
     }
+    public void Refresh() => OnPropertyChanged(nameof(Enabled));
     public string Status { get => _status; set => Set(ref _status, value); }
     public StatusKind Kind { get => _kind; set => Set(ref _kind, value); }
 }
@@ -67,6 +68,12 @@ public sealed class GamingViewModel : ObservableObject
     public ObservableCollection<GameOptionViewModel> Options { get; } = new();
     public AsyncCommand PowerCommand { get; }
 
+    // ---------- Tweaks ----------
+    public ObservableCollection<GameOptionViewModel> TweakOptions { get; } = new();
+    public RelayCommand RestoreTweaksCommand { get; }
+    public string TweaksMessage { get => _tweaksMessage; private set => Set(ref _tweaksMessage, value); }
+    private string _tweaksMessage = "";
+
     // ---------- Cleaner ----------
     public CleanerViewModel Cleaner { get; } = new();
 
@@ -92,6 +99,14 @@ public sealed class GamingViewModel : ObservableObject
             "Prevents the screen from dimming or sleeping during long sessions while Game Mode is on.",
             () => g.KeepDisplayAwake, v => g.KeepDisplayAwake = v);
 
+        foreach (var t in Svc.Tweaks.All) TweakOptions.Add(MakeTweak(t));
+        RestoreTweaksCommand = new RelayCommand(() =>
+        {
+            Svc.Tweaks.RevertAll();
+            foreach (var o in TweakOptions) { o.Refresh(); o.Status = ""; o.Kind = StatusKind.Neutral; }
+            TweaksMessage = "All tweaks are switched off and your original Windows settings are back.";
+        });
+
         PowerCommand = new AsyncCommand(TogglePower, () => !IsBusy);
         Svc.GameMode.Changed += () => Application.Current.Dispatcher.BeginInvoke(RefreshGameMode);
 
@@ -99,6 +114,22 @@ public sealed class GamingViewModel : ObservableObject
         _timer.Start();
         Sample();
         RefreshGameMode();
+    }
+
+    private GameOptionViewModel MakeTweak(TweakInfo t)
+    {
+        OptionResult? last = null;
+        var vm = new GameOptionViewModel(() => Svc.Tweaks.IsApplied(t.Id), on => last = Svc.Tweaks.Set(t.Id, on))
+        {
+            Key = t.Id, Title = t.Title, Description = t.Description,
+        };
+        vm.Changed = o =>
+        {
+            o.Status = last?.Text ?? "";
+            o.Kind = last?.Kind ?? StatusKind.Neutral;
+            o.Refresh();   // a failed tweak must show as off again
+        };
+        return vm;
     }
 
     private async Task TogglePower()

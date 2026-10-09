@@ -335,6 +335,7 @@ public sealed class SettingsViewModel : ObservableObject
         {
             Svc.StopAllInput();
             Svc.S.Utility.Socd.Enabled = false;
+            Svc.Tweaks.RevertAll();
             await Svc.GameMode.SetActiveAsync(false);
             var m = Svc.Movement.HasBackup ? Svc.Movement.Restore() : null;
             var p = Svc.Pointer.HasBackup ? Svc.Pointer.Restore() : null;
@@ -348,6 +349,7 @@ public sealed class SettingsViewModel : ObservableObject
             Svc.GameMode.RestoreOnExit();
             if (Svc.Movement.HasBackup) Svc.Movement.Restore();
             if (Svc.Pointer.HasBackup) Svc.Pointer.Restore();
+            Svc.Tweaks.RevertAll();
             Svc.Settings.Reset();
             try { Process.Start(new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true }); } catch { }
             Application.Current.Shutdown();

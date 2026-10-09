@@ -293,6 +293,10 @@ public sealed class SystemBackups
 {
     public bool GameModeActive { get; set; }
     public string? OriginalPowerScheme { get; set; }
+    /// <summary>PC tweaks currently switched on, and the original value of every setting they changed ("id|subkey|name" to "N" / "I:n" / "S:text").</summary>
+    public HashSet<string> TweaksApplied { get; set; } = new();
+    public Dictionary<string, string> Tweaks { get; set; } = new();
+
     public bool HasGameBarBackup { get; set; }
     public int? OriginalGameBarValue { get; set; }
 

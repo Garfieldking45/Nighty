@@ -117,7 +117,7 @@ public sealed class MainViewModel : ObservableObject
             foreach (var l in labels) _index.Add(new SearchHit(l, nav));
         }
         Add("Combat", "Activation", "Click speed", "Duty cycle", "Hotkey", "Mouse button", "Only while Roblox is focused", "Presets", "Clicker");
-        Add("Gaming", "Game Mode", "Cleaner", "Optimizations", "System usage", "What to clean");
+        Add("Gaming", "Game Mode", "Tweaks", "PC tweaks", "FPS", "Cleaner", "Optimizations", "System usage", "What to clean");
         Add("Utility", "Brightness", "Movement Helper", "Tracking Helper", "Best DNS", "Apply the fastest automatically", "QoS Policy", "Disable Sticky Keys shortcut",
             "Disable Filter Keys shortcut", "Disable Toggle Keys shortcut", "Enhance pointer precision", "Fast key repeat", "Pointer speed", "Sensitivity calculator", "Network adapter", "Roblox traffic policy");
         Add("Mods", "Your mods");
