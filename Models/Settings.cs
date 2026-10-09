@@ -251,7 +251,7 @@ public sealed class BowSwitchSettings : ObservableObject
 {
     private bool _enabled, _shoot = true, _return = true, _onlyRoblox = true;
     private int _vk = 0x56, _mods;
-    private double _bow = 2, _ret = 1, _switchDelay = 60, _hold = 80, _returnDelay = 120;
+    private double _bow = 2, _ret = 1, _switchDelay = 10, _hold = 20, _returnDelay = 25;
     private ClickButton _button = ClickButton.Left;
     private BowMode _mode = BowMode.Auto;
     private double _cooldown = 1250;
@@ -273,7 +273,13 @@ public sealed class BowSwitchSettings : ObservableObject
     public bool Shoot { get => _shoot; set => Set(ref _shoot, value); }
     public ClickButton ShootButton { get => _button; set => Set(ref _button, value); }
     public double HoldMs { get => _hold; set => Set(ref _hold, Math.Clamp(Math.Round(value), 10, 1000)); }
+    private double _blockSlot;
+    /// <summary>Hotbar slot (1-9) holding your blocks; Auto mode never switches to the bow while it is selected. 0 = off.</summary>
+    public double BlockSlot { get => _blockSlot; set => Set(ref _blockSlot, Math.Clamp(Math.Round(value), 0, 9)); }
     public bool ReturnToSlot { get => _return; set => Set(ref _return, value); }
+    private bool _returnPrev = true;
+    /// <summary>Go back to the hotbar slot you were holding (sword, blocks, ...) instead of a fixed one.</summary>
+    public bool ReturnToPrevious { get => _returnPrev; set => Set(ref _returnPrev, value); }
     public double ReturnSlot { get => _ret; set => Set(ref _ret, Math.Clamp(Math.Round(value), 1, 9)); }
     public double ReturnDelayMs { get => _returnDelay; set => Set(ref _returnDelay, Math.Clamp(Math.Round(value), 0, 2000)); }
     public bool OnlyWhenRobloxFocused { get => _onlyRoblox; set => Set(ref _onlyRoblox, value); }

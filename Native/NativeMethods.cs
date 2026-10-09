@@ -53,6 +53,13 @@ internal static class NativeMethods
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     public static extern IntPtr GetModuleHandle(string? name);
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MSG { public IntPtr hwnd; public uint message; public IntPtr wParam, lParam; public uint time; public POINT pt; }
+    public const uint WM_QUIT = 0x12;
+    [DllImport("user32.dll")] public static extern int GetMessage(out MSG msg, IntPtr hWnd, uint min, uint max);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] public static extern bool PostThreadMessage(uint threadId, uint msg, IntPtr wParam, IntPtr lParam);
+    [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+
     // ---------- System parameters ----------
     public const uint SPI_GETMOUSE = 0x3, SPI_SETMOUSE = 0x4, SPI_GETKEYBOARDSPEED = 0xA, SPI_SETKEYBOARDSPEED = 0xB,
         SPI_GETKEYBOARDDELAY = 0x16, SPI_SETKEYBOARDDELAY = 0x17,

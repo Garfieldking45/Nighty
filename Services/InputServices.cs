@@ -164,6 +164,7 @@ public sealed class ClickerService
             finally { InputSender.MouseButton(button, false); }   // never leave the button stuck down
 
             lock (_gate) _stamps.Enqueue(Environment.TickCount64);
+            Svc.Bow.TryAuto();   // react right after a click instead of waiting for the UI timer
 
             next += Wait.FromMs(periodMs);
 
@@ -264,25 +265,45 @@ public sealed class CpsMonitor
 {
     private IntPtr _hook;
     private NativeMethods.LowLevelProc? _proc;   // keep the delegate alive
+    private uint _threadId;
+    private bool _running;
     private readonly Queue<long> _left = new(), _right = new();
     private readonly object _gate = new();
 
-    public bool IsActive => _hook != IntPtr.Zero;
+    public bool IsActive => _running;
 
+    /// <summary>
+    /// The hook lives on its own message-pump thread. A low-level hook on the UI thread makes every injected click
+    /// (the auto clicker's SendInput) wait for the UI thread, which can freeze the app while clicking.
+    /// </summary>
     public void Start()
     {
-        if (IsActive) return;
-        _proc = Callback;
-        _hook = NativeMethods.SetWindowsHookEx(NativeMethods.WH_MOUSE_LL, _proc, NativeMethods.GetModuleHandle(null), 0);
-        if (_hook == IntPtr.Zero) Log.Warn("Mouse hook could not be installed");
+        if (_running) return;
+        _running = true;
+        var ready = new ManualResetEventSlim();
+        var t = new Thread(() =>
+        {
+            _proc = Callback;
+            _hook = NativeMethods.SetWindowsHookEx(NativeMethods.WH_MOUSE_LL, _proc, NativeMethods.GetModuleHandle(null), 0);
+            _threadId = NativeMethods.GetCurrentThreadId();
+            if (_hook == IntPtr.Zero) Log.Warn("Mouse hook could not be installed");
+            ready.Set();
+            if (_hook == IntPtr.Zero) return;
+            while (NativeMethods.GetMessage(out _, IntPtr.Zero, 0, 0) > 0) { }
+            NativeMethods.UnhookWindowsHookEx(_hook);
+            _hook = IntPtr.Zero;
+        }) { IsBackground = true, Name = "Nighty CPS hook" };
+        t.SetApartmentState(ApartmentState.STA);
+        t.Start();
+        ready.Wait(2000);
+        if (_hook == IntPtr.Zero) _running = false;
     }
 
     public void Stop()
     {
-        if (!IsActive) return;
-        NativeMethods.UnhookWindowsHookEx(_hook);
-        _hook = IntPtr.Zero;
-        _proc = null;
+        if (!_running) return;
+        _running = false;
+        NativeMethods.PostThreadMessage(_threadId, NativeMethods.WM_QUIT, IntPtr.Zero, IntPtr.Zero);
     }
 
     public (int Left, int Right) Read()

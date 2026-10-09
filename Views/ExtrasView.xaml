@@ -62,6 +62,9 @@
                         <TextBlock Text="Bow slot" Style="{StaticResource CardTitle}"/>
                         <TextBlock Text="Which hotbar number (1-9) your bow is in." Style="{StaticResource Muted}" Margin="0,3,0,14"/>
                         <c:ValueStepper Value="{Binding Bow.BowSlot, Mode=TwoWay}" Minimum="1" Maximum="9" Step="1"/>
+                        <TextBlock Text="BLOCK SLOT" Style="{StaticResource Label}" Margin="0,18,0,6"/>
+                        <c:ValueStepper Value="{Binding Bow.BlockSlot, Mode=TwoWay}" Minimum="0" Maximum="9" Step="1"/>
+                        <TextBlock Style="{StaticResource Muted}" Margin="0,8,0,0" Text="Hotbar number of your blocks (0 = off). Auto mode won't switch to the bow while this slot is selected, so auto clicking blocks keeps placing them. Needs the slot picked with its number key."/>
                         <TextBlock Text="DELAY BEFORE SHOOTING" Style="{StaticResource Label}" Margin="0,18,0,6"/>
                         <c:ValueStepper Value="{Binding Bow.SwitchDelayMs, Mode=TwoWay}" Minimum="0" Maximum="1000" Step="5" Suffix=" ms"/>
                         <TextBlock Style="{StaticResource Muted}" Margin="0,8,0,0" Text="Time to wait after selecting the bow. Too short and the shot may not register; this is the value to tune against the equip cooldown."/>
@@ -94,6 +97,10 @@
                             <CheckBox IsChecked="{Binding Bow.ReturnToSlot}"/>
                         </c:SettingRow>
                         <StackPanel IsEnabled="{Binding Bow.ReturnToSlot}">
+                            <Border Style="{StaticResource Divider}"/>
+                            <c:SettingRow Title="Return to the slot I was on" Description="Goes back to whichever slot (sword, blocks...) you had selected, using number keys. If you changed slot with the scroll wheel, the fixed slot below is used.">
+                                <CheckBox IsChecked="{Binding Bow.ReturnToPrevious}"/>
+                            </c:SettingRow>
                             <Border Style="{StaticResource Divider}"/>
                             <TextBlock Text="RETURN TO SLOT" Style="{StaticResource Label}" Margin="0,0,0,6"/>
                             <c:ValueStepper Value="{Binding Bow.ReturnSlot, Mode=TwoWay}" Minimum="1" Maximum="9" Step="1"/>

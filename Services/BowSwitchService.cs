@@ -19,6 +19,8 @@ public sealed class BowSwitchService
     public void TryAuto()
     {
         var s = Svc.S.Bow;
+        if (!s.Enabled || s.Mode != BowMode.Auto || Svc.Hotkeys.Suspended) return;
+        if (s.BlockSlot > 0 && _slot == (int)s.BlockSlot) return;   // holding blocks: leave them alone
         if (_cts != null || Environment.TickCount64 - _lastStart < s.CooldownMs) return;
         if (s.OnlyWhileFighting)
         {
@@ -33,10 +35,43 @@ public sealed class BowSwitchService
         var s = Svc.S.Bow;
         if (_cts != null) return;
         if (startDelayMs == 0 && (RobloxService.IsOwnWindowForeground() || (s.OnlyWhenRobloxFocused && !Svc.Roblox.IsForeground))) return;
-        var cts = _cts = new CancellationTokenSource();
+        CancellationTokenSource cts;
+        lock (_gate)   // the clicker thread and the UI timer can both ask at once
+        {
+            if (_cts != null) return;
+            cts = _cts = new CancellationTokenSource();
+        }
         _lastStart = Environment.TickCount64;
         Changed?.Invoke();
-        Task.Run(() => Run(s, startDelayMs, cts.Token));
+        // Own high-priority thread: the thread pool can add several ms before the first key is even sent.
+        new Thread(() => Run(s, startDelayMs, cts.Token)) { IsBackground = true, Priority = ThreadPriority.Highest, Name = "Nighty bow switch" }.Start();
+    }
+
+    private readonly object _gate = new();
+
+    // Last hotbar slot picked with a number key (0 = unknown). Polled on a light background thread; our own
+    // injected taps are ignored while a switch runs.
+    private volatile int _slot;
+    private Thread? _slotWatch;
+
+    public void StartSlotTracking()
+    {
+        if (_slotWatch != null) return;
+        _slotWatch = new Thread(() =>
+        {
+            var wasDown = new bool[9];
+            while (true)
+            {
+                for (int i = 0; i < 9; i++)
+                {
+                    bool d = (NativeMethods.GetAsyncKeyState(0x31 + i) & 0x8000) != 0;
+                    if (d && !wasDown[i] && _cts == null) _slot = i + 1;
+                    wasDown[i] = d;
+                }
+                Thread.Sleep(4);
+            }
+        }) { IsBackground = true, Name = "Nighty slot tracker" };
+        _slotWatch.Start();
     }
 
     public void Stop() { _cts?.Cancel(); }
@@ -50,21 +85,23 @@ public sealed class BowSwitchService
         try
         {
             if (startDelay > 0) Wait.Ms(startDelay, ct);
-            var sw = Stopwatch.StartNew();
+            // One absolute timeline: each step is scheduled from the start, so sleep overshoot never adds up.
+            int back = s.ReturnToPrevious && _slot != 0 && _slot != (int)s.BowSlot ? _slot : (int)s.ReturnSlot;
+            long t0 = Wait.Now, t = t0;
             Tap(SlotVk(s.BowSlot), ct);
             if (s.Shoot)
             {
-                Wait.Ms(s.SwitchDelayMs, ct);
+                t += Wait.FromMs(s.SwitchDelayMs); Wait.Until(t, ct);
                 InputSender.MouseButton(s.ShootButton, true); buttonDown = true;
-                Wait.Ms(s.HoldMs, ct);
+                t += Wait.FromMs(s.HoldMs); Wait.Until(t, ct);
                 InputSender.MouseButton(s.ShootButton, false); buttonDown = false;
             }
             if (s.ReturnToSlot)
             {
-                Wait.Ms(s.Shoot ? s.ReturnDelayMs : s.SwitchDelayMs, ct);
-                Tap(SlotVk(s.ReturnSlot), ct);
+                t += Wait.FromMs(s.Shoot ? s.ReturnDelayMs : s.SwitchDelayMs); Wait.Until(t, ct);
+                Tap(SlotVk(back), ct); _slot = back;
             }
-            LastRunMs = sw.Elapsed.TotalMilliseconds;
+            LastRunMs = (Wait.Now - t0) / (double)Wait.FromMs(1);
         }
         catch (Exception ex) { Log.Error("Bow switch failed", ex); }
         finally
@@ -79,7 +116,7 @@ public sealed class BowSwitchService
     private static void Tap(int vk, CancellationToken ct)
     {
         InputSender.Key(vk, true);
-        Wait.Ms(15, ct);
+        Wait.Ms(4, ct);
         InputSender.Key(vk, false);
     }
 }

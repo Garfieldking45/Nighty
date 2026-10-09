@@ -144,8 +144,6 @@ public sealed class MainViewModel : ObservableObject
         RobloxText = _robloxRunning ? "Running" : "Not running";
         RobloxKind = _robloxRunning ? StatusKind.Success : StatusKind.Neutral;
 
-        Svc.Pointer.AutoTick();
-
         var s = Svc.S.Clicker;
         if (Svc.Clicker.IsClicking) { ClickerText = $"Clicking · {Svc.Clicker.MeasuredCps:0} CPS"; ClickerKind = StatusKind.Success; }
         else if (s.Enabled) { ClickerText = "Armed"; ClickerKind = StatusKind.Info; }

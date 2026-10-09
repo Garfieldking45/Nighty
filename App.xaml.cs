@@ -9,6 +9,7 @@ namespace Nighty;
 public partial class App : Application
 {
     private Mutex? _single;
+    private bool _ownsMutex;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -16,6 +17,7 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnMainWindowClose;
 
         _single = new Mutex(true, "Nighty.SingleInstance", out bool created);
+        _ownsMutex = created;
         if (!created)
         {
             MessageBox.Show("Nighty is already running.", "Nighty", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -66,7 +68,7 @@ public partial class App : Application
             }
         }
         catch (Exception ex) { Log.Error("Shutdown cleanup failed", ex); }
-        _single?.ReleaseMutex();
+        if (_ownsMutex) _single?.ReleaseMutex();   // a second instance never owned it
         base.OnExit(e);
     }
 }

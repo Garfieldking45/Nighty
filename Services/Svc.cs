@@ -55,6 +55,7 @@ public static class Svc
         Clicker = new ClickerService(S.Clicker);
         Macros = new MacroPlayer();
         Bow = new BowSwitchService();
+        Bow.StartSlotTracking();
         Cps = new CpsMonitor();
         GameMode = new GameModeService();
         Cleaner = new CleanerService();

@@ -144,10 +144,6 @@
                         <Button Content="Windows default (10)" Command="{Binding PresetCommand}" CommandParameter="10" Margin="8,0,0,0"/>
                         <Button Content="Fast (14)" Command="{Binding PresetCommand}" CommandParameter="14" Margin="8,0,0,0"/>
                     </StackPanel>
-                    <Border Style="{StaticResource Divider}" Margin="0,16,0,2"/>
-                    <c:SettingRow Title="Only while Roblox is focused" Description="Use these values only when Roblox is in front. Windows' own pointer settings come back when you switch away or close Nighty.">
-                        <CheckBox IsChecked="{Binding Settings.ApplyOnlyInRoblox}"/>
-                    </c:SettingRow>
                     <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
                         <Button Content="Apply" Command="{Binding ApplyCommand}" Style="{StaticResource PrimaryButton}" MinWidth="96"/>
                         <Button Content="Restore original" Command="{Binding RestoreCommand}" Margin="10,0,0,0"/>
