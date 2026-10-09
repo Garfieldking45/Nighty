@@ -214,6 +214,7 @@ public sealed class DnsViewModel : ObservableObject
     private StatusKind _kind = StatusKind.Info;
     private CancellationTokenSource? _cts;
 
+    public DnsSettings Settings => Svc.S.Utility.Dns;
     public ObservableCollection<DnsProvider> Providers { get; } = new();
     public ObservableCollection<AdapterInfo> Adapters { get; } = new();
 
@@ -244,8 +245,8 @@ public sealed class DnsViewModel : ObservableObject
     {
         foreach (var p in Svc.Dns.CreateProviders()) Providers.Add(p);
         TestCommand = new AsyncCommand(Test, () => !IsBusy);
-        ApplyCommand = new AsyncCommand(p => Apply(p as DnsProvider), p => !IsBusy && Adapter != null);
-        ApplyBestCommand = new AsyncCommand(() => Apply(Providers.FirstOrDefault(x => x.IsBest)), () => !IsBusy && Adapter != null && Providers.Any(x => x.IsBest));
+        ApplyCommand = new AsyncCommand(p => Apply(p as DnsProvider, true), p => !IsBusy && Adapter != null);
+        ApplyBestCommand = new AsyncCommand(() => Apply(Providers.FirstOrDefault(x => x.IsBest), true), () => !IsBusy && Adapter != null && Providers.Any(x => x.IsBest));
         RestoreCommand = new AsyncCommand(Restore, () => !IsBusy && Svc.Dns.HasBackup);
         CancelCommand = new RelayCommand(() => _cts?.Cancel(), () => IsBusy);
         RefreshAdaptersCommand = new RelayCommand(LoadAdapters);
@@ -271,13 +272,15 @@ public sealed class DnsViewModel : ObservableObject
     private async Task Test()
     {
         _cts = new CancellationTokenSource();
+        DnsProvider? autoApply = null;
         IsBusy = true; Kind = StatusKind.Info; Message = "Measuring real DNS response times… this takes a few seconds.";
         foreach (var p in Providers) { p.LatencyMs = null; p.Success = 0; p.Total = 0; p.IsBest = false; p.Status = "Waiting"; p.Kind = StatusKind.Neutral; }
         try
         {
             foreach (var p in Providers) await Svc.Dns.MeasureAsync(p, _cts.Token);
             var best = Providers.Where(p => p.LatencyMs != null && p.Total > 0 && p.Success * 100 >= p.Total * 80).OrderBy(p => p.LatencyMs).FirstOrDefault();
-            if (best != null) { best.IsBest = true; Message = $"Fastest reachable resolver from this PC right now: {best.Name} ({best.LatencyMs:0} ms median). Results vary by network and time."; Kind = StatusKind.Success; }
+            if (best != null) { best.IsBest = true; Message = $"Fastest reachable resolver from this PC right now: {best.Name} ({best.LatencyMs:0} ms median). Results vary by network and time."; Kind = StatusKind.Success;
+                if (Settings.AutoApplyBest && Adapter != null && !best.IsCurrent) autoApply = best; }
             else { Message = "No resolver answered reliably. Check your connection or firewall (UDP port 53)."; Kind = StatusKind.Error; }
         }
         catch (OperationCanceledException)
@@ -286,12 +289,13 @@ public sealed class DnsViewModel : ObservableObject
             Message = "Test cancelled."; Kind = StatusKind.Warning;
         }
         finally { IsBusy = false; }
+        if (autoApply != null) await Apply(autoApply, confirm: false);
     }
 
-    private async Task Apply(DnsProvider? p)
+    private async Task Apply(DnsProvider? p, bool confirm = true)
     {
         if (p == null || Adapter == null) return;
-        if (!Dialogs.Confirm("Change DNS servers?", $"Set DNS for “{Adapter.Name}” to {p.Name} ({p.Servers}).\n\nWindows will ask for administrator approval. Your current configuration is saved first so you can restore it.", "Apply DNS")) return;
+        if (confirm && !Dialogs.Confirm("Change DNS servers?", $"Set DNS for “{Adapter.Name}” to {p.Name} ({p.Servers}).\n\nWindows will ask for administrator approval. Your current configuration is saved first so you can restore it.", "Apply DNS")) return;
         IsBusy = true; Kind = StatusKind.Info; Message = "Waiting for administrator approval…";
         try
         {

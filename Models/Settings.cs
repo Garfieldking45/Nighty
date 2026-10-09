@@ -100,7 +100,9 @@ public sealed class TrackingSettings : ObservableObject
 public sealed class DnsSettings : ObservableObject
 {
     private string? _adapter;
+    private bool _autoBest;
     public string? AdapterId { get => _adapter; set => Set(ref _adapter, value); }
+    public bool AutoApplyBest { get => _autoBest; set => Set(ref _autoBest, value); }
 }
 
 public sealed class QosSettings : ObservableObject

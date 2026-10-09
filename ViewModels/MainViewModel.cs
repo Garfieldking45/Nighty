@@ -118,7 +118,7 @@ public sealed class MainViewModel : ObservableObject
         }
         Add("Combat", "Activation", "Click speed", "Duty cycle", "Hotkey", "Mouse button", "Only while Roblox is focused", "Presets", "Clicker");
         Add("Gaming", "Game Mode", "Cleaner", "Optimizations", "System usage", "What to clean");
-        Add("Utility", "Brightness", "Movement Helper", "Tracking Helper", "Best DNS", "QoS Policy", "Disable Sticky Keys shortcut",
+        Add("Utility", "Brightness", "Movement Helper", "Tracking Helper", "Best DNS", "Apply the fastest automatically", "QoS Policy", "Disable Sticky Keys shortcut",
             "Disable Filter Keys shortcut", "Disable Toggle Keys shortcut", "Enhance pointer precision", "Fast key repeat", "Pointer speed", "Network adapter", "Roblox traffic policy");
         Add("Mods", "Your mods");
         Add("Extras", "Bow slot", "Shoot automatically", "Only while fighting", "Switch back afterwards", "Trigger", "Try it");

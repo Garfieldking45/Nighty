@@ -226,7 +226,11 @@
                         <Button Content="Cancel" Command="{Binding CancelCommand}" Margin="10,0,0,0"/>
                     </StackPanel>
                     <c:InfoBanner Kind="{Binding Kind}" Text="{Binding Message}" Margin="0,14,0,0" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
-                    <Border Style="{StaticResource Divider}" Margin="0,16,0,14"/>
+                    <Border Style="{StaticResource Divider}" Margin="0,16,0,2"/>
+                    <c:SettingRow Title="Apply the fastest automatically" Description="After “Test all”, switch to the fastest reliable resolver without asking again. Windows still asks for administrator approval.">
+                        <CheckBox IsChecked="{Binding Settings.AutoApplyBest}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}" Margin="0,2,0,14"/>
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <StackPanel Margin="0,0,16,0">
