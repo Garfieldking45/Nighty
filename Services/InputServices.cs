@@ -193,7 +193,7 @@ public sealed class MacroPlayer
         var steps = m.Steps.Select(s => (s.Type, s.Value)).ToList();
         int repeat = m.Repeat;
         Changed?.Invoke();
-        Task.Run(() => Run(m.Id, steps, repeat, startDelayMs, cts.Token));
+        Task.Run(() => Run(m.Id, steps, repeat, startDelayMs, cts));
     }
 
     public void Stop(Guid id)
@@ -207,8 +207,9 @@ public sealed class MacroPlayer
         foreach (var id in _running.Keys.ToList()) Stop(id);
     }
 
-    private void Run(Guid id, List<(MacroStepType Type, int Value)> steps, int repeat, int startDelay, CancellationToken ct)
+    private void Run(Guid id, List<(MacroStepType Type, int Value)> steps, int repeat, int startDelay, CancellationTokenSource cts)
     {
+        var ct = cts.Token;
         var held = new HashSet<int>();
         try
         {
@@ -242,7 +243,8 @@ public sealed class MacroPlayer
         {
             foreach (var vk in held) InputSender.Key(vk, false);
             NativeMethods.timeEndPeriod(1);
-            _running.TryRemove(id, out _);
+            _running.TryRemove(new KeyValuePair<Guid, CancellationTokenSource>(id, cts));   // only our own entry, never a newer run
+            cts.Dispose();
             Application.Current?.Dispatcher.BeginInvoke(() => Changed?.Invoke());
         }
     }

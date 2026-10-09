@@ -326,6 +326,7 @@ public sealed class SettingsViewModel : ObservableObject
         RestoreAllCommand = new AsyncCommand(async () =>
         {
             Svc.StopAllInput();
+            Svc.S.Utility.Socd.Enabled = false;
             await Svc.GameMode.SetActiveAsync(false);
             var m = Svc.Movement.HasBackup ? Svc.Movement.Restore() : null;
             var p = Svc.Pointer.HasBackup ? Svc.Pointer.Restore() : null;

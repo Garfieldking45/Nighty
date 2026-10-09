@@ -11,9 +11,6 @@ namespace Nighty.Services;
 /// </summary>
 public sealed class SocdService
 {
-    [StructLayout(LayoutKind.Sequential)]
-    private struct KBDLLHOOKSTRUCT { public uint vkCode, scanCode, flags, time; public UIntPtr extra; }
-
     private sealed class Axis
     {
         public required int Neg, Pos;        // virtual-key codes (A/D or S/W)
@@ -80,12 +77,16 @@ public sealed class SocdService
     {
         if (code >= 0)
         {
-            var k = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
-            int msg = (int)wParam;
-            bool injected = (k.flags & NativeMethods.LLKHF_INJECTED) != 0;
-            bool down = msg is NativeMethods.WM_KEYDOWN or NativeMethods.WM_SYSKEYDOWN;
-            bool up = msg is NativeMethods.WM_KEYUP or NativeMethods.WM_SYSKEYUP;
-            if (!injected && (down || up) && Handle((int)k.vkCode, down)) return (IntPtr)1;
+            try
+            {
+                int vk = Marshal.ReadInt32(lParam, 0);                                  // KBDLLHOOKSTRUCT.vkCode
+                bool injected = ((uint)Marshal.ReadInt32(lParam, 8) & NativeMethods.LLKHF_INJECTED) != 0;   // .flags
+                int msg = (int)wParam;
+                bool down = msg is NativeMethods.WM_KEYDOWN or NativeMethods.WM_SYSKEYDOWN;
+                bool up = msg is NativeMethods.WM_KEYUP or NativeMethods.WM_SYSKEYUP;
+                if (!injected && (down || up) && Handle(vk, down)) return (IntPtr)1;
+            }
+            catch (Exception ex) { Log.Warn("Movement helper hook error", ex); }
         }
         return NativeMethods.CallNextHookEx(_hook, code, wParam, lParam);
     }
