@@ -44,15 +44,19 @@
                         </StackPanel>
                         <StackPanel Visibility="{Binding Settings.UseRange, Converter={StaticResource Eq}, ConverterParameter=False}">
                             <TextBlock Text="CPS" Style="{StaticResource Label}" Margin="0,0,0,6"/>
-                            <c:ValueStepper Value="{Binding Settings.Cps, Mode=TwoWay}" Minimum="1" Maximum="35" Step="0.5" Decimals="1"/>
+                            <c:ValueStepper Value="{Binding Settings.Cps, Mode=TwoWay}" Minimum="1" Maximum="50" Step="0.5" Decimals="1"/>
                         </StackPanel>
                         <StackPanel Visibility="{Binding Settings.UseRange, Converter={StaticResource Eq}, ConverterParameter=True}">
                             <TextBlock Text="MINIMUM CPS" Style="{StaticResource Label}" Margin="0,0,0,6"/>
-                            <c:ValueStepper Value="{Binding Settings.MinCps, Mode=TwoWay}" Minimum="1" Maximum="35" Step="0.5" Decimals="1"/>
+                            <c:ValueStepper Value="{Binding Settings.MinCps, Mode=TwoWay}" Minimum="1" Maximum="50" Step="0.5" Decimals="1"/>
                             <TextBlock Text="MAXIMUM CPS" Style="{StaticResource Label}" Margin="0,14,0,6"/>
-                            <c:ValueStepper Value="{Binding Settings.MaxCps, Mode=TwoWay}" Minimum="1" Maximum="35" Step="0.5" Decimals="1"/>
+                            <c:ValueStepper Value="{Binding Settings.MaxCps, Mode=TwoWay}" Minimum="1" Maximum="50" Step="0.5" Decimals="1"/>
                             <TextBlock Style="{StaticResource Muted}" Margin="0,10,0,0" Text="Each click picks a new random speed between the two values."/>
                         </StackPanel>
+                        <Button Content="Calibrate" Command="{Binding Calibrate}" HorizontalAlignment="Left" MinWidth="110" Margin="0,14,0,0"/>
+                        <TextBlock Style="{StaticResource Muted}" Margin="0,8,0,0" Text="Tests how evenly this PC can deliver clicks (takes ~12 s, nothing is clicked) and sets the highest steady CPS."/>
+                        <TextBlock Text="{Binding CalibrationMessage}" Style="{StaticResource Muted}" Margin="0,6,0,0" Foreground="{StaticResource SuccessBrush}"
+                                   Visibility="{Binding CalibrationMessage, Converter={StaticResource NullVisible}}"/>
                     </StackPanel>
                 </Border>
 

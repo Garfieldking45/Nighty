@@ -18,6 +18,10 @@
                 <c:SettingRow Title="Keep window on top" Description="Keeps the Nighty window above other windows.">
                     <CheckBox IsChecked="{Binding General.AlwaysOnTop}"/>
                 </c:SettingRow>
+                <Border Style="{StaticResource Divider}"/>
+                <c:SettingRow Title="Notifications" Description="Show a brief message in the bottom-right corner (over the game) when you toggle something.">
+                    <CheckBox IsChecked="{Binding General.ShowNotifications}"/>
+                </c:SettingRow>
             </StackPanel>
         </Border>
 
@@ -41,6 +45,22 @@
                 <c:SettingRow Title="{Binding AdminText}" Description="Nighty runs without administrator rights. It asks for approval only for DNS, QoS and the FPS overlay.">
                     <Button Content="Restart as administrator" Command="{Binding RelaunchAdmin}"/>
                 </c:SettingRow>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <TextBlock Text="Changelog" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
+                <ItemsControl ItemsSource="{Binding Changelog}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,0,0,14">
+                                <TextBlock Text="{Binding Header}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Body}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
         </Border>
 

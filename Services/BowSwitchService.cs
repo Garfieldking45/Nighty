@@ -10,6 +10,10 @@ namespace Nighty.Services;
 /// </summary>
 public sealed class BowSwitchService
 {
+    // Fixed, tuned timings (no user setting): crossbow reload is 1.3 s start-to-start; the shot follows the equip by a
+    // few ms, the click is held just long enough to register, and the sword comes back right after.
+    private const double CooldownMs = 1320, SwitchDelayMs = 14, HoldMs = 16, ReturnDelayMs = 30;
+
     private CancellationTokenSource? _cts;
     public bool IsRunning => _cts != null;
     public double LastRunMs { get; private set; }
@@ -21,27 +25,27 @@ public sealed class BowSwitchService
         var s = Svc.S.Bow;
         if (!s.Enabled || s.Mode != BowMode.Auto || Svc.Hotkeys.Suspended) return;
         if (s.BlockSlot > 0 && _slot == (int)s.BlockSlot) return;   // holding blocks: leave them alone
-        if (_cts != null || Environment.TickCount64 - _lastStart < s.CooldownMs) return;
+        if (_cts != null || Wait.Now - _lastStart < Wait.FromMs(CooldownMs)) return;
         if (s.OnlyWhileFighting)
         {
             if (!Svc.Clicker.IsClicking) return;   // only the auto clicker counts, never manual clicks
         }
-        Trigger();
+        Trigger(0, true);
     }
     public event Action? Changed;
 
-    public void Trigger(int startDelayMs = 0)
+    public void Trigger(int startDelayMs = 0, bool fromClicker = false)
     {
         var s = Svc.S.Bow;
         if (_cts != null) return;
-        if (startDelayMs == 0 && (RobloxService.IsOwnWindowForeground() || (s.OnlyWhenRobloxFocused && !Svc.Roblox.IsForeground))) return;
+        if (startDelayMs == 0 && !fromClicker && (RobloxService.IsOwnWindowForeground() || (s.OnlyWhenRobloxFocused && !Svc.Roblox.IsForeground))) return;
         CancellationTokenSource cts;
         lock (_gate)   // the clicker thread and the UI timer can both ask at once
         {
             if (_cts != null) return;
             cts = _cts = new CancellationTokenSource();
         }
-        _lastStart = Environment.TickCount64;
+        _lastStart = Wait.Now;
         Changed?.Invoke();
         // Own high-priority thread: the thread pool can add several ms before the first key is even sent.
         new Thread(() => Run(s, startDelayMs, cts.Token)) { IsBackground = true, Priority = ThreadPriority.Highest, Name = "Nighty bow switch" }.Start();
@@ -52,6 +56,9 @@ public sealed class BowSwitchService
     // Last hotbar slot picked with a number key (0 = unknown). Polled on a light background thread; our own
     // injected taps are ignored while a switch runs.
     private volatile int _slot;
+    /// <summary>Last hotbar slot picked with a number key (0 = unknown).</summary>
+    public int CurrentSlot => _slot;
+    public event Action? SlotChanged;
     private Thread? _slotWatch;
 
     public void StartSlotTracking()
@@ -65,7 +72,7 @@ public sealed class BowSwitchService
                 for (int i = 0; i < 9; i++)
                 {
                     bool d = (NativeMethods.GetAsyncKeyState(0x31 + i) & 0x8000) != 0;
-                    if (d && !wasDown[i] && _cts == null) _slot = i + 1;
+                    if (d && !wasDown[i] && _cts == null && _slot != i + 1) { _slot = i + 1; try { SlotChanged?.Invoke(); } catch { } }
                     wasDown[i] = d;
                 }
                 Thread.Sleep(4);
@@ -91,14 +98,14 @@ public sealed class BowSwitchService
             Tap(SlotVk(s.BowSlot), ct);
             if (s.Shoot)
             {
-                t += Wait.FromMs(s.SwitchDelayMs); Wait.Until(t, ct);
+                t += Wait.FromMs(SwitchDelayMs); Wait.Until(t, ct);
                 InputSender.MouseButton(s.ShootButton, true); buttonDown = true;
-                t += Wait.FromMs(s.HoldMs); Wait.Until(t, ct);
+                t += Wait.FromMs(HoldMs); Wait.Until(t, ct);
                 InputSender.MouseButton(s.ShootButton, false); buttonDown = false;
             }
             if (s.ReturnToSlot)
             {
-                t += Wait.FromMs(s.Shoot ? s.ReturnDelayMs : s.SwitchDelayMs); Wait.Until(t, ct);
+                t += Wait.FromMs(s.Shoot ? ReturnDelayMs : SwitchDelayMs); Wait.Until(t, ct);
                 Tap(SlotVk(back), ct); _slot = back;
             }
             LastRunMs = (Wait.Now - t0) / (double)Wait.FromMs(1);

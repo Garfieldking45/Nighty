@@ -246,11 +246,38 @@ public sealed class PointerService
     }
 
     private bool _autoApplied;
+    private bool _slowApplied;
+    private int _speedBeforeSlow;
+    private readonly object _slowGate = new();
+
+    /// <summary>Slot-1 slowdown: drops the pointer speed while slot 1 is selected in Roblox and puts it back after.
+    /// Not persisted (no registry write), so a crash can't leave a slow pointer after the next sign-in.</summary>
+    public void UpdateSlotSlowdown()
+    {
+        lock (_slowGate)
+        {
+            var t = Svc.S.Utility.Tracking;
+            bool want = t.SlowInSlotOne && Svc.Bow.CurrentSlot == 1 && Svc.Roblox.IsForeground;
+            if (want && !_slowApplied)
+            {
+                if (!B.HasPointerBackup) Apply(ReadCurrent().Speed, ReadCurrent().Precision);   // record originals so Restore works
+                _speedBeforeSlow = ReadCurrent().Speed;
+                NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)Math.Clamp(t.SlowSpeed, 1, 20), 0);
+                _slowApplied = true;
+            }
+            else if (!want && _slowApplied)
+            {
+                _slowApplied = false;
+                NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)Math.Clamp(_speedBeforeSlow, 1, 20), 0);
+            }
+        }
+    }
 
     /// <summary>Called a couple of times per second. Applies the tracking settings while Roblox is focused and puts Windows' values back afterwards.</summary>
     public void AutoTick()
     {
         var t = Svc.S.Utility.Tracking;
+        UpdateSlotSlowdown();
         bool want = t.ApplyOnlyInRoblox && Svc.Roblox.IsForeground;
         if (want && !_autoApplied)
         {
@@ -262,11 +289,13 @@ public sealed class PointerService
             _autoApplied = false;
             Restore();
         }
+        UpdateSlotSlowdown();   // apply after our own speed is in place
     }
 
     /// <summary>Leaves Windows with its own pointer settings if we only applied ours temporarily.</summary>
     public void AutoRelease()
     {
+        lock (_slowGate) { if (_slowApplied) { _slowApplied = false; NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)Math.Clamp(_speedBeforeSlow, 1, 20), 0); } }
         if (!_autoApplied) return;
         _autoApplied = false;
         Restore();

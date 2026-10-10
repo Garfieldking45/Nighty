@@ -25,6 +25,7 @@ public static class Svc
     public static QosService Qos { get; private set; } = null!;
     public static PingService Ping { get; private set; } = null!;
     public static FpsService Fps { get; private set; } = null!;
+    public static ToastService Toast { get; } = new();
     public static OverlayManager Overlays { get; private set; } = null!;
     public static ModsService Mods { get; private set; } = null!;
 

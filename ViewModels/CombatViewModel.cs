@@ -28,12 +28,35 @@ public sealed class CombatViewModel : ObservableObject
         ? $"Press {Hotkeys.Format(Settings.HotkeyVk, Settings.HotkeyMods)} to start and stop clicking."
         : $"Hold {Hotkeys.Format(Settings.HotkeyVk, Settings.HotkeyMods)} to click; release to stop.";
 
+    private bool _calibrating;
+    private string _calMessage = "";
+    public bool IsCalibrating { get => _calibrating; private set { Set(ref _calibrating, value); Calibrate.Refresh(); } }
+    public string CalibrationMessage { get => _calMessage; private set => Set(ref _calMessage, value); }
+    public RelayCommand Calibrate { get; }
+
+    private async void DoCalibrate()
+    {
+        if (Svc.Clicker.IsClicking) { CalibrationMessage = "Stop the auto clicker first."; return; }
+        IsCalibrating = true;
+        try
+        {
+            var progress = new Progress<string>(m => CalibrationMessage = m);
+            var r = await Task.Run(() => CalibrationService.Run(progress, CancellationToken.None));
+            if (Settings.UseRange) { Settings.MaxCps = r.BestCps; Settings.MinCps = Math.Max(1, r.BestCps - 3); }
+            else Settings.Cps = r.BestCps;
+            CalibrationMessage = r.Summary;
+        }
+        catch (Exception ex) { Log.Error("Calibration failed", ex); CalibrationMessage = "Calibration failed."; }
+        finally { IsCalibrating = false; }
+    }
+
     public RelayCommand SavePreset { get; }
     public RelayCommand LoadPreset { get; }
     public RelayCommand DeletePreset { get; }
 
     public CombatViewModel()
     {
+        Calibrate = new RelayCommand(DoCalibrate, () => !IsCalibrating);
         SavePreset = new RelayCommand(DoSave, () => !string.IsNullOrWhiteSpace(PresetName));
         LoadPreset = new RelayCommand(p =>
         {
@@ -72,6 +95,7 @@ public sealed class CombatViewModel : ObservableObject
         {
             if (!down) return;
             if (Svc.Clicker.IsClicking) Svc.Clicker.Stop(); else Svc.Clicker.Start();
+            Svc.Toast.Toggled("Auto Clicker", Svc.Clicker.IsClicking);
         }
         else
         {

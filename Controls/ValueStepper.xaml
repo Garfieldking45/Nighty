@@ -16,9 +16,15 @@
                 TickFrequency="{Binding Step, ElementName=Root}" IsSnapToTickEnabled="True"
                 SmallChange="{Binding Step, ElementName=Root}" LargeChange="{Binding Step, ElementName=Root}"/>
         <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE710;" Click="OnIncrease" ToolTip="Increase" AutomationProperties.Name="Increase"/>
-        <Border Grid.Column="3" MinWidth="72" Height="30" Margin="10,0,0,0" CornerRadius="6" Background="{StaticResource Panel2Brush}"
+        <Border Grid.Column="3" MinWidth="88" Height="30" Margin="10,0,0,0" CornerRadius="6" Background="{StaticResource Panel2Brush}"
                 BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1">
-            <TextBlock x:Name="ValueText" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBox x:Name="ValueBox" MinWidth="40" Padding="4,0" Background="Transparent" BorderThickness="0" FontWeight="SemiBold"
+                         TextAlignment="Right" VerticalContentAlignment="Center" ToolTip="Type a value and press Enter"
+                         GotKeyboardFocus="OnBoxFocus" LostKeyboardFocus="OnBoxLostFocus" PreviewKeyDown="OnBoxKeyDown"
+                         AutomationProperties.Name="Value"/>
+                <TextBlock x:Name="SuffixText" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{StaticResource TextBrush}"/>
+            </StackPanel>
         </Border>
     </Grid>
 </UserControl>

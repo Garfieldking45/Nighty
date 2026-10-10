@@ -63,6 +63,7 @@ public partial class App : Application
                 Svc.Pointer.AutoRelease();
                 Svc.GameMode.RestoreOnExit();     // always give the user their original system settings back
                 Svc.Overlays.Shutdown();
+                Svc.Toast.Shutdown();
                 Svc.Hotkeys.Stop();
                 Svc.Settings.Save();
             }

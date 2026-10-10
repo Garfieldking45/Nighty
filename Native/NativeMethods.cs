@@ -29,7 +29,7 @@ internal static class NativeMethods
 
     public const uint INPUT_MOUSE = 0, INPUT_KEYBOARD = 1;
     public const uint MOUSEEVENTF_LEFTDOWN = 0x2, MOUSEEVENTF_LEFTUP = 0x4, MOUSEEVENTF_RIGHTDOWN = 0x8,
-        MOUSEEVENTF_RIGHTUP = 0x10, MOUSEEVENTF_MIDDLEDOWN = 0x20, MOUSEEVENTF_MIDDLEUP = 0x40;
+        MOUSEEVENTF_RIGHTUP = 0x10, MOUSEEVENTF_MIDDLEDOWN = 0x20, MOUSEEVENTF_MIDDLEUP = 0x40, MOUSEEVENTF_MOVE = 0x1;
     public const uint KEYEVENTF_EXTENDEDKEY = 0x1, KEYEVENTF_KEYUP = 0x2;
 
     [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint code, uint mapType);
@@ -166,6 +166,15 @@ internal static class InputSender
         var buf = MouseBuf ??= new NativeMethods.INPUT[1];
         buf[0] = new NativeMethods.INPUT { type = NativeMethods.INPUT_MOUSE };
         buf[0].u.mi.dwFlags = flag;
+        NativeMethods.SendInput(1, buf, Size);
+    }
+
+    /// <summary>A zero-distance mouse move: exercises SendInput exactly like a click without clicking anything.</summary>
+    public static void Noop()
+    {
+        var buf = MouseBuf ??= new NativeMethods.INPUT[1];
+        buf[0] = new NativeMethods.INPUT { type = NativeMethods.INPUT_MOUSE };
+        buf[0].u.mi.dwFlags = NativeMethods.MOUSEEVENTF_MOVE;
         NativeMethods.SendInput(1, buf, Size);
     }
 

@@ -131,6 +131,16 @@
             <c:InfoBanner Kind="Info" Text="Sets Windows' pointer speed and “Enhance pointer precision” (mouse acceleration). Your original values are saved the first time you apply, and can be restored here."/>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
+                    <c:SettingRow Title="Tracking Helper (Roblox only)" Description="On: these values apply only while Roblox is in front, and Windows' own values come back as soon as you leave it.">
+                        <CheckBox IsChecked="{Binding Settings.ApplyOnlyInRoblox}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}" Margin="0,14,0,18"/>
+                    <c:SettingRow Title="Slow down in slot 1" Description="While hotbar slot 1 is selected (pick it with the 1 key), the pointer drops to the slow speed below for steadier aim, then returns to normal. Roblox only.">
+                        <CheckBox IsChecked="{Binding Settings.SlowInSlotOne}"/>
+                    </c:SettingRow>
+                    <TextBlock Text="SLOW SPEED" Style="{StaticResource Label}" Margin="0,10,0,6"/>
+                    <c:ValueStepper Value="{Binding SlowSpeed, Mode=TwoWay}" Minimum="1" Maximum="20" Step="1"/>
+                    <Border Style="{StaticResource Divider}" Margin="0,18"/>
                     <TextBlock Text="Pointer speed" Style="{StaticResource CardTitle}"/>
                     <TextBlock Text="Windows pointer speed, 1–20 (10 is the Windows default)." Style="{StaticResource Muted}" Margin="0,3,0,14"/>
                     <c:ValueStepper Value="{Binding Speed, Mode=TwoWay}" Minimum="1" Maximum="20" Step="1"/>

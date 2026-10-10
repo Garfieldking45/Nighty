@@ -30,7 +30,7 @@ public sealed class MainViewModel : ObservableObject
     private string _searchText = "";
     private List<SearchHit> _index = new();
     private int _robloxTick;
-    private bool _robloxRunning;
+    private bool _robloxRunning, _autoStarted;
 
     public ObservableCollection<NavItem> Items { get; }
     public CombatViewModel Combat { get; } = new();
@@ -99,9 +99,18 @@ public sealed class MainViewModel : ObservableObject
         // Emergency stop: stops the clicker and every running macro.
         Svc.Hotkeys.Register("stop-all", () => (Svc.S.General.StopHotkeyVk, Svc.S.General.StopHotkeyMods), down =>
         {
-            if (down) { Svc.StopAllInput(); Log.Info("Emergency stop hotkey pressed"); }
+            if (down) { Svc.StopAllInput(); Svc.Toast.Show("Emergency stop", "all input stopped", false); Log.Info("Emergency stop hotkey pressed"); }
         });
 
+        Svc.Bow.SlotChanged += () => { if (Svc.S.Utility.Tracking.SlowInSlotOne) Svc.Pointer.UpdateSlotSlowdown(); };
+        Svc.S.Utility.Tracking.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(TrackingSettings.SlowInSlotOne))
+            {
+                Svc.Toast.Toggled("Slot 1 slowdown", Svc.S.Utility.Tracking.SlowInSlotOne);
+                Svc.Pointer.UpdateSlotSlowdown();
+            }
+        };
         _timer.Tick += (_, _) => Refresh();
         _timer.Start();
         Refresh();
@@ -138,9 +147,25 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(NoResults));
     }
 
+    private bool _trackingWas = Svc.S.Utility.Tracking.ApplyOnlyInRoblox;
+
     private void Refresh()
     {
-        if (_robloxTick++ % 4 == 0) _robloxRunning = Svc.Roblox.IsRunning;   // process scan every 2 s
+        Svc.Pointer.AutoTick();
+        var tr = Svc.S.Utility.Tracking.ApplyOnlyInRoblox;
+        if (tr != _trackingWas) { _trackingWas = tr; Svc.Toast.Toggled("Tracking Helper", tr); if (!tr) Svc.Pointer.AutoRelease(); }
+        if (_robloxTick++ % 4 == 0)
+        {
+            bool was = _robloxRunning;
+            _robloxRunning = Svc.Roblox.IsRunning;   // process scan every 2 s
+            // Auto Game Mode: follow Roblox starting / closing (only transitions, so manual toggling still works).
+            if (Svc.S.Game.AutoGameMode && _robloxRunning != was && (_robloxRunning || _autoStarted))
+            {
+                _autoStarted = _robloxRunning;
+                _ = Svc.GameMode.SetActiveAsync(_robloxRunning);
+                Svc.Toast.Toggled("Game Mode", _robloxRunning);
+            }
+        }
         RobloxText = _robloxRunning ? "Running" : "Not running";
         RobloxKind = _robloxRunning ? StatusKind.Success : StatusKind.Neutral;
 

@@ -164,6 +164,7 @@ public sealed class TrackingViewModel : ObservableObject
     private string _current = "";
 
     public TrackingSettings Settings => Svc.S.Utility.Tracking;
+    public double SlowSpeed { get => Settings.SlowSpeed; set { Settings.SlowSpeed = (int)value; OnPropertyChanged(); } }
     public double Speed { get => Settings.PointerSpeed; set { Settings.PointerSpeed = (int)value; OnPropertyChanged(); } }
     public string Message { get => _message; private set => Set(ref _message, value); }
     public StatusKind Kind { get => _kind; private set => Set(ref _kind, value); }

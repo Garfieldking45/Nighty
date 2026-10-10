@@ -17,10 +17,10 @@ public sealed class ExtrasViewModel : ObservableObject
         {
             var b = Bow;
             var s = b.Mode == BowMode.Auto
-                ? $"Automatic{(b.OnlyWhileFighting ? " while fighting" : "")}, at most every {b.CooldownMs:0} ms → slot {b.BowSlot:0}"
+                ? $"Automatic{(b.OnlyWhileFighting ? " while fighting" : "")}, → slot {b.BowSlot:0}"
                 : $"Press {Hotkeys.Format(b.HotkeyVk, b.HotkeyMods)} → slot {b.BowSlot:0}";
-            if (b.Shoot) s += $" → wait {b.SwitchDelayMs:0} ms → {b.ShootButton} click ({b.HoldMs:0} ms)";
-            if (b.ReturnToSlot) s += $" → wait {(b.Shoot ? b.ReturnDelayMs : b.SwitchDelayMs):0} ms → back to slot {b.ReturnSlot:0}";
+            if (b.Shoot) s += $" → {b.ShootButton} click";
+            if (b.ReturnToSlot) s += $" → back to your previous slot";
             return s;
         }
     }
@@ -35,6 +35,12 @@ public sealed class ExtrasViewModel : ObservableObject
             Message = "Running in 3 seconds — click into Roblox now.";
         });
         Svc.Hotkeys.Register("bow", () => Bow.Enabled && Bow.Mode == BowMode.Hotkey ? (Bow.HotkeyVk, Bow.HotkeyMods) : (0, 0), down => { if (down) Svc.Bow.Trigger(); });
+        Svc.Hotkeys.Register("bow-toggle", () => (Bow.ToggleVk, Bow.ToggleMods), down =>
+        {
+            if (!down) return;
+            Bow.Enabled = !Bow.Enabled;
+            Svc.Toast.Toggled("Bow Switch", Bow.Enabled);
+        });
         _auto.Tick += (_, _) => { if (Bow.Enabled && Bow.Mode == BowMode.Auto && !Svc.Hotkeys.Suspended) Svc.Bow.TryAuto(); };
         _auto.Start();
         Bow.PropertyChanged += (_, _) => OnPropertyChanged(nameof(Summary));

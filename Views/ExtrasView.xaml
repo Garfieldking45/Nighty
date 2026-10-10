@@ -7,11 +7,13 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="Extras" Style="{StaticResource PageTitle}"/>
-                <TextBlock Text="Quick-action helpers for fights. Tune each delay until it feels right." Style="{StaticResource PageSubtitle}"/>
+                <TextBlock Text="One switch: turn on Bow Switch and it handles the timing for you." Style="{StaticResource PageSubtitle}"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="Bow Switch" Foreground="{StaticResource MutedBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
                 <CheckBox IsChecked="{Binding Bow.Enabled}" AutomationProperties.Name="Enable Bow Switch"/>
+                <TextBlock Text="Toggle key" Foreground="{StaticResource MutedBrush}" Margin="20,0,10,0" VerticalAlignment="Center"/>
+                <c:HotkeyBox Vk="{Binding Bow.ToggleVk, Mode=TwoWay}" Mods="{Binding Bow.ToggleMods, Mode=TwoWay}"/>
             </StackPanel>
         </Grid>
 
@@ -46,8 +48,6 @@
                             </c:SettingRow>
                         </StackPanel>
                         <StackPanel Visibility="{Binding Bow.Mode, Converter={StaticResource Eq}, ConverterParameter=Auto}">
-                            <TextBlock Text="CROSSBOW COOLDOWN" Style="{StaticResource Label}" Margin="0,0,0,6"/>
-                            <c:ValueStepper Value="{Binding Bow.CooldownMs, Mode=TwoWay}" Minimum="100" Maximum="5000" Step="50" Suffix=" ms"/>
                             <c:SettingRow Title="Only while fighting" Description="Runs only while the auto clicker is clicking. Manual clicks never trigger it." Margin="0,10,0,0">
                                 <CheckBox IsChecked="{Binding Bow.OnlyWhileFighting}"/>
                             </c:SettingRow>
@@ -65,16 +65,13 @@
                         <TextBlock Text="BLOCK SLOT" Style="{StaticResource Label}" Margin="0,18,0,6"/>
                         <c:ValueStepper Value="{Binding Bow.BlockSlot, Mode=TwoWay}" Minimum="0" Maximum="9" Step="1"/>
                         <TextBlock Style="{StaticResource Muted}" Margin="0,8,0,0" Text="Hotbar number of your blocks (0 = off). Auto mode won't switch to the bow while this slot is selected, so auto clicking blocks keeps placing them. Needs the slot picked with its number key."/>
-                        <TextBlock Text="DELAY BEFORE SHOOTING" Style="{StaticResource Label}" Margin="0,18,0,6"/>
-                        <c:ValueStepper Value="{Binding Bow.SwitchDelayMs, Mode=TwoWay}" Minimum="0" Maximum="1000" Step="5" Suffix=" ms"/>
-                        <TextBlock Style="{StaticResource Muted}" Margin="0,8,0,0" Text="Time to wait after selecting the bow. Too short and the shot may not register; this is the value to tune against the equip cooldown."/>
                     </StackPanel>
                 </Border>
             </StackPanel>
             <StackPanel Grid.Column="2">
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <c:SettingRow Title="Shoot automatically" Description="Click once after the delay. Turn off to only switch.">
+                        <c:SettingRow Title="Shoot automatically" Description="Click once right after selecting the bow. Turn off to only switch.">
                             <CheckBox IsChecked="{Binding Bow.Shoot}"/>
                         </c:SettingRow>
                         <StackPanel IsEnabled="{Binding Bow.Shoot}">
@@ -86,8 +83,6 @@
                                 <RadioButton Style="{StaticResource OptionCard}" GroupName="bowbtn" Content="Right"
                                              IsChecked="{Binding Bow.ShootButton, Converter={StaticResource Eq}, ConverterParameter=Right}"/>
                             </UniformGrid>
-                            <TextBlock Text="HOLD TIME" Style="{StaticResource Label}" Margin="0,16,0,6"/>
-                            <c:ValueStepper Value="{Binding Bow.HoldMs, Mode=TwoWay}" Minimum="10" Maximum="1000" Step="10" Suffix=" ms"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -104,8 +99,6 @@
                             <Border Style="{StaticResource Divider}"/>
                             <TextBlock Text="RETURN TO SLOT" Style="{StaticResource Label}" Margin="0,0,0,6"/>
                             <c:ValueStepper Value="{Binding Bow.ReturnSlot, Mode=TwoWay}" Minimum="1" Maximum="9" Step="1"/>
-                            <TextBlock Text="DELAY BEFORE SWITCHING BACK" Style="{StaticResource Label}" Margin="0,16,0,6"/>
-                            <c:ValueStepper Value="{Binding Bow.ReturnDelayMs, Mode=TwoWay}" Minimum="0" Maximum="2000" Step="10" Suffix=" ms"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>

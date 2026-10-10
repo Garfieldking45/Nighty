@@ -158,6 +158,7 @@ public sealed class ClickerService
 
             Wait.Until(next, ct);
             if (ct.IsCancellationRequested) break;
+            if (Svc.Bow.IsRunning) { next = Wait.Now + Wait.FromMs(1); continue; }   // don't interleave sword clicks with the crossbow shot
             long clickStart = Wait.Now;
             InputSender.MouseButton(button, true);
             try { Wait.Until(clickStart + Wait.FromMs(holdMs), ct); }

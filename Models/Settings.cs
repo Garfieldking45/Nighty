@@ -37,17 +37,17 @@ public sealed class ClickerSettings : ObservableObject
     private ActivationMode _mode = ActivationMode.Toggle;
 
     public bool Enabled { get => _enabled; set => Set(ref _enabled, value); }
-    public double Cps { get => _cps; set => Set(ref _cps, Math.Clamp(Math.Round(value, 1), 1, 35)); }
+    public double Cps { get => _cps; set => Set(ref _cps, Math.Clamp(Math.Round(value, 1), 1, 50)); }
     public bool UseRange { get => _useRange; set => Set(ref _useRange, value); }
     public double MinCps
     {
         get => _minCps;
-        set { if (Set(ref _minCps, Math.Clamp(Math.Round(value, 1), 1, 35)) && _minCps > _maxCps) MaxCps = _minCps; }
+        set { if (Set(ref _minCps, Math.Clamp(Math.Round(value, 1), 1, 50)) && _minCps > _maxCps) MaxCps = _minCps; }
     }
     public double MaxCps
     {
         get => _maxCps;
-        set { if (Set(ref _maxCps, Math.Clamp(Math.Round(value, 1), 1, 35)) && _maxCps < _minCps) MinCps = _maxCps; }
+        set { if (Set(ref _maxCps, Math.Clamp(Math.Round(value, 1), 1, 50)) && _maxCps < _minCps) MinCps = _maxCps; }
     }
     public ClickButton Button { get => _button; set => Set(ref _button, value); }
     public int DutyCycle { get => _duty; set => Set(ref _duty, Math.Clamp(value, 5, 95)); }
@@ -77,7 +77,9 @@ public sealed class ClickerPreset : ObservableObject
 
 public sealed class GameSettings : ObservableObject
 {
-    private bool _power = true, _priority = true, _timer = true, _gameMode = true, _awake;
+    private bool _power = true, _priority = true, _timer = true, _gameMode = true, _awake, _auto = true;
+    /// <summary>Turn Game Mode on when Roblox starts and off again when it closes.</summary>
+    public bool AutoGameMode { get => _auto; set => Set(ref _auto, value); }
     public bool HighPerformancePower { get => _power; set => Set(ref _power, value); }
     public bool RobloxHighPriority { get => _priority; set => Set(ref _priority, value); }
     public bool TimerResolution { get => _timer; set => Set(ref _timer, value); }
@@ -112,6 +114,12 @@ public sealed class TrackingSettings : ObservableObject
     private bool _precision = true;
     public int PointerSpeed { get => _speed; set => Set(ref _speed, Math.Clamp(value, 1, 20)); }
     public bool EnhancePointerPrecision { get => _precision; set => Set(ref _precision, value); }
+
+    private bool _slowOne;
+    private int _slowSpeed = 6;
+    /// <summary>While hotbar slot 1 is selected (and Roblox is in front), use the slower pointer speed below.</summary>
+    public bool SlowInSlotOne { get => _slowOne; set => Set(ref _slowOne, value); }
+    public int SlowSpeed { get => _slowSpeed; set => Set(ref _slowSpeed, Math.Clamp(value, 1, 20)); }
 
     private bool _onlyRoblox;
     private int _dpi = 800;
@@ -251,28 +259,26 @@ public sealed class BowSwitchSettings : ObservableObject
 {
     private bool _enabled, _shoot = true, _return = true, _onlyRoblox = true;
     private int _vk = 0x56, _mods;
-    private double _bow = 2, _ret = 1, _switchDelay = 10, _hold = 20, _returnDelay = 25;
+    private double _bow = 2, _ret = 1;
     private ClickButton _button = ClickButton.Left;
     private BowMode _mode = BowMode.Auto;
-    private double _cooldown = 1250;
     private bool _requireFighting = true;
 
     public bool Enabled { get => _enabled; set => Set(ref _enabled, value); }
+    private int _toggleVk, _toggleMods;
+    /// <summary>Optional key that turns Bow Switch on and off.</summary>
+    public int ToggleVk { get => _toggleVk; set => Set(ref _toggleVk, value); }
+    public int ToggleMods { get => _toggleMods; set => Set(ref _toggleMods, value); }
     /// <summary>Auto: runs by itself while fighting. Hotkey: runs when the trigger key is pressed.</summary>
     public BowMode Mode { get => _mode; set => Set(ref _mode, value); }
-    /// <summary>Crossbow cooldown. Auto mode never starts a new switch sooner than this after the last one began.</summary>
-    public double CooldownMs { get => _cooldown; set => Set(ref _cooldown, Math.Clamp(Math.Round(value), 100, 5000)); }
     /// <summary>Auto mode only fires while the auto clicker is clicking (manual clicks never trigger it).</summary>
     public bool OnlyWhileFighting { get => _requireFighting; set => Set(ref _requireFighting, value); }
     public int HotkeyVk { get => _vk; set => Set(ref _vk, value); }
     public int HotkeyMods { get => _mods; set => Set(ref _mods, value); }
     /// <summary>Hotbar slot (1-9) holding the bow.</summary>
     public double BowSlot { get => _bow; set => Set(ref _bow, Math.Clamp(Math.Round(value), 1, 9)); }
-    /// <summary>Wait between selecting the bow and the shot, so the equip animation/cooldown can finish.</summary>
-    public double SwitchDelayMs { get => _switchDelay; set => Set(ref _switchDelay, Math.Clamp(Math.Round(value), 0, 1000)); }
     public bool Shoot { get => _shoot; set => Set(ref _shoot, value); }
     public ClickButton ShootButton { get => _button; set => Set(ref _button, value); }
-    public double HoldMs { get => _hold; set => Set(ref _hold, Math.Clamp(Math.Round(value), 10, 1000)); }
     private double _blockSlot;
     /// <summary>Hotbar slot (1-9) holding your blocks; Auto mode never switches to the bow while it is selected. 0 = off.</summary>
     public double BlockSlot { get => _blockSlot; set => Set(ref _blockSlot, Math.Clamp(Math.Round(value), 0, 9)); }
@@ -281,13 +287,14 @@ public sealed class BowSwitchSettings : ObservableObject
     /// <summary>Go back to the hotbar slot you were holding (sword, blocks, ...) instead of a fixed one.</summary>
     public bool ReturnToPrevious { get => _returnPrev; set => Set(ref _returnPrev, value); }
     public double ReturnSlot { get => _ret; set => Set(ref _ret, Math.Clamp(Math.Round(value), 1, 9)); }
-    public double ReturnDelayMs { get => _returnDelay; set => Set(ref _returnDelay, Math.Clamp(Math.Round(value), 0, 2000)); }
     public bool OnlyWhenRobloxFocused { get => _onlyRoblox; set => Set(ref _onlyRoblox, value); }
 }
 
 public sealed class GeneralSettings : ObservableObject
 {
-    private bool _topmost;
+    private bool _topmost, _notify = true;
+    /// <summary>Brief bottom-right notification when something is toggled.</summary>
+    public bool ShowNotifications { get => _notify; set => Set(ref _notify, value); }
     private int _stopVk = 0x78, _stopMods;
     public bool AlwaysOnTop { get => _topmost; set => Set(ref _topmost, value); }
     public int StopHotkeyVk { get => _stopVk; set => Set(ref _stopVk, value); }

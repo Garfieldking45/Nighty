@@ -68,6 +68,9 @@
                         <TextBlock Text="{Binding PowerHint}" Style="{StaticResource Muted}" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,5,0,8"/>
                         <TextBlock Text="{Binding GameStatus}" Style="{StaticResource Muted}" Foreground="{StaticResource SuccessBrush}" TextAlignment="Center" Margin="0,2,0,4"
                                    Visibility="{Binding GameStatus, Converter={StaticResource NullVisible}}"/>
+                        <c:SettingRow Title="Turn on automatically" Description="Enables Game Mode when Roblox starts and restores your settings when it closes.">
+                            <CheckBox IsChecked="{Binding Game.AutoGameMode}"/>
+                        </c:SettingRow>
                     </StackPanel>
                 </Border>
 

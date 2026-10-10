@@ -211,6 +211,12 @@ public sealed class RobloxService
         }
     }
 
+    // Resolving a process name allocates and costs milliseconds; the foreground pid rarely changes, so cache the
+    // answer per pid (re-checked every 2 s in case the pid was reused). This runs on the clicker thread.
+    private int _fgPid;
+    private bool _fgIsRoblox;
+    private long _fgStamp;
+
     public bool IsForeground
     {
         get
@@ -218,8 +224,13 @@ public sealed class RobloxService
             var hwnd = NativeMethods.GetForegroundWindow();
             if (hwnd == IntPtr.Zero) return false;
             NativeMethods.GetWindowThreadProcessId(hwnd, out var pid);
-            try { using var p = Process.GetProcessById((int)pid); return p.ProcessName.Equals(ProcessName, StringComparison.OrdinalIgnoreCase); }
-            catch { return false; }
+            long now = Environment.TickCount64;
+            if (pid == _fgPid && now - _fgStamp < 2000) return _fgIsRoblox;
+            bool result;
+            try { using var p = Process.GetProcessById((int)pid); result = p.ProcessName.Equals(ProcessName, StringComparison.OrdinalIgnoreCase); }
+            catch { result = false; }
+            _fgPid = (int)pid; _fgIsRoblox = result; _fgStamp = now;
+            return result;
         }
     }
 
@@ -231,12 +242,25 @@ public sealed class RobloxService
         return pid == Environment.ProcessId;
     }
 
-    /// <summary>Newest installed Roblox version folder (per-user install), or null.</summary>
+    /// <summary>Folder holding RobloxPlayerBeta.exe: the running client first (works with Bloxstrap/Fishstrap/Froststrap
+    /// too), otherwise the newest install in the usual per-user locations, or null.</summary>
     public string? FindVersionFolder()
     {
-        var root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Roblox", "Versions");
-        if (!Directory.Exists(root)) return null;
-        return new DirectoryInfo(root).GetDirectories("version-*")
+        try
+        {
+            foreach (var p in Process.GetProcessesByName(ProcessName))
+            {
+                try { var dir = Path.GetDirectoryName(p.MainModule?.FileName); if (dir != null) return dir; }
+                catch { }
+                finally { p.Dispose(); }
+            }
+        }
+        catch { }
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        string[] roots = { "Roblox", "Bloxstrap", "Fishstrap", "Froststrap", "Voidstrap" };
+        return roots.Select(r => Path.Combine(local, r, "Versions"))
+            .Where(Directory.Exists)
+            .SelectMany(r => new DirectoryInfo(r).GetDirectories("version-*"))
             .Where(d => File.Exists(Path.Combine(d.FullName, "RobloxPlayerBeta.exe")))
             .OrderByDescending(d => d.LastWriteTimeUtc)
             .Select(d => d.FullName)

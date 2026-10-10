@@ -56,6 +56,7 @@ public sealed class GamingViewModel : ObservableObject
 
     // ---------- Game Mode ----------
     public bool IsActive => Svc.GameMode.IsActive;
+    public GameSettings Game => Svc.S.Game;
     public bool IsBusy { get => _busy; private set { Set(ref _busy, value); PowerCommand.Refresh(); } }
     public string PowerLabel => IsBusy ? "Working…" : IsActive ? "Game Mode is ON" : "Game Mode is OFF";
     public string PowerHint => IsActive ? "Click to restore your original settings" : "Click to apply the selected optimizations";

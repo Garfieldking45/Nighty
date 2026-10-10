@@ -33,8 +33,31 @@ public partial class ValueStepper : UserControl
 
     private static void OnRangeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => d.CoerceValue(ValueProperty);
 
-    private void UpdateText() =>
-        ValueText.Text = Value.ToString("F" + Math.Max(0, Decimals), CultureInfo.CurrentCulture) + Suffix;
+    private void UpdateText()
+    {
+        if (ValueBox == null) return;
+        ValueBox.Text = Value.ToString("F" + Math.Max(0, Decimals), CultureInfo.CurrentCulture);
+        SuffixText.Text = Suffix?.Trim() ?? "";
+        SuffixText.Margin = new Thickness(0, 0, string.IsNullOrEmpty(SuffixText.Text) ? 0 : 8, 0);
+    }
+
+    private void Commit()
+    {
+        var t = ValueBox.Text.Trim();
+        if (!string.IsNullOrEmpty(Suffix)) t = t.Replace(Suffix.Trim(), "");
+        if (double.TryParse(t, NumberStyles.Float, CultureInfo.CurrentCulture, out var v) ||
+            double.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out v))
+            Value = v;
+        UpdateText(); // snap box back to the coerced value (or revert on bad input)
+    }
+
+    private void OnBoxFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs e) => ValueBox.SelectAll();
+    private void OnBoxLostFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs e) => Commit();
+    private void OnBoxKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter) { Commit(); ValueBox.SelectAll(); e.Handled = true; }
+        else if (e.Key == System.Windows.Input.Key.Escape) { UpdateText(); e.Handled = true; }
+    }
 
     private void OnDecrease(object sender, RoutedEventArgs e) => Value = Math.Round(Value - Step, 4);
     private void OnIncrease(object sender, RoutedEventArgs e) => Value = Math.Round(Value + Step, 4);
