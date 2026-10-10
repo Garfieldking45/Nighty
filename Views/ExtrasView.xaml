@@ -104,6 +104,34 @@
                 </Border>
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
+                        <TextBlock Text="Auto fish" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="Casts the rod by holding the mouse, then holds and releases to keep your green box over the moving line (any colour) until the fish is caught. After a catch it waits a second and casts again." Style="{StaticResource Muted}" Margin="0,3,0,12" TextWrapping="Wrap"/>
+                        <c:SettingRow Title="Start / stop key" Description="Works from anywhere (default F7). The emergency stop also stops it.">
+                            <c:HotkeyBox Vk="{Binding Fishing.HotkeyVk, Mode=TwoWay}" Mods="{Binding Fishing.HotkeyMods, Mode=TwoWay}"/>
+                        </c:SettingRow>
+                        <Border Style="{StaticResource Divider}"/>
+                        <c:SettingRow Title="Holding moves the green box right" Description="Turn off if the green box runs away from the line instead of towards it.">
+                            <CheckBox IsChecked="{Binding Fishing.HoldMovesRight}"/>
+                        </c:SettingRow>
+                        <TextBlock Text="CAST HOLD" Style="{StaticResource Label}" Margin="0,14,0,6"/>
+                        <c:ValueStepper Value="{Binding Fishing.CastHoldMs, Mode=TwoWay}" Minimum="10" Maximum="3000" Step="10" Suffix=" ms"/>
+                        <Border Style="{StaticResource Divider}" Margin="0,16,0,14"/>
+                        <TextBlock Text="SKIPPER" Style="{StaticResource Label}" Margin="0,0,0,4"/>
+                        <TextBlock Text="Tick a fish to skip it: Nighty jumps once to dismiss it and then fishes again." Style="{StaticResource Muted}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                        <c:SettingRow Title="Skip common (grey)"><CheckBox IsChecked="{Binding Fishing.SkipCommon}"/></c:SettingRow>
+                        <c:SettingRow Title="Skip blue / cyan"><CheckBox IsChecked="{Binding Fishing.SkipBlue}"/></c:SettingRow>
+                        <c:SettingRow Title="Skip special (red)"><CheckBox IsChecked="{Binding Fishing.SkipSpecial}"/></c:SettingRow>
+                        <c:SettingRow Title="Skip gold (yellow)"><CheckBox IsChecked="{Binding Fishing.SkipGold}"/></c:SettingRow>
+                        <c:SettingRow Title="Skip emerald (green)"><CheckBox IsChecked="{Binding Fishing.SkipEmerald}"/></c:SettingRow>
+                        <Border Style="{StaticResource Divider}" Margin="0,10,0,14"/>
+                        <TextBlock Text="{Binding FishCounts}" Style="{StaticResource Muted}" TextWrapping="Wrap"/>
+                        <Button Content="Reset counts" Command="{Binding ResetFishCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+                        <Button Content="{Binding FishButton}" Command="{Binding FishCommand}" HorizontalAlignment="Left" MinWidth="130" Margin="0,14,0,0"/>
+                        <TextBlock Text="{Binding FishStatus}" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
                         <TextBlock Text="Try it" Style="{StaticResource CardTitle}"/>
                         <TextBlock Text="Starts after 3 seconds so you can click into Roblox first." Style="{StaticResource Muted}" Margin="0,3,0,12"/>
                         <Button Content="Test in 3 s" Command="{Binding TestCommand}" HorizontalAlignment="Left" MinWidth="110"/>
@@ -113,6 +141,52 @@
                 </Border>
             </StackPanel>
         </Grid>
+        <TextBlock Text="Hotbar macros" Style="{StaticResource CardTitle}" Margin="0,6,0,4"/>
+        <TextBlock Text="One-key macros that swap between your hotbar slots (number keys 1-9). Turn on the ones you want and set their key; the emergency stop cancels them." Style="{StaticResource Muted}" Margin="0,0,0,12" TextWrapping="Wrap"/>
+        <ItemsControl ItemsSource="{Binding QuickMacros}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Title}" Style="{StaticResource CardTitle}"/>
+                                    <TextBlock Text="{Binding Description}" Style="{StaticResource Muted}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding Enabled}" VerticalAlignment="Top" Margin="12,2,0,0" AutomationProperties.Name="Enable macro"/>
+                            </Grid>
+                            <StackPanel IsEnabled="{Binding Enabled}">
+                                <c:SettingRow Title="Key" Description="{Binding KeyHint}">
+                                    <c:HotkeyBox Vk="{Binding HotkeyVk, Mode=TwoWay}" Mods="{Binding HotkeyMods, Mode=TwoWay}"/>
+                                </c:SettingRow>
+                                <c:SettingRow Title="Only while Roblox is focused">
+                                    <CheckBox IsChecked="{Binding OnlyWhenRobloxFocused}"/>
+                                </c:SettingRow>
+                                <UniformGrid Columns="2" Margin="0,8,0,0">
+                                    <StackPanel Margin="0,0,10,10">
+                                        <TextBlock Text="{Binding LabelA}" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                                        <c:ValueStepper Value="{Binding SlotA, Mode=TwoWay}" Minimum="1" Maximum="9" Step="1"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,0,10">
+                                        <TextBlock Text="{Binding LabelB}" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                                        <c:ValueStepper Value="{Binding SlotB, Mode=TwoWay}" Minimum="1" Maximum="9" Step="1"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,10,0" Visibility="{Binding LabelDelay, Converter={StaticResource NullVisible}}">
+                                        <TextBlock Text="{Binding LabelDelay}" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                                        <TextBox Text="{Binding DelayMs, UpdateSourceTrigger=LostFocus}" TextAlignment="Right" AutomationProperties.Name="Delay milliseconds"/>
+                                    </StackPanel>
+                                    <StackPanel Visibility="{Binding LabelLook, Converter={StaticResource NullVisible}}">
+                                        <TextBlock Text="{Binding LabelLook}" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                                        <TextBox Text="{Binding LookDown, UpdateSourceTrigger=LostFocus}" TextAlignment="Right" AutomationProperties.Name="Look down pixels"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
         <TextBlock Style="{StaticResource Muted}" Text="Nighty only sends the same key presses and clicks you would. Check the rules of the game or server you play on before using automation. The emergency-stop hotkey (Settings) cancels a run."/>
     </StackPanel>
 </UserControl>

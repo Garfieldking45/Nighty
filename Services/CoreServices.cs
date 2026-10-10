@@ -96,10 +96,46 @@ public sealed class SettingsService
         Save();
     }
 
+    private const long MaxProfileBytes = 2 * 1024 * 1024;
+
+    /// <summary>Writes the whole setup (clickers, macros, overlays...) as plain JSON. Windows backups stay on this PC.</summary>
+    public void ExportProfile(string path)
+    {
+        Save();
+        var clone = JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(Current, Json), Json)!;
+        clone.Backups = new SystemBackups();
+        clone.Mods.Clear();   // mod folders are paths on this PC
+        File.WriteAllText(path, JsonSerializer.Serialize(clone, Json));
+    }
+
+    /// <summary>Replaces the saved setup with a profile file. Returns an error message, or null when it was written (restart to use it).</summary>
+    public string? ImportProfile(string path)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            if (!info.Exists || info.Length == 0) return "The file is empty.";
+            if (info.Length > MaxProfileBytes) return "The file is too big to be a profile.";
+            var loaded = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Json);
+            if (loaded == null) return "That file isn't a Nighty profile.";
+            loaded.Backups = Current.Backups;   // never take another PC's system backups
+            loaded.Mods = Current.Mods;
+            _debounce.Stop();
+            File.WriteAllText(AppPaths.SettingsFile, JsonSerializer.Serialize(loaded, Json));
+            Frozen = true;
+            return null;
+        }
+        catch (Exception ex) { return "That file couldn't be read: " + ex.Message; }
+    }
+
     public void MarkDirty() { _debounce.Stop(); _debounce.Start(); }
+
+    /// <summary>Set after a profile import so the closing app can't overwrite the imported file.</summary>
+    public bool Frozen { get; private set; }
 
     public void Save()
     {
+        if (Frozen) return;
         try
         {
             AppPaths.EnsureCreated();
@@ -372,7 +408,7 @@ public static class StartupRegistration
     public static void Set(bool enabled)
     {
         using var k = Registry.CurrentUser.OpenSubKey(RunKey, true) ?? Registry.CurrentUser.CreateSubKey(RunKey);
-        if (enabled) k.SetValue("Nighty", $"\"{Environment.ProcessPath}\"");
+        if (enabled) k.SetValue("Nighty", $"\"{Environment.ProcessPath}\"" + (Svc.S.General.StartMinimized ? " --minimized" : ""));
         else k.DeleteValue("Nighty", false);
     }
 }

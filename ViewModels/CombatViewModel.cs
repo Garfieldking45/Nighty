@@ -19,6 +19,7 @@ public sealed class CombatViewModel : ObservableObject
     public ClickerSettings Settings => Svc.S.Clicker;
     public ObservableCollection<ClickerPreset> Presets => Svc.S.Presets;
 
+    public double ClicksPerHit { get => Settings.ClicksPerHit; set { Settings.ClicksPerHit = (int)value; OnPropertyChanged(); } }
     public string PresetName { get => _presetName; set => Set(ref _presetName, value); }
     public string PresetMessage { get => _presetMessage; private set => Set(ref _presetMessage, value); }
     public string MeasuredCps { get => _measured; private set => Set(ref _measured, value); }

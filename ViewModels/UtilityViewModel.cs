@@ -165,6 +165,8 @@ public sealed class TrackingViewModel : ObservableObject
 
     public TrackingSettings Settings => Svc.S.Utility.Tracking;
     public double SlowSpeed { get => Settings.SlowSpeed; set { Settings.SlowSpeed = (int)value; OnPropertyChanged(); } }
+    public double ScrollLines { get => Settings.ScrollLines; set { Settings.ScrollLines = (int)value; OnPropertyChanged(); } }
+    public double DoubleClickMs { get => Settings.DoubleClickMs; set { Settings.DoubleClickMs = (int)value; OnPropertyChanged(); } }
     public double Speed { get => Settings.PointerSpeed; set { Settings.PointerSpeed = (int)value; OnPropertyChanged(); } }
     public string Message { get => _message; private set => Set(ref _message, value); }
     public StatusKind Kind { get => _kind; private set => Set(ref _kind, value); }
@@ -264,10 +266,49 @@ public sealed class DnsViewModel : ObservableObject
     public AsyncCommand RestoreCommand { get; }
     public RelayCommand CancelCommand { get; }
     public RelayCommand RefreshAdaptersCommand { get; }
+    public RelayCommand AddCustomCommand { get; }
+    public RelayCommand RemoveCustomCommand { get; }
+    public string CustomText { get => _customText; set => Set(ref _customText, value); }
+    private string _customText = "";
+    private const int MaxCustom = 6;
+
+    private static bool TryParseCustom(string text, out string primary, out string secondary)
+    {
+        primary = secondary = "";
+        var parts = text.Split(new[] { ',', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length is < 1 or > 2) return false;
+        foreach (var part in parts)
+            if (!System.Net.IPAddress.TryParse(part, out var ip) || ip.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork || part.Count(c => c == '.') != 3) return false;
+        primary = parts[0]; secondary = parts.Length == 2 ? parts[1] : "";
+        return true;
+    }
+
+    private static DnsProvider MakeCustom(string primary, string secondary) =>
+        new() { Name = "Custom " + primary, Primary = primary, Secondary = secondary, IsCustom = true };
 
     public DnsViewModel()
     {
         foreach (var p in Svc.Dns.CreateProviders()) Providers.Add(p);
+        foreach (var c in Settings.Custom.ToList())
+            if (TryParseCustom(c, out var p1, out var p2)) Providers.Add(MakeCustom(p1, p2));
+        AddCustomCommand = new RelayCommand(() =>
+        {
+            if (!TryParseCustom(CustomText.Trim(), out var p1, out var p2)) { Message = "Enter an IPv4 address such as 192.168.1.1 (optionally a second one after a comma)."; Kind = StatusKind.Warning; return; }
+            if (Providers.Count(x => x.IsCustom) >= MaxCustom) { Message = "Remove a custom resolver first (up to 6)."; Kind = StatusKind.Warning; return; }
+            if (Providers.Any(x => x.Primary == p1)) { Message = "That resolver is already in the list."; Kind = StatusKind.Warning; return; }
+            Providers.Add(MakeCustom(p1, p2));
+            Settings.Custom.Add(p2.Length == 0 ? p1 : $"{p1},{p2}");
+            Svc.Settings.Save();
+            CustomText = ""; MarkCurrent();
+            Message = $"Added {p1}. Press Test all to include it."; Kind = StatusKind.Info;
+        });
+        RemoveCustomCommand = new RelayCommand(o =>
+        {
+            if (o is not DnsProvider d || !d.IsCustom) return;
+            Providers.Remove(d);
+            Settings.Custom.RemoveAll(c => c.StartsWith(d.Primary));
+            Svc.Settings.Save();
+        });
         TestCommand = new AsyncCommand(Test, () => !IsBusy);
         ApplyCommand = new AsyncCommand(p => Apply(p as DnsProvider, true), p => !IsBusy && Adapter != null);
         ApplyBestCommand = new AsyncCommand(() => Apply(Providers.FirstOrDefault(x => x.IsBest), true), () => !IsBusy && Adapter != null && Providers.Any(x => x.IsBest));

@@ -125,6 +125,8 @@ public sealed class MacrosViewModel : ObservableObject
     {
         new(MacroStepType.KeyPress, "Press key"), new(MacroStepType.KeyDown, "Hold key"), new(MacroStepType.KeyUp, "Release key"),
         new(MacroStepType.Click, "Mouse click"), new(MacroStepType.Wait, "Wait"),
+        new(MacroStepType.RandomWait, "Random wait"), new(MacroStepType.Scroll, "Scroll wheel"), new(MacroStepType.MoveMouse, "Move mouse"),
+        new(MacroStepType.TypeText, "Type text"), new(MacroStepType.Note, "Note"),
     };
     public List<string> ClickNames { get; } = new() { "Left", "Right", "Middle" };
 
@@ -157,7 +159,7 @@ public sealed class MacrosViewModel : ObservableObject
         {
             if (Selected == null) return;
             var t = Enum.Parse<MacroStepType>(p?.ToString() ?? "Wait");
-            Selected.Steps.Add(new MacroStep { Type = t, Value = t switch { MacroStepType.Wait => 100, MacroStepType.Click => 0, _ => 0x20 } });
+            Selected.Steps.Add(new MacroStep { Type = t, Value = t switch { MacroStepType.Wait => 100, MacroStepType.RandomWait => 50, MacroStepType.Click => 0, MacroStepType.Scroll => 1, MacroStepType.MoveMouse or MacroStepType.TypeText or MacroStepType.Note => 0, _ => 0x20 }, Value2 = t == MacroStepType.RandomWait ? 150 : 0, Text = t == MacroStepType.TypeText ? "hello" : "" });
         });
         RemoveStep = new RelayCommand(p => { if (p is MacroStep s) Selected?.Steps.Remove(s); });
         MoveUp = new RelayCommand(p => Move(p as MacroStep, -1));
@@ -203,7 +205,7 @@ public sealed class MacrosViewModel : ObservableObject
     {
         Svc.Hotkeys.Register("macro:" + m.Id, () => m.HotkeyEnabled ? (m.HotkeyVk, m.HotkeyMods) : (0, 0), down =>
         {
-            if (down) Svc.Macros.Toggle(m);
+            if (down && (!m.OnlyInRoblox || Svc.Roblox.IsForeground || Svc.Macros.IsRunning(m.Id))) Svc.Macros.Toggle(m);
         });
     }
 }
@@ -226,6 +228,13 @@ public sealed class OverlaysViewModel : ObservableObject
     public RelayCommand RemoveCommand { get; }
     public RelayCommand ResetPositionsCommand { get; }
     public RelayCommand RelaunchAdminCommand { get; }
+    public RelayCommand SaveLayoutCommand { get; }
+    public RelayCommand LoadLayoutCommand { get; }
+    public RelayCommand UndoLoadCommand { get; }
+    public string ShareMessage { get => _shareMsg; private set => Set(ref _shareMsg, value); }
+    private string _shareMsg = "";
+    private List<OverlayConfig>? _beforeLoad;
+    private const int MaxLayoutBytes = 256 * 1024;
     public AsyncCommand SetupFpsCommand { get; }
     public string SetupMessage { get => _setupMsg; private set => Set(ref _setupMsg, value); }
     private string _setupMsg = "";
@@ -234,6 +243,8 @@ public sealed class OverlaysViewModel : ObservableObject
     public OverlaysViewModel()
     {
         if (Items.Count == 0) SeedDefaults();
+        if (!Items.Any(i => i.Kind == OverlayKind.FishTracker)) Items.Add(new OverlayConfig { Kind = OverlayKind.FishTracker, Title = "Fish tracker", X = 1, Y = 12 });
+        if (!Items.Any(i => i.Kind == OverlayKind.Hud)) Items.Add(new OverlayConfig { Kind = OverlayKind.Hud, Title = "Macro HUD", X = 99, Y = 3 });
         foreach (var i in Items) Hook(i);
         Items.CollectionChanged += (_, e) =>
         {
@@ -254,6 +265,51 @@ public sealed class OverlaysViewModel : ObservableObject
             Items.Add(new OverlayConfig { Kind = OverlayKind.Crosshair, Title = n == 1 ? "Crosshair" : $"Crosshair {n}", Enabled = true, X = 50, Y = 50, Opacity = 1 });
         });
         RemoveCommand = new RelayCommand(p => { if (p is OverlayConfig c) Items.Remove(c); });
+        SaveLayoutCommand = new RelayCommand(() =>
+        {
+            var dlg = new Microsoft.Win32.SaveFileDialog { Title = "Save overlays", Filter = "Nighty overlays (*.nightyoverlay)|*.nightyoverlay", FileName = "My overlays", DefaultExt = ".nightyoverlay" };
+            if (dlg.ShowDialog() != true) return;
+            try
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(new OverlayLayoutFile { PingHost = Settings.PingHost, Items = Items.ToList() }, LayoutJson);
+                File.WriteAllText(dlg.FileName, json);
+                ShareMessage = $"Saved {Items.Count} overlays to {Path.GetFileName(dlg.FileName)}. Send it to anyone with Nighty.";
+            }
+            catch (Exception ex) { ShareMessage = "Couldn't save the file: " + ex.Message; }
+        });
+        LoadLayoutCommand = new RelayCommand(() =>
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog { Title = "Load overlays", Filter = "Nighty overlays (*.nightyoverlay)|*.nightyoverlay" };
+            if (dlg.ShowDialog() != true) return;
+            try
+            {
+                var info = new FileInfo(dlg.FileName);
+                if (info.Length == 0) { ShareMessage = "The file is empty."; return; }
+                if (info.Length > MaxLayoutBytes) { ShareMessage = "The file is too big to be an overlay layout."; return; }
+                var file = System.Text.Json.JsonSerializer.Deserialize<OverlayLayoutFile>(File.ReadAllText(dlg.FileName), LayoutJson);
+                if (file?.Items == null || file.Items.Count == 0 || file.Items.Count > 64) { ShareMessage = "That file couldn't be loaded: it has no valid overlays."; return; }
+                if (!Dialogs.Confirm("Load overlays?", $"This replaces your {Items.Count} overlays with {file.Items.Count} from the file. Undo brings yours back.", "Load")) return;
+                _beforeLoad = Items.Select(CloneOverlay).ToList();
+                var oldPing = Settings.PingHost;
+                Items.Clear();
+                foreach (var o in file.Items) { o.Id = Guid.NewGuid(); Items.Add(o); }
+                if (!string.IsNullOrWhiteSpace(file.PingHost) && file.PingHost.Length <= 100) Settings.PingHost = file.PingHost;
+                _beforePing = oldPing;
+                UndoLoadCommand?.Refresh();
+                ShareMessage = $"Loaded {file.Items.Count} overlays. Undo is under Share overlays.";
+            }
+            catch (Exception ex) { ShareMessage = "That file couldn't be loaded. " + ex.Message; }
+        });
+        UndoLoadCommand = new RelayCommand(() =>
+        {
+            if (_beforeLoad == null) return;
+            Items.Clear();
+            foreach (var o in _beforeLoad) Items.Add(o);
+            if (_beforePing != null) Settings.PingHost = _beforePing;
+            _beforeLoad = null;
+            UndoLoadCommand?.Refresh();
+            ShareMessage = "Your previous overlays are back.";
+        }, () => _beforeLoad != null);
         ResetPositionsCommand = new RelayCommand(() =>
         {
             int n = 0;
@@ -271,6 +327,22 @@ public sealed class OverlaysViewModel : ObservableObject
                 if (Elevation.RelaunchAsAdmin()) Application.Current.Shutdown();
         });
         Svc.Overlays.Sync();
+    }
+
+    private string? _beforePing;
+    private static readonly System.Text.Json.JsonSerializerOptions LayoutJson = new() { WriteIndented = true };
+
+    private static OverlayConfig CloneOverlay(OverlayConfig o)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(o);
+        return System.Text.Json.JsonSerializer.Deserialize<OverlayConfig>(json)!;
+    }
+
+    /// <summary>A .nightyoverlay file: positions and styles only, nothing else from the PC.</summary>
+    public sealed class OverlayLayoutFile
+    {
+        public string? PingHost { get; set; }
+        public List<OverlayConfig> Items { get; set; } = new();
     }
 
     private void SeedDefaults()
@@ -305,6 +377,22 @@ public sealed class SettingsViewModel : ObservableObject
 {
     private string _message = "";
     public GeneralSettings General => Svc.S.General;
+    public IReadOnlyList<ThemeChoice> Themes => ThemeService.Themes;
+    public string SelectedTheme
+    {
+        get => ThemeService.Find(General.Theme).Id;
+        set { General.Theme = value; ThemeService.Apply(value); OnPropertyChanged(); }
+    }
+    public bool StartMinimized
+    {
+        get => General.StartMinimized;
+        set
+        {
+            General.StartMinimized = value;
+            if (StartupRegistration.IsEnabled) { try { StartupRegistration.Set(true); } catch (Exception ex) { Message = "Could not update startup entry: " + ex.Message; } }
+            OnPropertyChanged();
+        }
+    }
     public bool StartWithWindows
     {
         get => StartupRegistration.IsEnabled;
@@ -322,6 +410,8 @@ public sealed class SettingsViewModel : ObservableObject
     public RelayCommand RelaunchAdmin { get; }
     public AsyncCommand RestoreAllCommand { get; }
     public RelayCommand ResetCommand { get; }
+    public RelayCommand ExportProfileCommand { get; }
+    public RelayCommand ImportProfileCommand { get; }
 
     public SettingsViewModel()
     {
@@ -342,6 +432,25 @@ public sealed class SettingsViewModel : ObservableObject
             var p = Svc.Pointer.HasBackup ? Svc.Pointer.Restore() : null;
             Message = "Restored: Game Mode" + (m != null ? ", keyboard/accessibility" : "") + (p != null ? ", pointer" : "") +
                       ". DNS, QoS and mods are restored from their own pages because they need separate approval.";
+        });
+        ExportProfileCommand = new RelayCommand(() =>
+        {
+            var dlg = new Microsoft.Win32.SaveFileDialog { Title = "Export profile", Filter = "Nighty profile (*.json)|*.json", FileName = "nighty-profile", DefaultExt = ".json" };
+            if (dlg.ShowDialog() != true) return;
+            try { Svc.Settings.ExportProfile(dlg.FileName); Message = "Profile exported to " + Path.GetFileName(dlg.FileName) + ". It's plain JSON, so you can share it."; }
+            catch (Exception ex) { Message = "Couldn't export: " + ex.Message; }
+        });
+        ImportProfileCommand = new RelayCommand(() =>
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog { Title = "Import profile", Filter = "Nighty profile (*.json)|*.json" };
+            if (dlg.ShowDialog() != true) return;
+            if (!Dialogs.Confirm("Import profile?", "This replaces your clicker, macros, overlays and other preferences with the file's, then restarts Nighty. Windows backups and mods are kept.", "Import")) return;
+            var err = Svc.Settings.ImportProfile(dlg.FileName);
+            if (err != null) { Message = err; return; }
+            Svc.StopAllInput();
+            // Start the new copy a moment later, once this one has released its single-instance lock.
+            try { Process.Start(new ProcessStartInfo("cmd.exe", $"/c timeout /t 2 /nobreak >nul & start \"\" \"{Environment.ProcessPath}\"") { CreateNoWindow = true, UseShellExecute = false }); } catch { }
+            Application.Current.Shutdown();
         });
         ResetCommand = new RelayCommand(() =>
         {

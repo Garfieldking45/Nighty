@@ -32,6 +32,7 @@ public partial class App : Application
         AppPaths.EnsureCreated();
         Log.Info($"Nighty starting (admin={Elevation.IsAdmin})");
         Svc.Init();
+        ThemeService.Apply(Svc.S.General.Theme);
         Svc.GameMode.RecoverFromCrash();
         Svc.Hotkeys.Start();
 
@@ -39,6 +40,7 @@ public partial class App : Application
         var vm = new MainViewModel(page);
         var window = new MainWindow { DataContext = vm };
         MainWindow = window;
+        if (e.Args.Contains("--minimized")) window.WindowState = WindowState.Minimized;
         window.Show();
         Svc.Overlays.Start();
         UpdateService.StartPolling();
@@ -61,6 +63,7 @@ public partial class App : Application
                 Svc.StopAllInput();
                 Svc.Socd.Stop();
                 Svc.Pointer.AutoRelease();
+                if (Svc.S.General.RestoreOnClose) Svc.RestoreSystemOnExit();
                 Svc.GameMode.RestoreOnExit();     // always give the user their original system settings back
                 Svc.Overlays.Shutdown();
                 Svc.Toast.Shutdown();

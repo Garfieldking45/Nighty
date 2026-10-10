@@ -148,6 +148,14 @@
                     <c:SettingRow Title="Enhance pointer precision" Description="Mouse acceleration. Turn off for 1:1 movement that matches your hand speed.">
                         <CheckBox IsChecked="{Binding Settings.EnhancePointerPrecision}"/>
                     </c:SettingRow>
+                    <Border Style="{StaticResource Divider}" Margin="0,18"/>
+                    <TextBlock Text="Scroll speed" Style="{StaticResource CardTitle}"/>
+                    <TextBlock Text="Lines per wheel notch (0 leaves your Windows setting alone)." Style="{StaticResource Muted}" Margin="0,3,0,14"/>
+                    <c:ValueStepper Value="{Binding ScrollLines, Mode=TwoWay}" Minimum="0" Maximum="100" Step="1"/>
+                    <Border Style="{StaticResource Divider}" Margin="0,18"/>
+                    <TextBlock Text="Double-click speed" Style="{StaticResource CardTitle}"/>
+                    <TextBlock Text="How quickly two clicks must follow to count as a double click, in ms (0 leaves Windows alone)." Style="{StaticResource Muted}" Margin="0,3,0,14"/>
+                    <c:ValueStepper Value="{Binding DoubleClickMs, Mode=TwoWay}" Minimum="0" Maximum="900" Step="50"/>
                     <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
                         <TextBlock Text="PRESETS" Style="{StaticResource Label}" VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <Button Content="Slow (6)" Command="{Binding PresetCommand}" CommandParameter="6"/>
@@ -218,6 +226,11 @@
                         <TextBlock Grid.Column="3" Text="REPLIES" Style="{StaticResource Label}"/>
                         <TextBlock Grid.Column="4" Text="STATUS" Style="{StaticResource Label}"/>
                     </Grid>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding CustomText, UpdateSourceTrigger=PropertyChanged}" ToolTip="e.g. 192.168.1.1 (optionally a second address after a comma)" AutomationProperties.Name="Custom DNS resolver"/>
+                        <Button Grid.Column="1" Content="Add your own" Command="{Binding AddCustomCommand}" Margin="8,0,0,0"/>
+                    </Grid>
                     <ItemsControl ItemsSource="{Binding Providers}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -242,8 +255,13 @@
                                             <c:StatusDot Kind="{Binding Kind}"/>
                                             <TextBlock Text="{Binding Status}" Margin="8,0,0,0" FontSize="12.5" Foreground="{Binding Kind, Converter={StaticResource StatusBrush}}"/>
                                         </StackPanel>
-                                        <Button Grid.Column="5" Content="Apply" Padding="12,5" HorizontalAlignment="Right"
-                                                Command="{Binding DataContext.ApplyCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                        <StackPanel Grid.Column="5" Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Remove custom resolver" AutomationProperties.Name="Remove custom resolver" Margin="0,0,6,0"
+                                                    Visibility="{Binding IsCustom, Converter={StaticResource BoolVisible}}"
+                                                    Command="{Binding DataContext.RemoveCustomCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                            <Button Content="Apply" Padding="12,5"
+                                                    Command="{Binding DataContext.ApplyCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                        </StackPanel>
                                     </Grid>
                                 </Border>
                             </DataTemplate>

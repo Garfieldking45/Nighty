@@ -233,6 +233,22 @@ public sealed class OverlayWindow : Window
         if (_cfg.Kind == OverlayKind.Crosshair) { Left = Math.Round(Left); Top = Math.Round(Top); }   // keep the centre on a whole pixel
     }
 
+    /// <summary>One line per enabled feature with its key; a dot marks the ones running right now.</summary>
+    private static string HudText()
+    {
+        var lines = new List<string>();
+        void Add(string name, int vk, int mods, bool running) =>
+            lines.Add($"{(running ? "●" : "○")}  {name}" + (vk > 0 ? $"  [{Hotkeys.Format(vk, mods)}]" : ""));
+        var c = Svc.S.Clicker;
+        if (c.Enabled) Add("Auto Clicker", c.HotkeyVk, c.HotkeyMods, Svc.Clicker.IsClicking);
+        var b = Svc.S.Bow;
+        if (b.Enabled) Add("Bow Switch", b.Mode == BowMode.Hotkey ? b.HotkeyVk : 0, b.HotkeyMods, Svc.Bow.IsRunning);
+        foreach (var m in Svc.S.SlotMacros.Where(m => m.Enabled)) Add(m.Title, m.HotkeyVk, m.HotkeyMods, Svc.SlotMacros.IsRunning(m.Kind));
+        foreach (var m in Svc.S.Macros.Where(m => m.HotkeyEnabled && m.HotkeyVk > 0)) Add(m.Name, m.HotkeyVk, m.HotkeyMods, Svc.Macros.IsRunning(m.Id));
+        Add("Auto Fish", Svc.S.Fishing.HotkeyVk, Svc.S.Fishing.HotkeyMods, Svc.Fishing.IsRunning);
+        return lines.Count == 0 ? "No macros enabled" : string.Join("\n", lines);
+    }
+
     public void Refresh()
     {
         var accent = new SolidColorBrush(Color.FromRgb(0x3B, 0x82, 0xF6));
@@ -252,6 +268,12 @@ public sealed class OverlayWindow : Window
             }
             case OverlayKind.Fps:
                 _text.Text = Svc.Fps.Fps is double f ? $"FPS  {f:0}" : $"FPS  —  ({Svc.Fps.Status})";
+                break;
+            case OverlayKind.FishTracker:
+                _text.Text = Svc.Fishing.TrackerText;
+                break;
+            case OverlayKind.Hud:
+                _text.Text = HudText();
                 break;
             case OverlayKind.Ping:
                 _text.Text = Svc.Ping.LastMs is int ms ? $"PING  {ms} ms" : $"PING  —  ({Svc.Ping.Status})";

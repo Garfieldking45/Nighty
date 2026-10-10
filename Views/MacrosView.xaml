@@ -18,6 +18,31 @@
                 <TextBlock Text="ms" Style="{StaticResource Muted}" Margin="8,0,0,0" VerticalAlignment="Center"/>
             </StackPanel>
         </DataTemplate>
+        <DataTemplate x:Key="ScrollEditor">
+            <StackPanel Orientation="Horizontal">
+                <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}" Width="70" TextAlignment="Right" AutomationProperties.Name="Scroll notches"/>
+                <TextBlock Text="notches (negative = down)" Style="{StaticResource Muted}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="MoveEditor">
+            <StackPanel Orientation="Horizontal">
+                <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}" Width="60" TextAlignment="Right" AutomationProperties.Name="Pixels right"/>
+                <TextBlock Text="right," Style="{StaticResource Muted}" Margin="6,0,6,0" VerticalAlignment="Center"/>
+                <TextBox Text="{Binding Value2, UpdateSourceTrigger=LostFocus}" Width="60" TextAlignment="Right" AutomationProperties.Name="Pixels down"/>
+                <TextBlock Text="down (px)" Style="{StaticResource Muted}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="RandomWaitEditor">
+            <StackPanel Orientation="Horizontal">
+                <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}" Width="70" TextAlignment="Right" AutomationProperties.Name="Shortest wait"/>
+                <TextBlock Text="to" Style="{StaticResource Muted}" Margin="6,0,6,0" VerticalAlignment="Center"/>
+                <TextBox Text="{Binding Value2, UpdateSourceTrigger=LostFocus}" Width="70" TextAlignment="Right" AutomationProperties.Name="Longest wait"/>
+                <TextBlock Text="ms" Style="{StaticResource Muted}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="TextEditor">
+            <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Width="260" MaxLength="200" AutomationProperties.Name="Text"/>
+        </DataTemplate>
     </UserControl.Resources>
 
     <StackPanel>
@@ -82,6 +107,15 @@
                             <c:SettingRow Title="Repeat" Description="0 repeats until you stop it (or press the emergency stop hotkey).">
                                 <TextBox Text="{Binding Repeat, UpdateSourceTrigger=LostFocus}" Width="80" TextAlignment="Right" AutomationProperties.Name="Repeat count"/>
                             </c:SettingRow>
+                            <c:SettingRow Title="Pause between repeats" Description="Milliseconds to wait before playing again.">
+                                <TextBox Text="{Binding RepeatDelayMs, UpdateSourceTrigger=LostFocus}" Width="80" TextAlignment="Right" AutomationProperties.Name="Pause between repeats"/>
+                            </c:SettingRow>
+                            <c:SettingRow Title="Speed" Description="Plays every wait faster (above 1) or slower (below 1).">
+                                <TextBox Text="{Binding Speed, UpdateSourceTrigger=LostFocus}" Width="80" TextAlignment="Right" AutomationProperties.Name="Playback speed"/>
+                            </c:SettingRow>
+                            <c:SettingRow Title="Only in Roblox" Description="The hotkey only starts this macro while Roblox is the window in front.">
+                                <CheckBox IsChecked="{Binding OnlyInRoblox}"/>
+                            </c:SettingRow>
                             <TextBlock Text="{Binding DataContext.Message, RelativeSource={RelativeSource AncestorType=UserControl}}" Style="{StaticResource Muted}" Margin="0,6,0,0"
                                        Visibility="{Binding DataContext.Message, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NullVisible}}"/>
                         </StackPanel>
@@ -96,6 +130,9 @@
                                     <Button Content="+ Key" Command="{Binding AddStep}" CommandParameter="KeyPress" Padding="10,5"/>
                                     <Button Content="+ Click" Command="{Binding AddStep}" CommandParameter="Click" Margin="6,0,0,0" Padding="10,5"/>
                                     <Button Content="+ Wait" Command="{Binding AddStep}" CommandParameter="Wait" Margin="6,0,0,0" Padding="10,5"/>
+                                    <Button Content="+ Scroll" Command="{Binding AddStep}" CommandParameter="Scroll" Margin="6,0,0,0" Padding="10,5"/>
+                                    <Button Content="+ Move" Command="{Binding AddStep}" CommandParameter="MoveMouse" Margin="6,0,0,0" Padding="10,5"/>
+                                    <Button Content="+ Text" Command="{Binding AddStep}" CommandParameter="TypeText" Margin="6,0,0,0" Padding="10,5"/>
                                 </StackPanel>
                             </Grid>
                             <TextBlock Text="This macro has no steps. Add one above." Style="{StaticResource Muted}" Visibility="{Binding Selected.Steps.Count, Converter={StaticResource Eq}, ConverterParameter=0}"/>
@@ -117,6 +154,11 @@
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding Type}" Value="Click"><Setter Property="ContentTemplate" Value="{StaticResource ClickEditor}"/></DataTrigger>
                                                                 <DataTrigger Binding="{Binding Type}" Value="Wait"><Setter Property="ContentTemplate" Value="{StaticResource WaitEditor}"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding Type}" Value="RandomWait"><Setter Property="ContentTemplate" Value="{StaticResource RandomWaitEditor}"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding Type}" Value="Scroll"><Setter Property="ContentTemplate" Value="{StaticResource ScrollEditor}"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding Type}" Value="MoveMouse"><Setter Property="ContentTemplate" Value="{StaticResource MoveEditor}"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding Type}" Value="TypeText"><Setter Property="ContentTemplate" Value="{StaticResource TextEditor}"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding Type}" Value="Note"><Setter Property="ContentTemplate" Value="{StaticResource TextEditor}"/></DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </ContentControl.Style>

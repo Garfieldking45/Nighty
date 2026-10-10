@@ -64,7 +64,10 @@ internal static class NativeMethods
     public const uint SPI_GETMOUSE = 0x3, SPI_SETMOUSE = 0x4, SPI_GETKEYBOARDSPEED = 0xA, SPI_SETKEYBOARDSPEED = 0xB,
         SPI_GETKEYBOARDDELAY = 0x16, SPI_SETKEYBOARDDELAY = 0x17,
         SPI_GETFILTERKEYS = 0x32, SPI_SETFILTERKEYS = 0x33, SPI_GETTOGGLEKEYS = 0x34, SPI_SETTOGGLEKEYS = 0x35,
-        SPI_GETSTICKYKEYS = 0x3A, SPI_SETSTICKYKEYS = 0x3B, SPI_GETMOUSESPEED = 0x70, SPI_SETMOUSESPEED = 0x71;
+        SPI_GETSTICKYKEYS = 0x3A, SPI_SETSTICKYKEYS = 0x3B, SPI_GETMOUSESPEED = 0x70, SPI_SETMOUSESPEED = 0x71,
+        SPI_GETWHEELSCROLLLINES = 0x68, SPI_SETWHEELSCROLLLINES = 0x69;
+    [DllImport("user32.dll")] public static extern uint GetDoubleClickTime();
+    [DllImport("user32.dll")] public static extern bool SetDoubleClickTime(uint ms);
     public const uint SPIF_UPDATEINIFILE = 0x1, SPIF_SENDCHANGE = 0x2;
 
     [StructLayout(LayoutKind.Sequential)] public struct STICKYKEYS { public uint cbSize, dwFlags; }
@@ -176,6 +179,38 @@ internal static class InputSender
         buf[0] = new NativeMethods.INPUT { type = NativeMethods.INPUT_MOUSE };
         buf[0].u.mi.dwFlags = NativeMethods.MOUSEEVENTF_MOVE;
         NativeMethods.SendInput(1, buf, Size);
+    }
+
+    public static void Scroll(int notches)
+    {
+        var buf = new NativeMethods.INPUT[1];
+        buf[0] = new NativeMethods.INPUT { type = NativeMethods.INPUT_MOUSE };
+        buf[0].u.mi.dwFlags = 0x0800;   // MOUSEEVENTF_WHEEL
+        buf[0].u.mi.mouseData = unchecked((uint)(notches * 120));
+        NativeMethods.SendInput(1, buf, Size);
+    }
+
+    public static void MoveRelative(int dx, int dy)
+    {
+        var buf = new NativeMethods.INPUT[1];
+        buf[0] = new NativeMethods.INPUT { type = NativeMethods.INPUT_MOUSE };
+        buf[0].u.mi.dx = dx; buf[0].u.mi.dy = dy;
+        buf[0].u.mi.dwFlags = NativeMethods.MOUSEEVENTF_MOVE;
+        NativeMethods.SendInput(1, buf, Size);
+    }
+
+    /// <summary>Types text as Unicode characters, so it lands in chat and text boxes whatever the keyboard layout.</summary>
+    public static void TypeText(string text, System.Threading.CancellationToken ct)
+    {
+        foreach (char ch in text)
+        {
+            if (ct.IsCancellationRequested) return;
+            var down = new NativeMethods.INPUT { type = NativeMethods.INPUT_KEYBOARD };
+            down.u.ki.wScan = ch; down.u.ki.dwFlags = 0x4;   // KEYEVENTF_UNICODE
+            var up = down; up.u.ki.dwFlags = 0x4 | NativeMethods.KEYEVENTF_KEYUP;
+            NativeMethods.SendInput(2, new[] { down, up }, Size);
+            System.Threading.Thread.Sleep(5);
+        }
     }
 
     public static void Key(int vk, bool down)

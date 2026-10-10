@@ -12,6 +12,7 @@ public static class Svc
     public static SystemUsageService Usage { get; private set; } = null!;
     public static ClickerService Clicker { get; private set; } = null!;
     public static BowSwitchService Bow { get; private set; } = null!;
+    public static SlotMacroService SlotMacros { get; } = new();
     public static MacroPlayer Macros { get; private set; } = null!;
     public static CpsMonitor Cps { get; private set; } = null!;
     public static GameModeService GameMode { get; private set; } = null!;
@@ -25,6 +26,7 @@ public static class Svc
     public static QosService Qos { get; private set; } = null!;
     public static PingService Ping { get; private set; } = null!;
     public static FpsService Fps { get; private set; } = null!;
+    public static FishingService Fishing { get; } = new();
     public static ToastService Toast { get; } = new();
     public static OverlayManager Overlays { get; private set; } = null!;
     public static ModsService Mods { get; private set; } = null!;
@@ -76,10 +78,20 @@ public static class Svc
     }
 
     /// <summary>Stops everything that sends input. Used by the emergency-stop hotkey and on exit.</summary>
+    /// <summary>Gives Windows its normal settings back. Run when Nighty closes.</summary>
+    public static void RestoreSystemOnExit()
+    {
+        try { Pointer.AutoRelease(); if (Pointer.HasBackup) Pointer.Restore(); } catch (Exception ex) { Log.Error("Pointer restore on exit failed", ex); }
+        try { if (Movement.HasBackup) Movement.Restore(); } catch (Exception ex) { Log.Error("Movement restore on exit failed", ex); }
+        try { Tweaks.RevertAllRemembering(); } catch (Exception ex) { Log.Error("Tweaks restore on exit failed", ex); }
+    }
+
     public static void StopAllInput()
     {
         Clicker.Stop();
         Macros.StopAll();
         Bow.Stop();
+        SlotMacros.StopAll();
+        Fishing.Stop();
     }
 }

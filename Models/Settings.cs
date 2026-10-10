@@ -6,7 +6,7 @@ namespace Nighty.Models;
 
 public enum ClickButton { Left, Right, Middle }
 public enum ActivationMode { Toggle, Hold }
-public enum OverlayKind { Cps, Fps, Ping, Wasd, Mouse, Key, Crosshair }
+public enum OverlayKind { Cps, Fps, Ping, Wasd, Mouse, Key, Crosshair, FishTracker, Hud }
 public enum CrosshairStyle { Cross, CrossDot, Dot, Circle }
 
 public sealed record CrosshairStyleChoice(string Name, CrosshairStyle Value);
@@ -25,7 +25,78 @@ public static class CrosshairOptions
     };
 }
 public enum SocdMode { LastInput, Neutral, FirstInput }
-public enum MacroStepType { KeyPress, KeyDown, KeyUp, Click, Wait }
+public enum SlotMacroKind { Whim, Lasso, BuildUp, Melody, GingerBread }
+public enum SlotMacroStyle { Toggle, Press, Hold }
+
+public sealed class SlotMacroConfig : ObservableObject
+{
+    private bool _enabled, _onlyRoblox = true;
+    private int _vk, _mods, _delay, _look;
+    private double _a = 1, _b = 2;
+
+    public SlotMacroKind Kind { get; set; }
+    public bool Enabled { get => _enabled; set => Set(ref _enabled, value); }
+    public bool OnlyWhenRobloxFocused { get => _onlyRoblox; set => Set(ref _onlyRoblox, value); }
+    public int HotkeyVk { get => _vk; set { if (Set(ref _vk, value)) OnPropertyChanged(nameof(KeyText)); } }
+    public int HotkeyMods { get => _mods; set { if (Set(ref _mods, value)) OnPropertyChanged(nameof(KeyText)); } }
+    /// <summary>First hotbar slot used (book, lasso, blocks, guitar or gumdrop).</summary>
+    public double SlotA { get => _a; set => Set(ref _a, Math.Clamp(Math.Round(value), 1, 9)); }
+    /// <summary>Second hotbar slot used (sword, blocks or pickaxe).</summary>
+    public double SlotB { get => _b; set => Set(ref _b, Math.Clamp(Math.Round(value), 1, 9)); }
+    public int DelayMs { get => _delay; set => Set(ref _delay, Math.Clamp(value, 0, 10000)); }
+    /// <summary>Mouse movement down, in pixels (restored afterwards by Build Up).</summary>
+    public int LookDown { get => _look; set => Set(ref _look, Math.Clamp(value, 0, 4000)); }
+
+    [JsonIgnore] public string KeyText => HotkeyVk <= 0 ? "no key set" : Hotkeys.Format(HotkeyVk, HotkeyMods);
+    [JsonIgnore] public SlotMacroStyle Style => Kind switch
+    {
+        SlotMacroKind.Whim => SlotMacroStyle.Toggle,
+        SlotMacroKind.BuildUp or SlotMacroKind.Melody => SlotMacroStyle.Hold,
+        _ => SlotMacroStyle.Press,
+    };
+    [JsonIgnore] public string Title => Kind switch
+    {
+        SlotMacroKind.Whim => "Auto Whim", SlotMacroKind.Lasso => "Auto Lasso", SlotMacroKind.BuildUp => "Auto Build Up",
+        SlotMacroKind.Melody => "Auto Melody", _ => "Auto GingerBread Man",
+    };
+    [JsonIgnore] public string Description => Kind switch
+    {
+        SlotMacroKind.Whim => "Toggle. Swaps to the book, fires, swaps to the sword and clicks through the 1.1 s cooldown, then repeats.",
+        SlotMacroKind.Lasso => "Press. Holds the lasso, looks down, swaps to blocks, then places one under you.",
+        SlotMacroKind.BuildUp => "Hold. Swaps to blocks, looks down and spam clicks at the Auto Clicker speed; on release restores your view and swaps back to the sword.",
+        SlotMacroKind.Melody => "Hold. Hits with the sword, swaps to the guitar and clicks, swaps back to the sword, then waits.",
+        _ => "Press. Swaps to the gumdrop and clicks, waits, then swaps to the pickaxe and clicks.",
+    };
+    [JsonIgnore] public string StyleText => Style switch { SlotMacroStyle.Toggle => "Toggle", SlotMacroStyle.Hold => "Hold", _ => "Press" };
+    [JsonIgnore] public string KeyHint => $"{StyleText}: click, then press a key or side button.";
+    [JsonIgnore] public string LabelA => Kind switch
+    {
+        SlotMacroKind.Whim => "BOOK SLOT", SlotMacroKind.Lasso => "LASSO SLOT", SlotMacroKind.BuildUp => "BLOCK SLOT",
+        SlotMacroKind.Melody => "GUITAR SLOT", _ => "GUMDROP SLOT",
+    };
+    [JsonIgnore] public string LabelB => Kind switch
+    {
+        SlotMacroKind.Lasso => "BLOCK SLOT", SlotMacroKind.GingerBread => "PICKAXE SLOT", _ => "SWORD SLOT",
+    };
+    [JsonIgnore] public string LabelDelay => Kind switch
+    {
+        SlotMacroKind.Lasso => "HOLD (MS)", SlotMacroKind.Melody or SlotMacroKind.GingerBread => "DELAY (MS)", _ => "",
+    };
+    [JsonIgnore] public string LabelLook => Kind is SlotMacroKind.Lasso or SlotMacroKind.BuildUp ? "LOOK DOWN (PX)" : "";
+
+    public SlotMacroConfig Snapshot() => (SlotMacroConfig)MemberwiseClone();
+
+    public static SlotMacroConfig Create(SlotMacroKind k) => k switch
+    {
+        SlotMacroKind.Whim => new() { Kind = k, HotkeyVk = 0x05, SlotA = 3, SlotB = 1 },
+        SlotMacroKind.Lasso => new() { Kind = k, HotkeyVk = 0x06, SlotA = 1, SlotB = 2, DelayMs = 1000, LookDown = 1200 },
+        SlotMacroKind.BuildUp => new() { Kind = k, HotkeyVk = 0x06, SlotA = 2, SlotB = 1, LookDown = 1200 },
+        SlotMacroKind.Melody => new() { Kind = k, HotkeyVk = 0x06, SlotA = 2, SlotB = 1, DelayMs = 1000 },
+        _ => new() { Kind = k, HotkeyVk = 0x05, SlotA = 1, SlotB = 2, DelayMs = 1000 },
+    };
+}
+
+public enum MacroStepType { KeyPress, KeyDown, KeyUp, Click, Wait, Scroll, MoveMouse, RandomWait, TypeText, Note }
 
 public sealed class ClickerSettings : ObservableObject
 {
@@ -37,6 +108,9 @@ public sealed class ClickerSettings : ObservableObject
     private ActivationMode _mode = ActivationMode.Toggle;
 
     public bool Enabled { get => _enabled; set => Set(ref _enabled, value); }
+    private int _perHit = 1;
+    /// <summary>How many clicks are sent each time the clicker fires (1 = normal).</summary>
+    public int ClicksPerHit { get => _perHit; set => Set(ref _perHit, Math.Clamp(value, 1, 10)); }
     public double Cps { get => _cps; set => Set(ref _cps, Math.Clamp(Math.Round(value, 1), 1, 50)); }
     public bool UseRange { get => _useRange; set => Set(ref _useRange, value); }
     public double MinCps
@@ -60,7 +134,7 @@ public sealed class ClickerSettings : ObservableObject
     {
         Cps = o.Cps; UseRange = o.UseRange; MinCps = o.MinCps; MaxCps = o.MaxCps; Button = o.Button;
         DutyCycle = o.DutyCycle; Mode = o.Mode; HotkeyVk = o.HotkeyVk; HotkeyMods = o.HotkeyMods;
-        OnlyWhenRobloxFocused = o.OnlyWhenRobloxFocused;
+        OnlyWhenRobloxFocused = o.OnlyWhenRobloxFocused; ClicksPerHit = o.ClicksPerHit;
     }
 
     public ClickerSettings Clone() { var c = new ClickerSettings(); c.CopyFrom(this); return c; }
@@ -121,6 +195,12 @@ public sealed class TrackingSettings : ObservableObject
     public bool SlowInSlotOne { get => _slowOne; set => Set(ref _slowOne, value); }
     public int SlowSpeed { get => _slowSpeed; set => Set(ref _slowSpeed, Math.Clamp(value, 1, 20)); }
 
+    private int _scrollLines, _doubleClickMs;
+    /// <summary>Lines per wheel notch. 0 leaves the Windows setting alone.</summary>
+    public int ScrollLines { get => _scrollLines; set => Set(ref _scrollLines, value <= 0 ? 0 : Math.Clamp(value, 1, 100)); }
+    /// <summary>Double-click speed in milliseconds. 0 leaves the Windows setting alone.</summary>
+    public int DoubleClickMs { get => _doubleClickMs; set => Set(ref _doubleClickMs, value <= 0 ? 0 : Math.Clamp(value, 200, 900)); }
+
     private bool _onlyRoblox;
     private int _dpi = 800;
     private double _sens = 0.5;
@@ -135,6 +215,8 @@ public sealed class DnsSettings : ObservableObject
     private string? _adapter;
     private bool _autoBest;
     public string? AdapterId { get => _adapter; set => Set(ref _adapter, value); }
+    /// <summary>Resolvers you added yourself (up to 6), each "primary" or "primary,secondary" (IPv4).</summary>
+    public List<string> Custom { get; set; } = new();
     public bool AutoApplyBest { get => _autoBest; set => Set(ref _autoBest, value); }
 }
 
@@ -199,6 +281,8 @@ public sealed class OverlayConfig : ObservableObject
         OverlayKind.Ping => "Round-trip time to the ping host set below (ICMP).",
         OverlayKind.Wasd => "W, A, S, D key states.",
         OverlayKind.Mouse => "Left, middle and right mouse button states.",
+        OverlayKind.Hud => "Lists every macro you have switched on with its key; the ones running right now are marked.",
+        OverlayKind.FishTracker => "Fish caught by Auto Fish this session, with a count for each rarity.",
         OverlayKind.Crosshair => "A crosshair drawn on top of your screen. Position 50% / 50% is the exact centre.",
         _ => $"Shows when {Hotkeys.KeyName(KeyVk)} is held.",
     };
@@ -218,8 +302,19 @@ public sealed class MacroStep : ObservableObject
     public MacroStepType Type { get => _type; set { if (Set(ref _type, value)) OnPropertyChanged(nameof(Description)); } }
     /// <summary>Virtual-key code, ClickButton index, or milliseconds depending on <see cref="Type"/>.</summary>
     public int Value { get => _value; set { if (Set(ref _value, value)) OnPropertyChanged(nameof(Description)); } }
+    private int _value2 = 0;
+    private string _text = "";
+    /// <summary>Second number: vertical pixels for MoveMouse, maximum milliseconds for RandomWait.</summary>
+    public int Value2 { get => _value2; set { if (Set(ref _value2, value)) OnPropertyChanged(nameof(Description)); } }
+    /// <summary>Text typed by TypeText, or the reminder shown by Note.</summary>
+    public string Text { get => _text; set { if (Set(ref _text, value ?? "")) OnPropertyChanged(nameof(Description)); } }
     public string Description => Type switch
     {
+        MacroStepType.Scroll => $"Scroll {(Value >= 0 ? "up" : "down")} {Math.Abs(Value)}",
+        MacroStepType.MoveMouse => $"Move mouse {Value}, {Value2} px",
+        MacroStepType.RandomWait => $"Wait {Value}–{Value2} ms",
+        MacroStepType.TypeText => $"Type “{Text}”",
+        MacroStepType.Note => $"Note: {Text}",
         MacroStepType.KeyPress => $"Press {Hotkeys.KeyName(Value)}",
         MacroStepType.KeyDown => $"Hold {Hotkeys.KeyName(Value)}",
         MacroStepType.KeyUp => $"Release {Hotkeys.KeyName(Value)}",
@@ -240,6 +335,15 @@ public sealed class MacroDef : ObservableObject
     public int HotkeyVk { get => _vk; set => Set(ref _vk, value); }
     public int HotkeyMods { get => _mods; set => Set(ref _mods, value); }
     public bool HotkeyEnabled { get => _enabled; set => Set(ref _enabled, value); }
+    private bool _onlyRoblox;
+    private int _repeatDelay;
+    private double _speed = 1;
+    /// <summary>The hotkey only starts the macro while Roblox is the window in front.</summary>
+    public bool OnlyInRoblox { get => _onlyRoblox; set => Set(ref _onlyRoblox, value); }
+    /// <summary>Pause between repeats, in milliseconds.</summary>
+    public int RepeatDelayMs { get => _repeatDelay; set => Set(ref _repeatDelay, Math.Clamp(value, 0, 600000)); }
+    /// <summary>Plays every wait faster (above 1) or slower (below 1).</summary>
+    public double Speed { get => _speed; set => Set(ref _speed, Math.Clamp(Math.Round(value, 2), 0.1, 10)); }
     public ObservableCollection<MacroStep> Steps { get; set; } = new();
 }
 
@@ -290,12 +394,48 @@ public sealed class BowSwitchSettings : ObservableObject
     public bool OnlyWhenRobloxFocused { get => _onlyRoblox; set => Set(ref _onlyRoblox, value); }
 }
 
+public enum FishRarity { Common, Blue, Special, Gold, Emerald, Unknown }
+
+public sealed class FishingSettings : ObservableObject
+{
+    private int _vk = 0x76, _mods;
+    private bool _right = true;
+    private double _cast = 700;
+    private bool _skipCommon, _skipBlue, _skipSpecial, _skipGold, _skipEmerald;
+    /// <summary>Skipper: when the fish on the line is one of these, jump once to dismiss it so you can fish again.</summary>
+    public bool SkipCommon { get => _skipCommon; set => Set(ref _skipCommon, value); }
+    public bool SkipBlue { get => _skipBlue; set => Set(ref _skipBlue, value); }
+    public bool SkipSpecial { get => _skipSpecial; set => Set(ref _skipSpecial, value); }
+    public bool SkipGold { get => _skipGold; set => Set(ref _skipGold, value); }
+    public bool SkipEmerald { get => _skipEmerald; set => Set(ref _skipEmerald, value); }
+    public bool ShouldSkip(FishRarity r) => r switch
+    {
+        FishRarity.Common => _skipCommon, FishRarity.Blue => _skipBlue, FishRarity.Special => _skipSpecial,
+        FishRarity.Gold => _skipGold, FishRarity.Emerald => _skipEmerald, _ => false,
+    };
+    /// <summary>Key that starts and stops auto fishing (default F7).</summary>
+    public int HotkeyVk { get => _vk; set => Set(ref _vk, value); }
+    public int HotkeyMods { get => _mods; set => Set(ref _mods, value); }
+    /// <summary>True when holding the mouse moves your green box to the right. Flip it if the box runs the wrong way.</summary>
+    public bool HoldMovesRight { get => _right; set => Set(ref _right, value); }
+    /// <summary>How long to hold the mouse to throw the rod.</summary>
+    public double CastHoldMs { get => _cast; set => Set(ref _cast, Math.Clamp(Math.Round(value), 10, 3000)); }
+}
+
 public sealed class GeneralSettings : ObservableObject
 {
-    private bool _topmost, _notify = true;
+    private bool _topmost, _notify = true, _restoreClose = true;
+    /// <summary>Put Windows back to normal (pointer, keyboard/accessibility, PC tweaks, Game Mode) when Nighty closes.</summary>
+    public bool RestoreOnClose { get => _restoreClose; set => Set(ref _restoreClose, value); }
     /// <summary>Brief bottom-right notification when something is toggled.</summary>
     public bool ShowNotifications { get => _notify; set => Set(ref _notify, value); }
     private int _stopVk = 0x78, _stopMods;
+    private bool _startMin;
+    private string _theme = "blue";
+    /// <summary>UI preset id (recolours the accent).</summary>
+    public string Theme { get => _theme; set => Set(ref _theme, value ?? "blue"); }
+    /// <summary>Open in the taskbar instead of on screen (used with Start with Windows, and by the --minimized flag).</summary>
+    public bool StartMinimized { get => _startMin; set => Set(ref _startMin, value); }
     public bool AlwaysOnTop { get => _topmost; set => Set(ref _topmost, value); }
     public int StopHotkeyVk { get => _stopVk; set => Set(ref _stopVk, value); }
     public int StopHotkeyMods { get => _stopMods; set => Set(ref _stopMods, value); }
@@ -308,6 +448,8 @@ public sealed class SystemBackups
     public string? OriginalPowerScheme { get; set; }
     /// <summary>PC tweaks currently switched on, and the original value of every setting they changed ("id|subkey|name" to "N" / "I:n" / "S:text").</summary>
     public HashSet<string> TweaksApplied { get; set; } = new();
+    /// <summary>Tweaks that were switched on when Nighty last closed; they are switched back on at the next start.</summary>
+    public HashSet<string> TweaksToReapply { get; set; } = new();
     public Dictionary<string, string> Tweaks { get; set; } = new();
 
     public bool HasGameBarBackup { get; set; }
@@ -320,6 +462,8 @@ public sealed class SystemBackups
     public int KeyboardDelay { get; set; }
     public int KeyboardSpeed { get; set; }
 
+    public int ScrollLinesOriginal { get; set; } = -1;
+    public int DoubleClickOriginal { get; set; } = -1;
     public bool HasPointerBackup { get; set; }
     public int PointerSpeed { get; set; }
     public int[] MouseParams { get; set; } = Array.Empty<int>();
@@ -344,9 +488,11 @@ public sealed class AppSettings
     public ObservableCollection<ClickerPreset> Presets { get; set; } = new();
     public GameSettings Game { get; set; } = new();
     public BowSwitchSettings Bow { get; set; } = new();
+    public FishingSettings Fishing { get; set; } = new();
     public UtilitySettings Utility { get; set; } = new();
     public OverlaySettings Overlays { get; set; } = new();
     public ObservableCollection<MacroDef> Macros { get; set; } = new();
     public ObservableCollection<ModEntry> Mods { get; set; } = new();
+    public ObservableCollection<SlotMacroConfig> SlotMacros { get; set; } = new();
     public SystemBackups Backups { get; set; } = new();
 }

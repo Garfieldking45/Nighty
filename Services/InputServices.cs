@@ -163,6 +163,13 @@ public sealed class ClickerService
             InputSender.MouseButton(button, true);
             try { Wait.Until(clickStart + Wait.FromMs(holdMs), ct); }
             finally { InputSender.MouseButton(button, false); }   // never leave the button stuck down
+            for (int extra = 1; extra < _s.ClicksPerHit && !ct.IsCancellationRequested; extra++)
+            {
+                Wait.Ms(Math.Min(8, periodMs / (2.0 * _s.ClicksPerHit)), ct);
+                InputSender.MouseButton(button, true);
+                try { Wait.Ms(Math.Min(6, holdMs), ct); }
+                finally { InputSender.MouseButton(button, false); }
+            }
 
             lock (_gate) _stamps.Enqueue(Environment.TickCount64);
             Svc.Bow.TryAuto();   // react right after a click instead of waiting for the UI timer
@@ -198,10 +205,12 @@ public sealed class MacroPlayer
         if (IsRunning(m.Id) || m.Steps.Count == 0) return;
         var cts = new CancellationTokenSource();
         _running[m.Id] = cts;
-        var steps = m.Steps.Select(s => (s.Type, s.Value)).ToList();
+        var steps = m.Steps.Select(s => new MacroStep { Type = s.Type, Value = s.Value, Value2 = s.Value2, Text = s.Text }).ToList();
+        double speed = m.Speed <= 0 ? 1 : m.Speed;
+        int repeatDelay = m.RepeatDelayMs;
         int repeat = m.Repeat;
         Changed?.Invoke();
-        Task.Run(() => Run(m.Id, steps, repeat, startDelayMs, cts));
+        Task.Run(() => Run(m.Id, steps, repeat, startDelayMs, speed, repeatDelay, cts));
     }
 
     public void Stop(Guid id)
@@ -215,7 +224,7 @@ public sealed class MacroPlayer
         foreach (var id in _running.Keys.ToList()) Stop(id);
     }
 
-    private void Run(Guid id, List<(MacroStepType Type, int Value)> steps, int repeat, int startDelay, CancellationTokenSource cts)
+    private void Run(Guid id, List<MacroStep> steps, int repeat, int startDelay, double speed, int repeatDelay, CancellationTokenSource cts)
     {
         var ct = cts.Token;
         var held = new HashSet<int>();
@@ -225,8 +234,9 @@ public sealed class MacroPlayer
             if (startDelay > 0) Wait.Ms(startDelay, ct);
             for (int i = 0; (repeat == 0 || i < repeat) && !ct.IsCancellationRequested; i++)
             {
-                foreach (var (type, value) in steps)
+                foreach (var step in steps)
                 {
+                    var type = step.Type; int value = step.Value;
                     if (ct.IsCancellationRequested) break;
                     switch (type)
                     {
@@ -240,10 +250,20 @@ public sealed class MacroPlayer
                             var b = (ClickButton)Math.Clamp(value, 0, 2);
                             InputSender.MouseButton(b, true); Wait.Ms(20, ct); InputSender.MouseButton(b, false); break;
                         case MacroStepType.Wait:
-                            Wait.Ms(value, ct); break;
+                            Wait.Ms(value / speed, ct); break;
+                        case MacroStepType.RandomWait:
+                            int lo = Math.Min(value, step.Value2), hi = Math.Max(value, step.Value2);
+                            Wait.Ms(Random.Shared.Next(lo, hi + 1) / speed, ct); break;
+                        case MacroStepType.Scroll:
+                            InputSender.Scroll(value); break;
+                        case MacroStepType.MoveMouse:
+                            InputSender.MoveRelative(value, step.Value2); break;
+                        case MacroStepType.TypeText:
+                            InputSender.TypeText(step.Text, ct); break;
                     }
                 }
-                if (steps.All(s => s.Type != MacroStepType.Wait)) Wait.Ms(5, ct);   // avoid a hot loop with no delays
+                if (repeatDelay > 0) Wait.Ms(repeatDelay, ct);
+                if (repeatDelay == 0 && steps.All(s => s.Type is not (MacroStepType.Wait or MacroStepType.RandomWait))) Wait.Ms(5, ct);   // avoid a hot loop with no delays
             }
         }
         catch (Exception ex) { Log.Error("Macro failed", ex); }

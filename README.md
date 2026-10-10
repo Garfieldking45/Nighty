@@ -1,6 +1,6 @@
 # Nighty
 
-Native Windows desktop app (C# / .NET 8 / WPF, MVVM) with seven pages: Combat, Gaming, Utility, Mods, Macros, Overlays, Settings.
+Native Windows desktop app (C# / .NET 8 / WPF, MVVM) with pages for Combat, Gaming, Utility, Tweaks, Extras (Bow Switch, hotbar macros, Auto Fish), Mods, Macros, Overlays and Settings.
 
 ## Build & run
 - Requires the .NET 8 SDK (build only). Run `powershell -ExecutionPolicy Bypass -File build.ps1`

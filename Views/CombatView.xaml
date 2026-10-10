@@ -92,6 +92,14 @@
 
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
+                        <TextBlock Text="Clicks per hit" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="How many clicks are sent each time the clicker fires. Leave at 1 unless you need bursts." Style="{StaticResource Muted}" Margin="0,3,0,12" TextWrapping="Wrap"/>
+                        <c:ValueStepper Value="{Binding ClicksPerHit, Mode=TwoWay}" Minimum="1" Maximum="10" Step="1"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
                         <TextBlock Text="Duty cycle" Style="{StaticResource CardTitle}"/>
                         <TextBlock Text="How long the button stays pressed within each click." Style="{StaticResource Muted}" Margin="0,3,0,12"/>
                         <Border Background="{StaticResource Panel2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Margin="0,0,0,14">

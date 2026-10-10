@@ -69,7 +69,16 @@ public sealed class TweaksService
     /// <summary>Roblox lives in a new folder after every update, so redo the per-path tweak at startup.</summary>
     public void Reapply()
     {
+        foreach (var id in B.TweaksToReapply.ToList()) if (!IsApplied(id)) Set(id, true);
+        B.TweaksToReapply.Clear();
         if (IsApplied("gpu")) Set("gpu", true);
+    }
+
+    /// <summary>Reverts every tweak but remembers which were on, so the next start puts them back.</summary>
+    public void RevertAllRemembering()
+    {
+        foreach (var id in B.TweaksApplied) B.TweaksToReapply.Add(id);
+        RevertAll();
     }
 
     private void Revert(string id)

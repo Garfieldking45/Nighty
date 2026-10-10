@@ -126,6 +126,19 @@
         </ItemsControl>
 
         <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <TextBlock Text="Share overlays" Style="{StaticResource CardTitle}"/>
+                <TextBlock Text="A .nightyoverlay file holds only overlay positions and styles: no settings, keys or anything else from your PC. Loading one replaces your overlays, and Undo brings yours back." Style="{StaticResource Muted}" Margin="0,3,0,12" TextWrapping="Wrap"/>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Save overlays" Command="{Binding SaveLayoutCommand}"/>
+                    <Button Content="Load overlays" Command="{Binding LoadLayoutCommand}" Margin="8,0,0,0"/>
+                    <Button Content="Undo last load" Command="{Binding UndoLoadCommand}" Margin="8,0,0,0"/>
+                </StackPanel>
+                <TextBlock Text="{Binding ShareMessage}" Style="{StaticResource Muted}" Margin="0,10,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
             <c:SettingRow Title="Ping host" Description="The Ping overlay measures round-trip time (ICMP) to this host. Some hosts block ping.">
                 <TextBox Text="{Binding Settings.PingHost, UpdateSourceTrigger=LostFocus}" Width="190" AutomationProperties.Name="Ping host"/>
             </c:SettingRow>

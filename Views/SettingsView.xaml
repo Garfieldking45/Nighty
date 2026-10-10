@@ -15,8 +15,20 @@
                     <CheckBox IsChecked="{Binding StartWithWindows}"/>
                 </c:SettingRow>
                 <Border Style="{StaticResource Divider}"/>
+                <c:SettingRow Title="UI preset" Description="Recolours buttons, highlights and selections across the app.">
+                    <ComboBox ItemsSource="{Binding Themes}" DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding SelectedTheme}" MinWidth="150" AutomationProperties.Name="UI preset"/>
+                </c:SettingRow>
+                <Border Style="{StaticResource Divider}"/>
+                <c:SettingRow Title="Start minimized" Description="Open in the taskbar instead of on screen when Nighty starts with Windows (or with --minimized).">
+                    <CheckBox IsChecked="{Binding StartMinimized}"/>
+                </c:SettingRow>
+                <Border Style="{StaticResource Divider}"/>
                 <c:SettingRow Title="Keep window on top" Description="Keeps the Nighty window above other windows.">
                     <CheckBox IsChecked="{Binding General.AlwaysOnTop}"/>
+                </c:SettingRow>
+                <Border Style="{StaticResource Divider}"/>
+                <c:SettingRow Title="Restore Windows settings on close" Description="When Nighty closes, put the pointer, keyboard and accessibility settings, PC tweaks and Game Mode back to normal. Tweaks come back on at the next start.">
+                    <CheckBox IsChecked="{Binding General.RestoreOnClose}"/>
                 </c:SettingRow>
                 <Border Style="{StaticResource Divider}"/>
                 <c:SettingRow Title="Notifications" Description="Show a brief message in the bottom-right corner (over the game) when you toggle something.">
@@ -73,6 +85,13 @@
                 <Border Style="{StaticResource Divider}"/>
                 <c:SettingRow Title="Logs" Description="Diagnostic logs for troubleshooting.">
                     <Button Content="Open logs folder" Command="{Binding OpenLogsFolder}"/>
+                </c:SettingRow>
+                <Border Style="{StaticResource Divider}"/>
+                <c:SettingRow Title="Profile" Description="Save your whole setup as plain JSON to back it up or share it, or load someone else's. Importing restarts Nighty.">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Export" Command="{Binding ExportProfileCommand}"/>
+                        <Button Content="Import" Command="{Binding ImportProfileCommand}" Margin="8,0,0,0"/>
+                    </StackPanel>
                 </c:SettingRow>
                 <Border Style="{StaticResource Divider}"/>
                 <c:SettingRow Title="Reset everything" Description="Restores system changes, deletes presets, macros and layout, and restarts.">

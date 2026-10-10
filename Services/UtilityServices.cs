@@ -236,6 +236,7 @@ public sealed class PointerService
             if (precision) { mouse[0] = B.MouseParams.Length == 3 && B.MouseParams[2] != 0 ? B.MouseParams[0] : 6; mouse[1] = B.MouseParams.Length == 3 && B.MouseParams[2] != 0 ? B.MouseParams[1] : 10; mouse[2] = 1; }
             else { mouse[0] = 0; mouse[1] = 0; mouse[2] = 0; }
             uint f = NativeMethods.SPIF_UPDATEINIFILE | NativeMethods.SPIF_SENDCHANGE;
+            ApplyScrollAndDoubleClick(f);
             bool ok = NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSE, 0, mouse, f)
                     & NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)Math.Clamp(speed, 1, 20), f);
             if (!ok) return "Windows rejected the pointer settings.";
@@ -246,6 +247,24 @@ public sealed class PointerService
     }
 
     private bool _autoApplied;
+
+    /// <summary>Scroll speed (lines per notch) and double-click time; 0 in the settings leaves Windows' value alone.</summary>
+    private void ApplyScrollAndDoubleClick(uint flags)
+    {
+        var t = Svc.S.Utility.Tracking;
+        if (t.ScrollLines > 0)
+        {
+            if (B.ScrollLinesOriginal < 0 && NativeMethods.SystemParametersInfo(NativeMethods.SPI_GETWHEELSCROLLLINES, 0, out int lines, 0)) B.ScrollLinesOriginal = lines;
+            NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETWHEELSCROLLLINES, (uint)t.ScrollLines, IntPtr.Zero, flags);
+        }
+        if (t.DoubleClickMs > 0)
+        {
+            if (B.DoubleClickOriginal < 0) B.DoubleClickOriginal = (int)NativeMethods.GetDoubleClickTime();
+            NativeMethods.SetDoubleClickTime((uint)t.DoubleClickMs);
+        }
+        Svc.Settings.Save();
+    }
+
     private bool _slowApplied;
     private int _speedBeforeSlow;
     private readonly object _slowGate = new();
@@ -307,6 +326,9 @@ public sealed class PointerService
         uint f = NativeMethods.SPIF_UPDATEINIFILE | NativeMethods.SPIF_SENDCHANGE;
         if (B.MouseParams.Length == 3) NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSE, 0, (int[])B.MouseParams.Clone(), f);
         NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)B.PointerSpeed, f);
+        if (B.ScrollLinesOriginal >= 0) NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETWHEELSCROLLLINES, (uint)B.ScrollLinesOriginal, IntPtr.Zero, f);
+        if (B.DoubleClickOriginal >= 0) NativeMethods.SetDoubleClickTime((uint)B.DoubleClickOriginal);
+        B.ScrollLinesOriginal = -1; B.DoubleClickOriginal = -1;
         B.HasPointerBackup = false;
         Svc.Settings.Save();
         return "Original pointer settings restored.";
@@ -325,8 +347,9 @@ public sealed class DnsProvider : ObservableObject
 
     public required string Name { get; init; }
     public required string Primary { get; init; }
-    public required string Secondary { get; init; }
-    public string Servers => $"{Primary}, {Secondary}";
+    public string Secondary { get; init; } = "";
+    public bool IsCustom { get; init; }
+    public string Servers => string.IsNullOrEmpty(Secondary) ? Primary : $"{Primary}, {Secondary}";
     public double? LatencyMs { get => _latency; set { if (Set(ref _latency, value)) OnPropertyChanged(nameof(LatencyText)); } }
     public string LatencyText => LatencyMs is double d ? $"{d:0} ms" : "—";
     public int Success { get => _success; set { Set(ref _success, value); OnPropertyChanged(nameof(SuccessText)); } }
@@ -458,12 +481,13 @@ public sealed class DnsService
             b.Dns = new DnsBackup { AdapterId = adapter.Id, AdapterName = adapter.Name, InterfaceIndex = adapter.InterfaceIndex, WasStatic = adapter.IsStatic, Servers = adapter.DnsServers.ToList() };
             Svc.Settings.Save();
         }
-        var script = $"Set-DnsClientServerAddress -InterfaceIndex {adapter.InterfaceIndex} -ServerAddresses ('{provider.Primary}','{provider.Secondary}'); Clear-DnsClientCache";
+        var wanted = new[] { provider.Primary, provider.Secondary }.Where(x => !string.IsNullOrEmpty(x)).ToArray();
+        var script = $"Set-DnsClientServerAddress -InterfaceIndex {adapter.InterfaceIndex} -ServerAddresses ({string.Join(",", wanted.Select(x => $"'{x}'"))}); Clear-DnsClientCache";
         var (ok, msg) = await Elevation.RunPowerShellAsync(script);
         if (!ok) return (false, msg);
         var now = GetAdapters().FirstOrDefault(a => a.Id == adapter.Id);
-        bool verified = now != null && now.DnsServers.Take(2).SequenceEqual(new[] { provider.Primary, provider.Secondary });
-        return verified ? (true, $"DNS on {adapter.Name} is now {provider.Name} ({provider.Primary}, {provider.Secondary}).")
+        bool verified = now != null && now.DnsServers.Take(wanted.Length).SequenceEqual(wanted);
+        return verified ? (true, $"DNS on {adapter.Name} is now {provider.Name} ({provider.Servers}).")
                         : (false, "The command finished but Windows still reports different DNS servers.");
     }
 
