@@ -11,6 +11,11 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.0.3", "2026-10-10", new[]
+        {
+            "Auto Crossbow: the Auto Clicker now pauses only until the shot is released, not through the sword swap, so hit reg stays faster while the crossbow is held",
+            "Updates are more reliable: the swap retries while Windows or antivirus still holds the file, Nighty always reopens, and the download is checked for size and checksum first",
+        }),
         new("2.0.2", "2026-10-10", new[]
         {
             "Fixed Auto Crossbow shots randomly not firing when the Auto Clicker shares its button: the clicker now holds still during the shot instead of clicking into it",

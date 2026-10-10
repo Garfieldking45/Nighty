@@ -15,7 +15,7 @@ public sealed class SlotMacroService
     private const int KeyHoldMs = 20, ClickHoldMs = 10;
     private const double CrossbowCooldownMs = 1400, WhimCooldownMs = 1100;
 
-    /// <summary>True from the weapon key going down until the sword is selected after a shot. The Auto Clicker holds still meanwhile, so none of its clicks land inside the shot.</summary>
+    /// <summary>True from the weapon key going down until the shot is released. The Auto Clicker holds still meanwhile, so none of its clicks land inside the shot.</summary>
     public static volatile bool ShotInProgress;
 
     private readonly ConcurrentDictionary<SlotMacroKind, CancellationTokenSource> _running = new();
@@ -186,6 +186,7 @@ public sealed class SlotMacroService
             InputSender.MouseButton(ClickButton.Left, true);
             try { Wait.Until(t0 + Wait.FromMs(plan.ShotUp), ct); }
             finally { InputSender.MouseButton(ClickButton.Left, false); }   // never leave the shot held
+            ShotInProgress = false;   // the shot is out; the Auto Clicker may swing again while the sword is selected
             Wait.Until(t0 + Wait.FromMs(plan.SwordKey), ct);
 
             InputSender.KeyScan(swordVk, true);

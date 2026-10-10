@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Windows;
 using Nighty.Views;
@@ -59,10 +61,15 @@ public static class UpdateService
             var current = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 0, 0);
             if (latest <= current || tag == _declinedTag) return;
 
-            string? url = null;
+            string? url = null, digest = null;
+            long size = 0;
             foreach (var a in root.GetProperty("assets").EnumerateArray())
-                if (string.Equals(a.GetProperty("name").GetString(), AssetName, StringComparison.OrdinalIgnoreCase))
-                    url = a.GetProperty("browser_download_url").GetString();
+            {
+                if (!string.Equals(a.GetProperty("name").GetString(), AssetName, StringComparison.OrdinalIgnoreCase)) continue;
+                url = a.GetProperty("browser_download_url").GetString();
+                if (a.TryGetProperty("size", out var sz)) size = sz.GetInt64();
+                if (a.TryGetProperty("digest", out var dg) && dg.ValueKind == JsonValueKind.String) digest = dg.GetString();
+            }
             if (url == null) return;
 
             bool yes = await Application.Current.Dispatcher.InvokeAsync(() =>
@@ -71,12 +78,12 @@ public static class UpdateService
                     "Update")).Task.ConfigureAwait(false) ;
             if (!yes) { _declinedTag = tag; return; }
 
-            await DownloadAndInstallAsync(http, url);
+            await DownloadAndInstallAsync(http, url, size, digest);
         }
         catch (Exception ex) { Log.Warn("Update check failed", ex); }
     }
 
-    private static async Task DownloadAndInstallAsync(HttpClient http, string url)
+    private static async Task DownloadAndInstallAsync(HttpClient http, string url, long size, string? digest)
     {
         string? exe = Environment.ProcessPath;
         if (exe == null) return;
@@ -91,12 +98,23 @@ public static class UpdateService
                 await src.CopyToAsync(dst);
             }
 
-            // Wait for this process to exit, replace the exe, relaunch.
+            // Never swap in a partial or damaged download.
+            if (size > 0 && new FileInfo(newExe).Length != size) throw new IOException("The download was incomplete.");
+            if (digest != null && digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
+            {
+                await using var fs = File.OpenRead(newExe);
+                string got = Convert.ToHexString(await SHA256.HashDataAsync(fs));
+                if (!got.Equals(digest[7..], StringComparison.OrdinalIgnoreCase)) throw new IOException("The download did not match its checksum.");
+            }
+
+            // Wait for this process to exit, replace the exe (retrying while antivirus or Windows still holds it), relaunch.
+            // The relaunch always happens, so a failed swap leaves the old Nighty running instead of nothing.
             int pid = Environment.ProcessId;
+            string n = newExe.Replace("'", "''"), e = exe.Replace("'", "''");
             string script =
-                $"$ErrorActionPreference='Stop'; try {{ Wait-Process -Id {pid} -Timeout 30 }} catch {{}}; " +
-                $"Move-Item -LiteralPath '{newExe.Replace("'", "''")}' -Destination '{exe.Replace("'", "''")}' -Force; " +
-                $"Start-Process -FilePath '{exe.Replace("'", "''")}'";
+                $"try {{ Wait-Process -Id {pid} -Timeout 30 }} catch {{}}; " +
+                $"$ok = $false; for ($i = 0; $i -lt 120 -and -not $ok; $i++) {{ try {{ Move-Item -LiteralPath '{n}' -Destination '{e}' -Force -ErrorAction Stop; $ok = $true }} catch {{ Start-Sleep -Seconds 1 }} }}; " +
+                $"Start-Process -FilePath '{e}'";
             Process.Start(new ProcessStartInfo("powershell.exe",
                 $"-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command \"{script}\"")
             { UseShellExecute = false, CreateNoWindow = true });
@@ -108,7 +126,7 @@ public static class UpdateService
             Log.Error("Update failed", ex);
             try { File.Delete(newExe); } catch { }
             Application.Current.Dispatcher.Invoke(() =>
-                Dialogs.Info("Update failed", "Couldn't download the update. Please try again later."));
+                Dialogs.Info("Update failed", "Couldn't download the update: " + ex.Message + "\nPlease try again later."));
         }
     }
 
