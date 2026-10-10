@@ -5,6 +5,8 @@ using Nighty.Mvvm;
 namespace Nighty.Models;
 
 public enum ClickButton { Left, Right, Middle }
+/// <summary>Efficient waits on the OS timer only, Balanced spins the last 0.4 ms, Precise spins the last 2 ms.</summary>
+public enum PrecisionMode { Efficient, Balanced, Precise }
 public enum ActivationMode { Toggle, Hold }
 public enum OverlayKind { Cps, Fps, Ping, Wasd, Mouse, Key, Crosshair, FishTracker, Hud }
 public enum CrosshairStyle { Cross, CrossDot, Dot, Circle }
@@ -25,6 +27,11 @@ public static class CrosshairOptions
     };
 }
 public enum SocdMode { LastInput, Neutral, FirstInput }
+public enum OverlayVisibility { Always, WhileRobloxOpen, WhileRobloxFront }
+public enum CpsLayout { Compact, Big, Graph }
+/// <summary>Which clicks the CPS overlay counts: both, only your own, or only the auto clicker's (and macros').</summary>
+public enum CpsSource { Both, Mine, Clicker }
+public enum CpsButtons { Left, Right, Both }
 public enum SlotMacroKind { Crossbow, Whim, Lasso, BuildUp, Melody, GingerBread }
 public enum SlotMacroStyle { Toggle, Press, Hold }
 
@@ -37,6 +44,10 @@ public sealed class SlotMacroConfig : ObservableObject
     public SlotMacroKind Kind { get; set; }
     public bool Enabled { get => _enabled; set => Set(ref _enabled, value); }
     public bool OnlyWhenRobloxFocused { get => _onlyRoblox; set => Set(ref _onlyRoblox, value); }
+    private bool _onlySlotOne = true;
+    /// <summary>Auto Crossbow only: start only while hotbar slot 1 is the slot you are holding (pick it with the 1 key). Other macros ignore this.</summary>
+    public bool OnlyInSlotOne { get => _onlySlotOne; set => Set(ref _onlySlotOne, value); }
+    [JsonIgnore] public bool IsCrossbow => Kind == SlotMacroKind.Crossbow;
     public int HotkeyVk { get => _vk; set { if (Set(ref _vk, value)) OnPropertyChanged(nameof(KeyText)); } }
     public int HotkeyMods { get => _mods; set { if (Set(ref _mods, value)) OnPropertyChanged(nameof(KeyText)); } }
     /// <summary>First hotbar slot used (book, lasso, blocks, guitar or gumdrop).</summary>
@@ -116,7 +127,7 @@ public sealed class SlotMacroConfig : ObservableObject
     };
 }
 
-public enum MacroStepType { KeyPress, KeyDown, KeyUp, Click, Wait, Scroll, MoveMouse, RandomWait, TypeText, Note }
+public enum MacroStepType { KeyPress, KeyDown, KeyUp, Click, Wait, Scroll, MoveMouse, RandomWait, TypeText, Note, MouseDown, MouseUp, AutoClick, KeyCombo, DoubleClick, MoveTo }
 
 public sealed class ClickerSettings : ObservableObject
 {
@@ -134,17 +145,17 @@ public sealed class ClickerSettings : ObservableObject
     private int _perHit = 1;
     /// <summary>How many clicks are sent each time the clicker fires (1 = normal).</summary>
     public int ClicksPerHit { get => _perHit; set => Set(ref _perHit, Math.Clamp(value, 1, 5)); }
-    public double Cps { get => _cps; set => Set(ref _cps, Math.Clamp(Math.Round(value, 1), 1, 50)); }
+    public double Cps { get => _cps; set => Set(ref _cps, Math.Clamp(Math.Round(value, 1), 1, 100)); }
     public bool UseRange { get => _useRange; set => Set(ref _useRange, value); }
     public double MinCps
     {
         get => _minCps;
-        set { if (Set(ref _minCps, Math.Clamp(Math.Round(value, 1), 1, 50)) && _minCps > _maxCps) MaxCps = _minCps; }
+        set { if (Set(ref _minCps, Math.Clamp(Math.Round(value, 1), 1, 100)) && _minCps > _maxCps) MaxCps = _minCps; }
     }
     public double MaxCps
     {
         get => _maxCps;
-        set { if (Set(ref _maxCps, Math.Clamp(Math.Round(value, 1), 1, 50)) && _maxCps < _minCps) MinCps = _maxCps; }
+        set { if (Set(ref _maxCps, Math.Clamp(Math.Round(value, 1), 1, 100)) && _maxCps < _minCps) MinCps = _maxCps; }
     }
     public ClickButton Button { get => _button; set => Set(ref _button, value); }
     public int DutyCycle { get => _duty; set => Set(ref _duty, Math.Clamp(value, 5, 95)); }
@@ -153,11 +164,23 @@ public sealed class ClickerSettings : ObservableObject
     public int HotkeyMods { get => _mods; set => Set(ref _mods, value); }
     public bool OnlyWhenRobloxFocused { get => _onlyRoblox; set => Set(ref _onlyRoblox, value); }
 
+    private bool _hitFix = true;
+    private int _stopAfter, _timeLimit, _startDelayMs;
+    /// <summary>Steadier clicks: the clicker thread gets real-time priority, its own CPU core and an exact final spin before every click.</summary>
+    public bool HitFix { get => _hitFix; set => Set(ref _hitFix, value); }
+    /// <summary>Stops by itself after this many clicks (0 = never).</summary>
+    public int StopAfterClicks { get => _stopAfter; set => Set(ref _stopAfter, Math.Clamp(value, 0, 1_000_000)); }
+    /// <summary>Stops by itself after this many seconds (0 = never).</summary>
+    public int TimeLimitSec { get => _timeLimit; set => Set(ref _timeLimit, Math.Clamp(value, 0, 86400)); }
+    /// <summary>Wait this long after starting before the first click.</summary>
+    public int StartDelayMs { get => _startDelayMs; set => Set(ref _startDelayMs, Math.Clamp(value, 0, 10000)); }
+
     public void CopyFrom(ClickerSettings o)
     {
         Cps = o.Cps; UseRange = o.UseRange; MinCps = o.MinCps; MaxCps = o.MaxCps; Button = o.Button;
         DutyCycle = o.DutyCycle; Mode = o.Mode; HotkeyVk = o.HotkeyVk; HotkeyMods = o.HotkeyMods;
         OnlyWhenRobloxFocused = o.OnlyWhenRobloxFocused; ClicksPerHit = o.ClicksPerHit; Jitter = o.Jitter;
+        HitFix = o.HitFix; StopAfterClicks = o.StopAfterClicks; TimeLimitSec = o.TimeLimitSec; StartDelayMs = o.StartDelayMs;
     }
 
     public ClickerSettings Clone() { var c = new ClickerSettings(); c.CopyFrom(this); return c; }
@@ -182,6 +205,11 @@ public sealed class GameSettings : ObservableObject
     public bool TimerResolution { get => _timer; set => Set(ref _timer, value); }
     public bool WindowsGameMode { get => _gameMode; set => Set(ref _gameMode, value); }
     public bool KeepDisplayAwake { get => _awake; set => Set(ref _awake, value); }
+    private bool _calm = true, _freeMem = true;
+    /// <summary>While Roblox runs, browsers, launchers and updaters wait: they drop to Below normal priority until Game Mode ends.</summary>
+    public bool CalmBackgroundApps { get => _calm; set => Set(ref _calm, value); }
+    /// <summary>When Roblox starts, those same background apps give back memory they are not using.</summary>
+    public bool FreeMemory { get => _freeMem; set => Set(ref _freeMem, value); }
     public HashSet<string> CleanerCategories { get; set; } = new() { "user_temp", "shader", "crash", "roblox_logs", "thumbs" };
 }
 
@@ -217,6 +245,9 @@ public sealed class TrackingSettings : ObservableObject
     /// <summary>While hotbar slot 1 is selected (and Roblox is in front), use the slower pointer speed below.</summary>
     public bool SlowInSlotOne { get => _slowOne; set => Set(ref _slowOne, value); }
     public int SlowSpeed { get => _slowSpeed; set => Set(ref _slowSpeed, Math.Clamp(value, 1, 20)); }
+    private int _otherSlotSpeed = 10;
+    /// <summary>While Roblox is in front with the slot-1 slowdown on, the pointer speed in every slot other than 1.</summary>
+    public int OtherSlotSpeed { get => _otherSlotSpeed; set => Set(ref _otherSlotSpeed, Math.Clamp(value, 1, 20)); }
 
     private int _scrollLines, _doubleClickMs;
     /// <summary>Lines per wheel notch. 0 leaves the Windows setting alone.</summary>
@@ -247,6 +278,11 @@ public sealed class QosSettings : ObservableObject
 {
     private int _dscp = 46;
     public int Dscp { get => _dscp; set => Set(ref _dscp, value); }
+    private bool _home = true, _nlaSet;
+    /// <summary>Also apply the policy on home Wi-Fi and Ethernet. Without this Windows only marks traffic on domain networks.</summary>
+    public bool UseOnHomeNetworks { get => _home; set => Set(ref _home, value); }
+    /// <summary>True when Nighty created the "Do not use NLA" value, so Remove only deletes what Nighty added.</summary>
+    public bool NlaSetByNighty { get => _nlaSet; set => Set(ref _nlaSet, value); }
 }
 
 public sealed class UtilitySettings : ObservableObject
@@ -290,6 +326,59 @@ public sealed class OverlayConfig : ObservableObject
     public string Color { get => _color; set => Set(ref _color, value); }
     public bool Outline { get => _outline; set => Set(ref _outline, value); }
 
+    // ---- look (every overlay except the crosshair)
+    private string _bg = "#101014", _text = "#FFFFFF", _hi = "#3B82F6", _border = "#2E2E38";
+    private double _bgOpacity = 0.85, _corner = 8;
+    private bool _showBorder = true, _shadow, _labels = true;
+    public string BgColor { get => _bg; set => Set(ref _bg, value); }
+    public string TextColor { get => _text; set => Set(ref _text, value); }
+    /// <summary>Colour of a pressed key or button.</summary>
+    public string HighlightColor { get => _hi; set => Set(ref _hi, value); }
+    public string BorderColor { get => _border; set => Set(ref _border, value); }
+    /// <summary>How solid the box behind the overlay is (0 = none, 1 = solid).</summary>
+    public double BgOpacity { get => _bgOpacity; set => Set(ref _bgOpacity, Math.Clamp(Math.Round(value, 2), 0, 1)); }
+    public double CornerRadius { get => _corner; set => Set(ref _corner, Math.Clamp(Math.Round(value), 0, 24)); }
+    public bool ShowBorder { get => _showBorder; set => Set(ref _showBorder, value); }
+    public bool Shadow { get => _shadow; set => Set(ref _shadow, value); }
+    /// <summary>Show the name in front of the number ("CPS", "FPS", "PING").</summary>
+    public bool Labels { get => _labels; set => Set(ref _labels, value); }
+
+    // ---- per kind
+    private CpsLayout _cpsLayout = CpsLayout.Compact;
+    private CpsSource _cpsSource = CpsSource.Both;
+    private CpsButtons _cpsButtons = CpsButtons.Both;
+    private bool _frameTime, _colorBySpeed = true, _counter, _space, _shift, _side, _cpsOnButtons = true, _includeClicker = true;
+    public CpsLayout CpsLayout { get => _cpsLayout; set => Set(ref _cpsLayout, value); }
+    public CpsSource CpsSource { get => _cpsSource; set => Set(ref _cpsSource, value); }
+    public CpsButtons CpsButtons { get => _cpsButtons; set => Set(ref _cpsButtons, value); }
+    /// <summary>FPS overlay: also show how long each frame takes.</summary>
+    public bool ShowFrameTime { get => _frameTime; set => Set(ref _frameTime, value); }
+    /// <summary>Ping overlay: green under 80 ms, yellow under 150 ms, red above.</summary>
+    public bool ColorBySpeed { get => _colorBySpeed; set => Set(ref _colorBySpeed, value); }
+    /// <summary>Key overlay: count how many times the key was pressed since Nighty started.</summary>
+    public bool PressCounter { get => _counter; set => Set(ref _counter, value); }
+    /// <summary>WASD overlay: also show the space bar and shift.</summary>
+    public bool ShowSpace { get => _space; set => Set(ref _space, value); }
+    public bool ShowShift { get => _shift; set => Set(ref _shift, value); }
+    /// <summary>Mouse overlay: mouse 4 and mouse 5.</summary>
+    public bool SideButtons { get => _side; set => Set(ref _side, value); }
+    public bool CpsOnButtons { get => _cpsOnButtons; set => Set(ref _cpsOnButtons, value); }
+    /// <summary>Mouse overlay: buttons also light up when the auto clicker clicks.</summary>
+    public bool IncludeClicker { get => _includeClicker; set => Set(ref _includeClicker, value); }
+
+    /// <summary>Puts every look option back to its default (position and kind-specific choices stay).</summary>
+    public void ResetStyle()
+    {
+        BgColor = "#101014"; TextColor = "#FFFFFF"; HighlightColor = "#3B82F6"; BorderColor = "#2E2E38";
+        BgOpacity = 0.85; CornerRadius = 8; ShowBorder = true; Shadow = false; Labels = true;
+    }
+    public void CopyStyleFrom(OverlayConfig o)
+    {
+        BgColor = o.BgColor; TextColor = o.TextColor; HighlightColor = o.HighlightColor; BorderColor = o.BorderColor;
+        BgOpacity = o.BgOpacity; CornerRadius = o.CornerRadius; ShowBorder = o.ShowBorder; Shadow = o.Shadow; Labels = o.Labels;
+    }
+
+    [JsonIgnore] public bool IsStylable => Kind != OverlayKind.Crosshair;
     [JsonIgnore] public bool IsCustom => Kind is OverlayKind.Key or OverlayKind.Crosshair;
     [JsonIgnore] public string Glyph => Kind switch
     {
@@ -314,6 +403,12 @@ public sealed class OverlayConfig : ObservableObject
 public sealed class OverlaySettings : ObservableObject
 {
     private string _pingHost = "1.1.1.1";
+    private OverlayVisibility _visibility = OverlayVisibility.Always;
+    private bool _followRoblox;
+    /// <summary>When overlays show: always, while Roblox is open, or only while Roblox is the window in front.</summary>
+    public OverlayVisibility Visibility { get => _visibility; set => Set(ref _visibility, value); }
+    /// <summary>Position overlays inside the Roblox window instead of the whole screen (useful when it is not full screen).</summary>
+    public bool FollowRobloxWindow { get => _followRoblox; set => Set(ref _followRoblox, value); }
     public string PingHost { get => _pingHost; set => Set(ref _pingHost, value); }
     public ObservableCollection<OverlayConfig> Items { get; set; } = new();
 }
@@ -325,8 +420,10 @@ public sealed class MacroStep : ObservableObject
     public MacroStepType Type { get => _type; set { if (Set(ref _type, value)) OnPropertyChanged(nameof(Description)); } }
     /// <summary>Virtual-key code, ClickButton index, or milliseconds depending on <see cref="Type"/>.</summary>
     public int Value { get => _value; set { if (Set(ref _value, value)) OnPropertyChanged(nameof(Description)); } }
-    private int _value2 = 0;
+    private int _value2 = 0, _value3 = 0;
     private string _text = "";
+    /// <summary>Third number: mouse button for Auto-click, modifier keys for Key combo.</summary>
+    public int Value3 { get => _value3; set { if (Set(ref _value3, value)) OnPropertyChanged(nameof(Description)); } }
     /// <summary>Second number: vertical pixels for MoveMouse, maximum milliseconds for RandomWait.</summary>
     public int Value2 { get => _value2; set { if (Set(ref _value2, value)) OnPropertyChanged(nameof(Description)); } }
     /// <summary>Text typed by TypeText, or the reminder shown by Note.</summary>
@@ -342,6 +439,12 @@ public sealed class MacroStep : ObservableObject
         MacroStepType.KeyDown => $"Hold {Hotkeys.KeyName(Value)}",
         MacroStepType.KeyUp => $"Release {Hotkeys.KeyName(Value)}",
         MacroStepType.Click => $"Click {(ClickButton)Math.Clamp(Value, 0, 2)} button",
+        MacroStepType.MouseDown => $"{(ClickButton)Math.Clamp(Value, 0, 2)} button down",
+        MacroStepType.MouseUp => $"{(ClickButton)Math.Clamp(Value, 0, 2)} button up",
+        MacroStepType.DoubleClick => $"Double click {(ClickButton)Math.Clamp(Value, 0, 2)} button",
+        MacroStepType.AutoClick => $"Auto-click {(ClickButton)Math.Clamp(Value3, 0, 2)} at {Value} CPS for {Value2} ms",
+        MacroStepType.KeyCombo => $"Press {Hotkeys.Format(Value, Value3)}",
+        MacroStepType.MoveTo => $"Move mouse to {Value}, {Value2}",
         _ => $"Wait {Value} ms",
     };
 }
@@ -358,9 +461,11 @@ public sealed class MacroDef : ObservableObject
     public int HotkeyVk { get => _vk; set => Set(ref _vk, value); }
     public int HotkeyMods { get => _mods; set => Set(ref _mods, value); }
     public bool HotkeyEnabled { get => _enabled; set => Set(ref _enabled, value); }
-    private bool _onlyRoblox;
+    private bool _onlyRoblox, _hold;
     private int _repeatDelay;
     private double _speed = 1;
+    /// <summary>False: the hotkey toggles the macro. True: it plays while the key is held.</summary>
+    public bool HoldMode { get => _hold; set => Set(ref _hold, value); }
     /// <summary>The hotkey only starts the macro while Roblox is the window in front.</summary>
     public bool OnlyInRoblox { get => _onlyRoblox; set => Set(ref _onlyRoblox, value); }
     /// <summary>Pause between repeats, in milliseconds.</summary>
@@ -454,9 +559,62 @@ public sealed class GeneralSettings : ObservableObject
     public bool ShowNotifications { get => _notify; set => Set(ref _notify, value); }
     private int _stopVk = 0x78, _stopMods;
     private bool _startMin;
-    private string _theme = "blue";
-    /// <summary>UI preset id (recolours the accent).</summary>
-    public string Theme { get => _theme; set => Set(ref _theme, value ?? "blue"); }
+    private string _theme = "midnight";
+    /// <summary>Theme id (midnight, light, cyberpunk, monochrome, ocean, forest, sunset, sakura). Old accent-only ids are migrated.</summary>
+    public string Theme { get => _theme; set => Set(ref _theme, value ?? "midnight"); }
+
+    private string? _accentOverride;
+    /// <summary>Accent colour picked on top of the theme (#RRGGBB), or null to use the theme's own.</summary>
+    public string? AccentOverride { get => _accentOverride; set => Set(ref _accentOverride, value); }
+    /// <summary>Per-colour overrides that survive theme changes: Accent, Accent2, Bg, Sidebar, Cards, Text, Muted, Borders.</summary>
+    public Dictionary<string, string> CustomColors { get; set; } = new();
+
+    private bool _anim = true, _sounds;
+    /// <summary>Smooth motion everywhere. Off makes every change instant.</summary>
+    public bool Animations { get => _anim; set => Set(ref _anim, value); }
+    /// <summary>Little sounds for button presses and for starting or stopping the clicker.</summary>
+    public bool SoundEffects { get => _sounds; set => Set(ref _sounds, value); }
+    private string _font = "";
+    /// <summary>Font used by the whole interface. Empty = Segoe UI Variable.</summary>
+    public string FontName { get => _font; set => Set(ref _font, value ?? ""); }
+
+    private string _bgImage = "";
+    private double _bgStrength = 0.35;
+    private bool _bgFit;
+    /// <summary>Picture drawn behind the window (PNG, JPG or GIF), copied into the app data folder.</summary>
+    public string BackgroundImage { get => _bgImage; set => Set(ref _bgImage, value ?? ""); }
+    public double BackgroundStrength { get => _bgStrength; set => Set(ref _bgStrength, Math.Clamp(Math.Round(value, 2), 0.05, 1)); }
+    /// <summary>False = fill the window, true = fit the whole picture.</summary>
+    public bool BackgroundFit { get => _bgFit; set => Set(ref _bgFit, value); }
+
+    private bool _remember = true;
+    private string _lastPage = "";
+    private double _winL, _winT, _winW, _winH;
+    private bool _winMax;
+    /// <summary>Open on the same page and in the same place.</summary>
+    public bool RememberWindow { get => _remember; set => Set(ref _remember, value); }
+    public string LastPage { get => _lastPage; set => Set(ref _lastPage, value ?? ""); }
+    public double WindowLeft { get => _winL; set => Set(ref _winL, value); }
+    public double WindowTop { get => _winT; set => Set(ref _winT, value); }
+    public double WindowWidth { get => _winW; set => Set(ref _winW, value); }
+    public double WindowHeight { get => _winH; set => Set(ref _winH, value); }
+    public bool WindowMaximized { get => _winMax; set => Set(ref _winMax, value); }
+
+    private bool _splash = true;
+    /// <summary>Show the loading screen while Nighty starts.</summary>
+    public bool ShowSplash { get => _splash; set => Set(ref _splash, value); }
+
+    private PrecisionMode _precision = PrecisionMode.Balanced;
+    /// <summary>How exactly the clicker lands each click, traded against CPU use.</summary>
+    public PrecisionMode Precision { get => _precision; set => Set(ref _precision, value); }
+
+    private bool _discord = false, _dActivity = true, _dTime = true;
+    private string _discordId = "";
+    /// <summary>Show "Using Nighty" on your Discord profile. Needs your own Discord application id.</summary>
+    public bool DiscordPresence { get => _discord; set => Set(ref _discord, value); }
+    public string DiscordAppId { get => _discordId; set => Set(ref _discordId, (value ?? "").Trim()); }
+    public bool DiscordShowActivity { get => _dActivity; set => Set(ref _dActivity, value); }
+    public bool DiscordShowTime { get => _dTime; set => Set(ref _dTime, value); }
     /// <summary>Open in the taskbar instead of on screen (used with Start with Windows, and by the --minimized flag).</summary>
     public bool StartMinimized { get => _startMin; set => Set(ref _startMin, value); }
     public bool AlwaysOnTop { get => _topmost; set => Set(ref _topmost, value); }
@@ -517,5 +675,7 @@ public sealed class AppSettings
     public ObservableCollection<MacroDef> Macros { get; set; } = new();
     public ObservableCollection<ModEntry> Mods { get; set; } = new();
     public ObservableCollection<SlotMacroConfig> SlotMacros { get; set; } = new();
+    public RobloxSettings Roblox { get; set; } = new();
+    public RecordSettings Record { get; set; } = new();
     public SystemBackups Backups { get; set; } = new();
 }

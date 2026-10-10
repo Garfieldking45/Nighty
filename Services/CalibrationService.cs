@@ -12,7 +12,7 @@ public sealed record CalibrationResult(double BestCps, string Summary);
 /// </summary>
 public static class CalibrationService
 {
-    private static readonly double[] Candidates = { 20, 24, 28, 32, 35, 38, 41, 44, 47, 50 };
+    private static readonly double[] Candidates = { 20, 28, 35, 44, 50, 60, 70, 80, 90, 100 };
     private const double SecondsPerStep = 1.2;
 
     public static CalibrationResult Run(IProgress<string>? progress, CancellationToken ct)

@@ -18,6 +18,19 @@ public sealed class GameModeService
     private const string HighPerfGuid = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
     private readonly Dictionary<int, ProcessPriorityClass> _origPriority = new();
     private bool _timerActive, _awakeActive;
+    private readonly Dictionary<int, ProcessPriorityClass> _origCalm = new();
+    private readonly HashSet<int> _freedFor = new();
+
+    /// <summary>Background apps that wait while Roblox runs. Discord and music players are deliberately not here.</summary>
+    private static readonly HashSet<string> Background = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "chrome", "msedge", "firefox", "opera", "opera_gx", "brave", "vivaldi", "msedgewebview2", "steam", "steamwebhelper", "epicgameslauncher",
+        "epicwebhelper", "battle.net", "eadesktop", "ubisoftconnect", "galaxyclient", "onedrive", "dropbox", "googledrivefs", "teams", "ms-teams",
+        "microsoftedgeupdate", "googleupdate", "phoneexperiencehost", "widgets", "searchhost",
+    };
+    /// <summary>Apps currently slowed, and memory given back since Game Mode was switched on.</summary>
+    public int AppsSlowed => _origCalm.Count;
+    public double MemoryFreedMb { get; private set; }
     private System.Windows.Threading.DispatcherTimer? _watch;
 
     public bool IsActive { get; private set; }
@@ -50,7 +63,11 @@ public sealed class GameModeService
         IsActive = true;
 
         if (Opt.HighPerformancePower) Results["power"] = await Task.Run(ApplyPower);
-        if (Opt.RobloxHighPriority) { Results["priority"] = ApplyPriority(); StartWatcher(); }
+        MemoryFreedMb = 0; _freedFor.Clear();
+        if (Opt.RobloxHighPriority) Results["priority"] = ApplyPriority();
+        if (Opt.CalmBackgroundApps) Results["calm"] = ApplyCalm();
+        if (Opt.FreeMemory) Results["memory"] = FreeBackgroundMemory();
+        if (Opt.RobloxHighPriority || Opt.CalmBackgroundApps || Opt.FreeMemory) StartWatcher();
         if (Opt.TimerResolution)
         {
             _timerActive = NativeMethods.timeBeginPeriod(1) == 0;
@@ -139,14 +156,80 @@ public sealed class GameModeService
         _watch = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _watch.Tick += (_, _) =>
         {
-            Results["priority"] = ApplyPriority();
+            if (Opt.RobloxHighPriority) Results["priority"] = ApplyPriority();
+            if (Opt.CalmBackgroundApps) Results["calm"] = ApplyCalm();
+            if (Opt.FreeMemory) Results["memory"] = FreeBackgroundMemory();
             Changed?.Invoke();
         };
         _watch.Start();
     }
 
+    // ---- calm background apps ----
+    private OptionResult ApplyCalm()
+    {
+        var roblox = Process.GetProcessesByName(RobloxService.ProcessName);
+        bool running = roblox.Length > 0;
+        foreach (var r in roblox) r.Dispose();
+        if (!running) { RestoreCalm(); return new(StatusKind.Info, "Waiting for Roblox to start"); }
+        int failed = 0;
+        foreach (var p in Process.GetProcesses())
+        {
+            try
+            {
+                if (!Background.Contains(p.ProcessName) || p.Id == Environment.ProcessId) continue;
+                if (_origCalm.ContainsKey(p.Id)) continue;
+                var cur = p.PriorityClass;
+                if (cur is ProcessPriorityClass.Idle or ProcessPriorityClass.BelowNormal) continue;
+                p.PriorityClass = ProcessPriorityClass.BelowNormal;
+                _origCalm[p.Id] = cur;
+            }
+            catch { failed++; }
+            finally { p.Dispose(); }
+        }
+        // Forget processes that have exited.
+        foreach (var pid in _origCalm.Keys.ToList()) { try { using var gone = Process.GetProcessById(pid); } catch { _origCalm.Remove(pid); } }
+        return new(StatusKind.Success, _origCalm.Count == 0 ? "No background apps needed slowing" : $"{_origCalm.Count} background app process{(_origCalm.Count == 1 ? "" : "es")} waiting" + (failed > 0 ? $" ({failed} could not be changed)" : ""));
+    }
+
+    private void RestoreCalm()
+    {
+        foreach (var (pid, prio) in _origCalm)
+        {
+            try { using var p = Process.GetProcessById(pid); p.PriorityClass = prio; } catch { /* gone */ }
+        }
+        _origCalm.Clear();
+    }
+
+    // ---- free up memory ----
+    private OptionResult FreeBackgroundMemory()
+    {
+        var roblox = Process.GetProcessesByName(RobloxService.ProcessName);
+        var pids = roblox.Select(p => p.Id).ToList();
+        foreach (var p in roblox) p.Dispose();
+        if (pids.Count == 0) return new(StatusKind.Info, "Waiting for Roblox to start");
+        if (pids.All(_freedFor.Contains)) return new(StatusKind.Success, $"{MemoryFreedMb:0} MB given back by background apps");
+        foreach (var id in pids) _freedFor.Add(id);
+        double freed = 0;
+        foreach (var p in Process.GetProcesses())
+        {
+            try
+            {
+                if (!Background.Contains(p.ProcessName) || p.Id == Environment.ProcessId) continue;
+                long before = p.WorkingSet64;
+                if (!NativeMethods.EmptyWorkingSet(p.Handle)) continue;
+                p.Refresh();
+                freed += Math.Max(0, before - p.WorkingSet64) / 1048576.0;
+            }
+            catch { }
+            finally { p.Dispose(); }
+        }
+        MemoryFreedMb += freed;
+        return new(StatusKind.Success, $"{MemoryFreedMb:0} MB given back by background apps");
+    }
+
     private void RestorePriority()
     {
+        RestoreCalm();
         foreach (var (pid, prio) in _origPriority)
         {
             try { using var p = Process.GetProcessById(pid); p.PriorityClass = prio; } catch { /* process already gone */ }

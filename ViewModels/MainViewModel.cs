@@ -40,6 +40,7 @@ public sealed class MainViewModel : ObservableObject
     public ExtrasViewModel Extras { get; } = new();
     public MacrosViewModel Macros { get; } = new();
     public OverlaysViewModel Overlays { get; } = new();
+    public RecordViewModel Record { get; } = new();
     public SettingsViewModel Settings { get; } = new();
 
     public GeneralSettings General => Svc.S.General;
@@ -92,6 +93,7 @@ public sealed class MainViewModel : ObservableObject
             new() { Title = "Extras", Glyph = "\uE734", Page = Extras },
             new() { Title = "Macros", Glyph = "", Page = Macros },
             new() { Title = "Overlays", Glyph = "", Page = Overlays },
+            new() { Title = "Record", Glyph = "", Page = Record },
             new() { Title = "Settings", Glyph = "", Page = Settings },
         };
         _selected = Items.FirstOrDefault(i => i.Title.Equals(startPage, StringComparison.OrdinalIgnoreCase)) ?? Items[0];
@@ -120,7 +122,11 @@ public sealed class MainViewModel : ObservableObject
                 Svc.Pointer.UpdateSlotSlowdown();
             }
         };
-        _timer.Tick += (_, _) => Refresh();
+        _timer.Tick += (_, _) =>
+        {
+            Refresh();
+            if (_robloxTick % 8 == 1 && Svc.RobloxAssets.ReapplyIfNeeded() is { } msg) Svc.Toast.Show("Roblox", msg, true);
+        };
         _timer.Start();
         Refresh();
     }
@@ -138,10 +144,11 @@ public sealed class MainViewModel : ObservableObject
         Add("Gaming", "Game Mode", "Tweaks", "PC tweaks", "FPS", "Cleaner", "Optimizations", "System usage", "What to clean");
         Add("Utility", "Brightness", "Movement Helper", "Tracking Helper", "Best DNS", "Apply the fastest automatically", "QoS Policy", "Disable Sticky Keys shortcut",
             "Disable Filter Keys shortcut", "Disable Toggle Keys shortcut", "Enhance pointer precision", "Fast key repeat", "Pointer speed", "Sensitivity calculator", "Network adapter", "Roblox traffic policy");
-        Add("Mods", "Your mods");
+        Add("Mods", "Cursors", "Roblox cursor", "Cursor Builder", "Picture to cursor", "Fonts", "Roblox font", "Your mods", "Remove background");
         Add("Extras", "Auto Crossbow", "Hotbar macros", "Auto Whim", "Auto Lasso", "Auto Build Up", "Auto Melody", "Auto fish");
         Add("Macros", "Your macros", "Steps", "Repeat", "Hotkey enabled");
         Add("Overlays", "Ping host", "Preview and position", "Crosshair", "Add crosshair");
+        Add("Record", "Instant Replay", "Save clip", "Start recording", "Screen recording", "Clips and recordings", "Record hotkeys", "Clip length", "Video quality");
         Add("Settings", "Emergency stop hotkey", "Keep window on top", "Start with Windows", "Permissions", "Logs", "App data folder", "Restore system changes", "Reset everything", "Safety");
     }
 

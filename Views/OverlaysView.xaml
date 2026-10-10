@@ -26,6 +26,59 @@
 
         <Border Style="{StaticResource Card}">
             <StackPanel>
+                <c:CardHeader Icon="&#xE7B3;" Title="Show them" Subtitle="Overlays never take clicks or focus away from the game."/>
+                <UniformGrid Rows="1" Columns="3">
+                    <RadioButton Style="{StaticResource OptionCard}" GroupName="ovis" Margin="0,0,10,0" IsChecked="{Binding Visibility, Converter={StaticResource Eq}, ConverterParameter=WhileRobloxFront}">
+                        <StackPanel HorizontalAlignment="Center"><TextBlock Text="Roblox in front" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Center" Margin="0,2,0,2"/><TextBlock Text="Only while you're in the game" Style="{StaticResource Muted}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/></StackPanel>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource OptionCard}" GroupName="ovis" Margin="0,0,10,0" IsChecked="{Binding Visibility, Converter={StaticResource Eq}, ConverterParameter=WhileRobloxOpen}">
+                        <StackPanel HorizontalAlignment="Center"><TextBlock Text="Roblox open" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Center" Margin="0,2,0,2"/><TextBlock Text="Whenever Roblox is running" Style="{StaticResource Muted}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/></StackPanel>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource OptionCard}" GroupName="ovis" IsChecked="{Binding Visibility, Converter={StaticResource Eq}, ConverterParameter=Always}">
+                        <StackPanel HorizontalAlignment="Center"><TextBlock Text="Always" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Center" Margin="0,2,0,2"/><TextBlock Text="On every window" Style="{StaticResource Muted}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/></StackPanel>
+                    </RadioButton>
+                </UniformGrid>
+                <Border Style="{StaticResource Divider}" Margin="0,14"/>
+                <c:SettingRow Title="Position inside the Roblox window" Description="Positions follow the Roblox window when it isn't full screen. Off uses the whole screen.">
+                    <CheckBox IsChecked="{Binding FollowRoblox}"/>
+                </c:SettingRow>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <c:CardHeader Icon="&#xE74E;" Title="Presets" Subtitle="Start from a ready-made layout, or save yours to switch back any time"/>
+                <ItemsControl ItemsSource="{Binding Presets}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,9" Margin="0,0,0,8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Kind}" Style="{StaticResource Muted}" FontSize="11.5"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="Load" Padding="14,6" Margin="8,0,6,0"
+                                            Command="{Binding DataContext.LoadPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                    <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Delete preset"
+                                            Visibility="{Binding BuiltIn, Converter={StaticResource BoolVisible}, ConverterParameter=!}"
+                                            Command="{Binding DataContext.DeletePresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid Margin="0,6,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBox Text="{Binding PresetName, UpdateSourceTrigger=PropertyChanged}" MaxLength="40" Padding="12,10" AutomationProperties.Name="Preset name"/>
+                    <Button Grid.Column="1" Content="Save this layout" Style="{StaticResource PrimaryButton}" Command="{Binding SavePresetCommand}" Margin="8,0,0,0" Padding="18,10"/>
+                </Grid>
+                <TextBlock Text="{Binding PresetMessage}" Style="{StaticResource Muted}" Margin="0,8,0,0" Visibility="{Binding PresetMessage, Converter={StaticResource NullVisible}}"/>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
                 <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                     <StackPanel>
@@ -48,7 +101,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <Border Width="36" Height="36" CornerRadius="9" Background="{StaticResource Panel2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,14,0">
+                                <Border Width="36" Height="36" CornerRadius="9" Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,14,0">
                                     <TextBlock Text="{Binding Glyph}" Style="{StaticResource Icon}" Foreground="{DynamicResource AccentHoverBrush}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
@@ -83,6 +136,67 @@
                                     <c:ValueStepper Value="{Binding Opacity, Mode=TwoWay}" Minimum="0.2" Maximum="1" Step="0.05" Decimals="2"/>
                                 </StackPanel>
                             </Grid>
+                            <!-- ===== options for this kind ===== -->
+                            <StackPanel Visibility="{Binding Kind, Converter={StaticResource Eq}, ConverterParameter=Cps}">
+                                <Border Style="{StaticResource Divider}" Margin="0,14"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <StackPanel><TextBlock Text="LAYOUT" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                                        <ComboBox SelectedItem="{Binding CpsLayout}" ItemsSource="{x:Static c:OverlayChoices.CpsLayouts}"/></StackPanel>
+                                    <StackPanel Grid.Column="2"><TextBlock Text="COUNT" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                                        <ComboBox SelectedItem="{Binding CpsSource}" ItemsSource="{x:Static c:OverlayChoices.CpsSources}"/></StackPanel>
+                                    <StackPanel Grid.Column="4"><TextBlock Text="BUTTONS" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                                        <ComboBox SelectedItem="{Binding CpsButtons}" ItemsSource="{x:Static c:OverlayChoices.CpsButtonSets}"/></StackPanel>
+                                </Grid>
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding Kind, Converter={StaticResource Eq}, ConverterParameter=Fps}">
+                                <Border Style="{StaticResource Divider}" Margin="0,14"/>
+                                <c:SettingRow Title="Frame time" Description="Also show how long each frame takes, in milliseconds."><CheckBox IsChecked="{Binding ShowFrameTime}"/></c:SettingRow>
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding Kind, Converter={StaticResource Eq}, ConverterParameter=Ping}">
+                                <Border Style="{StaticResource Divider}" Margin="0,14"/>
+                                <c:SettingRow Title="Color by speed" Description="Green under 80 ms, yellow under 150 ms, red above."><CheckBox IsChecked="{Binding ColorBySpeed}"/></c:SettingRow>
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding Kind, Converter={StaticResource Eq}, ConverterParameter=Wasd}">
+                                <Border Style="{StaticResource Divider}" Margin="0,14"/>
+                                <c:SettingRow Title="Space bar" Description="Jumping shows too."><CheckBox IsChecked="{Binding ShowSpace}"/></c:SettingRow>
+                                <c:SettingRow Title="Shift" Description="For shift-lock and sprinting."><CheckBox IsChecked="{Binding ShowShift}"/></c:SettingRow>
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding Kind, Converter={StaticResource Eq}, ConverterParameter=Mouse}">
+                                <Border Style="{StaticResource Divider}" Margin="0,14"/>
+                                <c:SettingRow Title="Side buttons" Description="Mouse 4 and Mouse 5."><CheckBox IsChecked="{Binding SideButtons}"/></c:SettingRow>
+                                <c:SettingRow Title="CPS on the buttons" Description="Clicks per second on the left and right buttons."><CheckBox IsChecked="{Binding CpsOnButtons}"/></c:SettingRow>
+                                <c:SettingRow Title="Include the clicker" Description="Buttons also light up (and count) when Nighty's clicker clicks."><CheckBox IsChecked="{Binding IncludeClicker}"/></c:SettingRow>
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding Kind, Converter={StaticResource Eq}, ConverterParameter=Key}">
+                                <Border Style="{StaticResource Divider}" Margin="0,14"/>
+                                <c:SettingRow Title="Press counter" Description="How many times the key was pressed since Nighty started."><CheckBox IsChecked="{Binding PressCounter}"/></c:SettingRow>
+                            </StackPanel>
+
+                            <!-- ===== style (not for the crosshair) ===== -->
+                            <Expander Header="Style" Margin="0,14,0,0" Foreground="{DynamicResource MutedBrush}" Visibility="{Binding IsStylable, Converter={StaticResource BoolVisible}}">
+                                <StackPanel Margin="0,12,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <StackPanel><TextBlock Text="BACKGROUND" Style="{StaticResource Label}" Margin="0,0,0,6"/><TextBox Text="{Binding BgColor, UpdateSourceTrigger=LostFocus}" MaxLength="9" Padding="10,7"/></StackPanel>
+                                        <StackPanel Grid.Column="2"><TextBlock Text="TEXT" Style="{StaticResource Label}" Margin="0,0,0,6"/><TextBox Text="{Binding TextColor, UpdateSourceTrigger=LostFocus}" MaxLength="9" Padding="10,7"/></StackPanel>
+                                        <StackPanel Grid.Column="4"><TextBlock Text="PRESSED / LINE" Style="{StaticResource Label}" Margin="0,0,0,6"/><TextBox Text="{Binding HighlightColor, UpdateSourceTrigger=LostFocus}" MaxLength="9" Padding="10,7"/></StackPanel>
+                                    </Grid>
+                                    <Grid Margin="0,12,0,0">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <StackPanel><TextBlock Text="BOX OPACITY" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding BgOpacity, Mode=TwoWay}" Minimum="0" Maximum="1" Step="0.05" Decimals="2"/></StackPanel>
+                                        <StackPanel Grid.Column="2"><TextBlock Text="CORNERS" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding CornerRadius, Mode=TwoWay}" Minimum="0" Maximum="24" Step="1" Suffix=" px"/></StackPanel>
+                                    </Grid>
+                                    <c:SettingRow Title="Border" Margin="0,12,0,0"><CheckBox IsChecked="{Binding ShowBorder}"/></c:SettingRow>
+                                    <c:SettingRow Title="Shadow"><CheckBox IsChecked="{Binding Shadow}"/></c:SettingRow>
+                                    <c:SettingRow Title="Labels" Description="Show the name in front of the number."><CheckBox IsChecked="{Binding Labels}"/></c:SettingRow>
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                        <Button Content="Reset style" Command="{Binding DataContext.ResetStyleCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                        <Button Content="Copy style to all" Margin="8,0,0,0" Command="{Binding DataContext.CopyStyleCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Expander>
+
                             <StackPanel Visibility="{Binding Kind, Converter={StaticResource Eq}, ConverterParameter=Crosshair}">
                                 <Border Style="{StaticResource Divider}" Margin="0,14"/>
                                 <Grid>

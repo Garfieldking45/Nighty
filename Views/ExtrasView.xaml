@@ -63,6 +63,10 @@
                                 <c:SettingRow Title="Only while Roblox is focused">
                                     <CheckBox IsChecked="{Binding OnlyWhenRobloxFocused}"/>
                                 </c:SettingRow>
+                                <c:SettingRow Title="Only works in slot 1" Description="Does nothing unless hotbar slot 1 is selected (pick it with the 1 key). Scrolling the hotbar counts as not slot 1, so press 1 again."
+                                              Visibility="{Binding IsCrossbow, Converter={StaticResource BoolVisible}}">
+                                    <CheckBox IsChecked="{Binding OnlyInSlotOne}"/>
+                                </c:SettingRow>
                                 <UniformGrid Columns="2" Margin="0,8,0,0">
                                     <StackPanel Margin="0,0,10,10">
                                         <TextBlock Text="{Binding LabelA}" Style="{StaticResource Label}" Margin="0,0,0,6"/>

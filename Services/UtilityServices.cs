@@ -240,6 +240,7 @@ public sealed class PointerService
             bool ok = NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSE, 0, mouse, f)
                     & NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)Math.Clamp(speed, 1, 20), f);
             if (!ok) return "Windows rejected the pointer settings.";
+            RebaseSlow(Math.Clamp(speed, 1, 20));
             var now = ReadCurrent();
             return now.Speed == speed && now.Precision == precision ? "Applied and verified." : "Applied, but Windows reports different values than requested.";
         }
@@ -269,6 +270,26 @@ public sealed class PointerService
     private int _speedBeforeSlow;
     private readonly object _slowGate = new();
 
+    /// <summary>
+    /// The "normal" speed changed while the slot-1 slowdown is on (tracking speed applied, restored, or edited). Remember the new
+    /// normal so leaving slot 1 goes back to it, and keep the slow speed in place until then.
+    /// </summary>
+    private void RebaseSlow(int normalSpeed)
+    {
+        lock (_slowGate)
+        {
+            if (!_slowApplied) return;
+            _speedBeforeSlow = normalSpeed;
+            NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)SlotSpeed(), 0);
+        }
+    }
+
+    private static int SlotSpeed()
+    {
+        var t = Svc.S.Utility.Tracking;
+        return Math.Clamp(Svc.Bow.CurrentSlot == 1 ? t.SlowSpeed : t.OtherSlotSpeed, 1, 20);
+    }
+
     /// <summary>Slot-1 slowdown: drops the pointer speed while slot 1 is selected in Roblox and puts it back after.
     /// Not persisted (no registry write), so a crash can't leave a slow pointer after the next sign-in.</summary>
     public void UpdateSlotSlowdown()
@@ -276,13 +297,20 @@ public sealed class PointerService
         lock (_slowGate)
         {
             var t = Svc.S.Utility.Tracking;
-            bool want = t.SlowInSlotOne && Svc.Bow.CurrentSlot == 1 && Svc.Roblox.IsForeground;
+            // While Roblox is in front the slot decides the speed: slot 1 is slow, every other slot (or an unknown one) uses its own speed.
+            bool want = t.SlowInSlotOne && Svc.Roblox.IsForeground;
             if (want && !_slowApplied)
             {
                 if (!B.HasPointerBackup) Apply(ReadCurrent().Speed, ReadCurrent().Precision);   // record originals so Restore works
                 _speedBeforeSlow = ReadCurrent().Speed;
-                NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)Math.Clamp(t.SlowSpeed, 1, 20), 0);
+                NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)SlotSpeed(), 0);
                 _slowApplied = true;
+            }
+            else if (want && _slowApplied)
+            {
+                int target = SlotSpeed();
+                NativeMethods.SystemParametersInfo(NativeMethods.SPI_GETMOUSESPEED, 0, out int now, 0);
+                if (now != target) NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)target, 0);
             }
             else if (!want && _slowApplied)
             {
@@ -331,6 +359,7 @@ public sealed class PointerService
         B.ScrollLinesOriginal = -1; B.DoubleClickOriginal = -1;
         B.HasPointerBackup = false;
         Svc.Settings.Save();
+        RebaseSlow(Math.Clamp(ReadCurrent().Speed, 1, 20));
         return "Original pointer settings restored.";
     }
 }
@@ -529,13 +558,27 @@ public sealed class QosService
         catch { return (false, null, null); }
     }
 
-    public async Task<(bool Ok, string Message)> ApplyAsync(int dscp)
+    private const string NlaKey = @"HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\QoS";
+
+    /// <summary>True when the machine-wide "Do not use NLA" value is set, which makes policies apply on every network.</summary>
+    public bool NlaDisabled()
     {
-        var script = $"Get-NetQosPolicy -Name '{PolicyName}' -PolicyStore ActiveStore -ErrorAction SilentlyContinue | Remove-NetQosPolicy -Confirm:$false -ErrorAction SilentlyContinue; " +
+        try { using var k = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\Tcpip\QoS"); return k?.GetValue("Do not use NLA")?.ToString() == "1"; }
+        catch { return false; }
+    }
+
+    public async Task<(bool Ok, string Message)> ApplyAsync(int dscp, bool useOnHome = true)
+    {
+        bool hadNla = NlaDisabled();
+        var nla = useOnHome
+            ? $"$k='{NlaKey}'; if (-not (Test-Path $k)) {{ New-Item -Path $k -Force | Out-Null }}; New-ItemProperty -Path $k -Name 'Do not use NLA' -Value '1' -PropertyType String -Force | Out-Null; "
+            : "";
+        var script = nla + $"Get-NetQosPolicy -Name '{PolicyName}' -PolicyStore ActiveStore -ErrorAction SilentlyContinue | Remove-NetQosPolicy -Confirm:$false -ErrorAction SilentlyContinue; " +
                      $"Get-NetQosPolicy -Name '{PolicyName}' -ErrorAction SilentlyContinue | Remove-NetQosPolicy -Confirm:$false; " +
                      $"New-NetQosPolicy -Name '{PolicyName}' -AppPathNameMatch '{AppName}' -DSCPAction {dscp} -NetworkProfile All | Out-Null";
         var (ok, msg) = await Elevation.RunPowerShellAsync(script);
         if (!ok) return (false, msg);
+        if (useOnHome && !hadNla) Svc.S.Utility.Qos.NlaSetByNighty = true;
         var p = ReadPolicy();
         return p.Exists && p.Dscp == dscp ? (true, $"QoS policy created: {AppName} traffic is marked DSCP {dscp}.")
                                           : (false, "The command finished but the policy could not be found afterwards.");
@@ -544,8 +587,11 @@ public sealed class QosService
     public async Task<(bool Ok, string Message)> RemoveAsync()
     {
         var script = $"Get-NetQosPolicy -Name '{PolicyName}' -ErrorAction SilentlyContinue | Remove-NetQosPolicy -Confirm:$false";
+        bool undoNla = Svc.S.Utility.Qos.NlaSetByNighty;
+        if (undoNla) script += $"; Remove-ItemProperty -Path '{NlaKey}' -Name 'Do not use NLA' -ErrorAction SilentlyContinue";
         var (ok, msg) = await Elevation.RunPowerShellAsync(script);
         if (!ok) return (false, msg);
+        if (undoNla) Svc.S.Utility.Qos.NlaSetByNighty = false;
         return ReadPolicy().Exists ? (false, "The policy is still present.") : (true, "QoS policy removed.");
     }
 }

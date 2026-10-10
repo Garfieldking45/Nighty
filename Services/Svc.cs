@@ -18,6 +18,7 @@ public static class Svc
     public static GameModeService GameMode { get; private set; } = null!;
     public static CleanerService Cleaner { get; private set; } = null!;
     public static BrightnessService Brightness { get; private set; } = null!;
+    public static SoftBrightnessService SoftBrightness { get; } = new();
     public static MovementService Movement { get; private set; } = null!;
     public static SocdService Socd { get; private set; } = null!;
     public static TweaksService Tweaks { get; private set; } = null!;
@@ -30,6 +31,17 @@ public static class Svc
     public static ToastService Toast { get; } = new();
     public static OverlayManager Overlays { get; private set; } = null!;
     public static ModsService Mods { get; private set; } = null!;
+    public static DiscordService Discord { get; } = new();
+    public static RobloxAssetsService RobloxAssets { get; } = new();
+    public static RecorderService Recorder { get; } = new();
+
+    /// <summary>Runs an action on the UI thread (fire and forget).</summary>
+    public static void Dispatch(Action a)
+    {
+        var d = System.Windows.Application.Current?.Dispatcher;
+        if (d == null) return;
+        if (d.CheckAccess()) a(); else d.BeginInvoke(a);
+    }
 
     /// <summary>
     /// Windows 11 may throttle a background process (and ignore its timer resolution) while another window such
@@ -82,6 +94,7 @@ public static class Svc
     /// <summary>Gives Windows its normal settings back. Run when Nighty closes.</summary>
     public static void RestoreSystemOnExit()
     {
+        try { SoftBrightness.RestoreOnExit(); } catch (Exception ex) { Log.Error("Software brightness restore on exit failed", ex); }
         try { Pointer.AutoRelease(); if (Pointer.HasBackup) Pointer.Restore(); } catch (Exception ex) { Log.Error("Pointer restore on exit failed", ex); }
         try { if (Movement.HasBackup) Movement.Restore(); } catch (Exception ex) { Log.Error("Movement restore on exit failed", ex); }
         try { Tweaks.RevertAllRemembering(); } catch (Exception ex) { Log.Error("Tweaks restore on exit failed", ex); }

@@ -11,6 +11,20 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.0.0", "2026-10-10", new[]
+        {
+            "New shell: custom top bar (breadcrumb, live Clicker / Roblox / Game Mode status, pin, window buttons), a loading screen that reports each real start-up step, and smooth motion everywhere: animated page changes with cards rising in, hover glow and press squish on buttons, sliding switches, an animated sidebar indicator",
+            "8 themes (Midnight, Light, Cyberpunk, Monochrome, Ocean, Forest, Sunset, Sakura) that fade into each other, accent swatches, your own colors for every part of the interface that survive theme changes, a contrast warning, a font picker, a background picture (PNG, JPG or animated GIF), optional sound effects, and an Animations switch",
+            "Auto clicker, better hit registration: HitFix (time-critical thread pinned to its own core, garbage collector paused while clicking, exact final wait before every click), Efficient / Balanced / Precise timing, clicks are checked and you are told when Windows blocks them (a game running as administrator), a timing test that reports measured CPS, jitter, average and 99th-percentile error, and the process CPU it used",
+            "Auto stop: stop after a number of clicks or a time limit, and a start delay",
+            "Gaming: Calm background apps (browsers, launchers and updaters wait while Roblox runs) and Free up memory, with live counters; everything is put back when Game Mode ends",
+            "Utility: software brightness boost and dimming, a mouse test pad (real pointer multiplier, acceleration check, polling rate), and QoS 'use on home Wi-Fi and Ethernet'",
+            "Mods: change Roblox's cursor and font (Roblox, Bloxstrap, Fishstrap, Voidstrap and Froststrap; originals are saved and restored; put back after updates), a cursor library with 15 designs, brightness and size, a Cursor Builder with layers, glow, outline and rotation, and turning any picture into a cursor with background removal; export PNG and .cur",
+            "Macros: record keys and clicks, duplicate, Hold mode, new steps (key combo, auto-click, double click, button down and up, go to a spot with a spot picker), and share macros as a code, a .nightymacro file or a link",
+            "Overlays: ready-made and saved presets, show only while Roblox is in front or open, positions inside the Roblox window, per-overlay colors, opacity, corners, border, shadow and labels, CPS layouts (compact, big, graph) and counting source, frame time, ping colors, space and shift on the WASD overlay, side buttons and CPS on the mouse overlay, key press counter",
+            "Record: Instant Replay (the last 10 seconds to 2 minutes, kept in memory only) and full screen or Roblox-window recording to H.264 MP4 using GPU screen capture, a clip library, hotkeys, an on-screen note and sound when a clip is saved. Sound is not recorded yet",
+            "Settings: Discord status (your own application id), start where you left off, remember window position, support info, plus the Performance tab",
+        }),
         new("1.7.0", "2026-10-10", new[]
         {
             "New look matching Lyre: darker palette, rounded cards with icon tiles, accent-bar page titles, a sidebar with version badge, GitHub button and live clicker status",

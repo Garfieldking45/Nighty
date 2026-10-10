@@ -29,6 +29,14 @@ public sealed class ModsViewModel : ObservableObject
     private StatusKind _kind = StatusKind.Info;
     private bool _busy;
 
+    private int _tab;
+    public int Tab { get => _tab; set => Set(ref _tab, value); }
+    public RobloxLocationViewModel Location { get; } = new();
+    public CursorsViewModel Cursors { get; }
+    public BuilderViewModel Builder { get; } = new();
+    public ImageCursorViewModel Picture { get; } = new();
+    public FontsViewModel Fonts { get; }
+
     public ObservableCollection<ModRowViewModel> Rows { get; } = new();
     public string? Version { get => _version; private set { Set(ref _version, value); OnPropertyChanged(nameof(InstallText)); OnPropertyChanged(nameof(Installed)); } }
     public bool Installed => Version != null;
@@ -47,6 +55,15 @@ public sealed class ModsViewModel : ObservableObject
 
     public ModsViewModel()
     {
+        Cursors = new CursorsViewModel(Location);
+        Fonts = new FontsViewModel(Location);
+        Cursors.EditRequested += spec =>
+        {
+            var copy = spec.Clone(); copy.Name = spec.IsBuiltIn ? spec.Name : spec.Name + " copy";
+            Builder.Load(copy, null); Tab = 2;
+        };
+        Builder.Saved += id => Cursors.Reload(id);
+        Picture.Added += id => { Cursors.Reload(id); Tab = 0; };
         AddCommand = new RelayCommand(Add);
         RemoveCommand = new RelayCommand(p => { if (p is ModRowViewModel r) Svc.S.Mods.Remove(r.Entry); });
         RescanCommand = new RelayCommand(Rescan);
@@ -127,6 +144,8 @@ public sealed class MacrosViewModel : ObservableObject
         new(MacroStepType.Click, "Mouse click"), new(MacroStepType.Wait, "Wait"),
         new(MacroStepType.RandomWait, "Random wait"), new(MacroStepType.Scroll, "Scroll wheel"), new(MacroStepType.MoveMouse, "Move mouse"),
         new(MacroStepType.TypeText, "Type text"), new(MacroStepType.Note, "Note"),
+        new(MacroStepType.MouseDown, "Mouse button down"), new(MacroStepType.MouseUp, "Mouse button up"), new(MacroStepType.AutoClick, "Auto-click"),
+        new(MacroStepType.KeyCombo, "Key combo"), new(MacroStepType.DoubleClick, "Double click"), new(MacroStepType.MoveTo, "Move mouse to spot"),
     };
     public List<string> ClickNames { get; } = new() { "Left", "Right", "Middle" };
 
@@ -138,8 +157,117 @@ public sealed class MacrosViewModel : ObservableObject
     public RelayCommand MoveDown { get; }
     public RelayCommand RunCommand { get; }
 
+    // ---- record, duplicate, share
+    private readonly MacroRecorder _rec = new();
+    private bool _recording;
+    private string _downloadUrl = "", _shareMsg = "";
+    public bool IsRecording { get => _recording; private set { Set(ref _recording, value); OnPropertyChanged(nameof(RecordLabel)); } }
+    public string RecordLabel => IsRecording ? "Stop recording" : "Record";
+    public string DownloadUrl { get => _downloadUrl; set => Set(ref _downloadUrl, value); }
+    public string ShareMessage { get => _shareMsg; private set => Set(ref _shareMsg, value); }
+    public RelayCommand RecordCommand { get; }
+    public RelayCommand DuplicateMacro { get; }
+    public RelayCommand CopyCodeCommand { get; }
+    public RelayCommand SaveFileCommand { get; }
+    public RelayCommand PasteCodeCommand { get; }
+    public RelayCommand OpenFileCommand { get; }
+    public AsyncCommand DownloadCommand { get; }
+    public RelayCommand PickSpotCommand { get; }
+
+    private void AddImported(MacroDef m, string source)
+    {
+        var baseName = m.Name; int i = 2;
+        while (Macros.Any(x => x.Name == m.Name)) m.Name = $"{baseName} {i++}";
+        Macros.Add(m); Selected = m;
+        ShareMessage = $"Added “{m.Name}”{source}. Its hotkey is off until you set one. Look through the steps before you run it.";
+    }
+
+    private void StopRecording()
+    {
+        if (!IsRecording) return;
+        var steps = _rec.Stop();
+        IsRecording = false;
+        if (Selected == null) return;
+        if (steps.Count == 0) { Message = "Nothing was recorded."; return; }
+        foreach (var s in steps) { if (Selected.Steps.Count >= MacroShare.MaxSteps) break; Selected.Steps.Add(s); }
+        Message = $"Recorded {steps.Count} step{(steps.Count == 1 ? "" : "s")}.";
+    }
+
     public MacrosViewModel()
     {
+        _rec.StopRequested += () => Application.Current.Dispatcher.BeginInvoke(StopRecording);
+        RecordCommand = new RelayCommand(() =>
+        {
+            if (IsRecording) { StopRecording(); return; }
+            if (Selected == null) return;
+            if (!_rec.Start()) { Message = "Windows didn't allow Nighty to listen to input, so recording isn't available."; return; }
+            IsRecording = true;
+            Message = "Recording your keys and clicks. Clicks on Nighty aren't recorded. Press Esc or Stop recording when you're done.";
+        });
+        DuplicateMacro = new RelayCommand(() =>
+        {
+            if (Selected == null) return;
+            var c = new MacroDef { Name = Selected.Name + " copy", Repeat = Selected.Repeat, RepeatDelayMs = Selected.RepeatDelayMs, Speed = Selected.Speed, OnlyInRoblox = Selected.OnlyInRoblox, HoldMode = Selected.HoldMode, HotkeyEnabled = false };
+            foreach (var s in Selected.Steps) c.Steps.Add(new MacroStep { Type = s.Type, Value = s.Value, Value2 = s.Value2, Value3 = s.Value3, Text = s.Text });
+            Macros.Add(c); Selected = c;
+        });
+        CopyCodeCommand = new RelayCommand(() =>
+        {
+            if (Selected == null) return;
+            var code = MacroShare.ToCode(Selected);
+            try { Clipboard.SetText(code); }
+            catch { ShareMessage = "Windows didn't let Nighty use the clipboard. Try again."; return; }
+            ShareMessage = code.Length > 1900 ? $"Code copied ({code.Length} characters): too long for one Discord message, so send the file instead."
+                                              : "Code copied. Paste it in chat; your friend presses Paste code.";
+        });
+        SaveFileCommand = new RelayCommand(() =>
+        {
+            if (Selected == null) return;
+            var dlg = new Microsoft.Win32.SaveFileDialog { Title = "Save the macro as a file", Filter = "Nighty macro (*.nightymacro)|*.nightymacro", FileName = Selected.Name, DefaultExt = ".nightymacro" };
+            if (dlg.ShowDialog() != true) return;
+            try { File.WriteAllText(dlg.FileName, MacroShare.ToJson(Selected)); ShareMessage = "Saved " + Path.GetFileName(dlg.FileName) + "."; }
+            catch (Exception ex) { ShareMessage = "The file couldn't be saved there: " + ex.Message; }
+        });
+        PasteCodeCommand = new RelayCommand(() =>
+        {
+            string text;
+            try { text = Clipboard.GetText(); } catch { ShareMessage = "Windows didn't let Nighty use the clipboard. Try again."; return; }
+            var (m, err) = MacroShare.Parse(text);
+            if (m == null) { ShareMessage = err ?? "That couldn't be added."; return; }
+            AddImported(m, " from the clipboard");
+        });
+        OpenFileCommand = new RelayCommand(() =>
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog { Title = "Open a macro file", Filter = "Nighty macros|*.nightymacro;*.json;*.txt|All files|*.*" };
+            if (dlg.ShowDialog() != true) return;
+            try
+            {
+                var info = new FileInfo(dlg.FileName);
+                if (info.Length == 0 || info.Length > 4 * 1024 * 1024) { ShareMessage = "That file couldn't be read (or is larger than 4 MB)."; return; }
+                var (m, err) = MacroShare.Parse(File.ReadAllText(dlg.FileName));
+                if (m == null) { ShareMessage = err ?? "That couldn't be added."; return; }
+                AddImported(m, " from " + info.Name);
+            }
+            catch (Exception ex) { ShareMessage = "That file couldn't be read: " + ex.Message; }
+        });
+        DownloadCommand = new AsyncCommand(async () =>
+        {
+            if (string.IsNullOrWhiteSpace(DownloadUrl)) { ShareMessage = "Paste an https:// link first."; return; }
+            ShareMessage = "Downloading…";
+            var (m, err) = await MacroShare.DownloadAsync(DownloadUrl);
+            if (m == null) { ShareMessage = err ?? "The download failed."; return; }
+            AddImported(m, " from the link");
+        });
+        PickSpotCommand = new RelayCommand(p =>
+        {
+            if (p is not MacroStep s) return;
+            var win = new SpotPicker();
+            if (Application.Current.MainWindow is { } mw) mw.WindowState = WindowState.Minimized;
+            win.ShowDialog();
+            if (Application.Current.MainWindow is { } mw2) { mw2.WindowState = WindowState.Normal; mw2.Activate(); }
+            if (win.Result is { } r) { s.Value = r.X; s.Value2 = r.Y; Message = $"Spot set to {r.X}, {r.Y}."; }
+        });
+
         AddMacro = new RelayCommand(() =>
         {
             var m = new MacroDef { Name = UniqueName() };
@@ -158,8 +286,21 @@ public sealed class MacrosViewModel : ObservableObject
         AddStep = new RelayCommand(p =>
         {
             if (Selected == null) return;
+            if (Selected.Steps.Count >= MacroShare.MaxSteps) { Message = $"A macro can have up to {MacroShare.MaxSteps} steps."; return; }
             var t = Enum.Parse<MacroStepType>(p?.ToString() ?? "Wait");
-            Selected.Steps.Add(new MacroStep { Type = t, Value = t switch { MacroStepType.Wait => 100, MacroStepType.RandomWait => 50, MacroStepType.Click => 0, MacroStepType.Scroll => 1, MacroStepType.MoveMouse or MacroStepType.TypeText or MacroStepType.Note => 0, _ => 0x20 }, Value2 = t == MacroStepType.RandomWait ? 150 : 0, Text = t == MacroStepType.TypeText ? "hello" : "" });
+            Selected.Steps.Add(new MacroStep
+            {
+                Type = t,
+                Value = t switch
+                {
+                    MacroStepType.Wait => 100, MacroStepType.RandomWait => 50, MacroStepType.AutoClick => 12, MacroStepType.KeyCombo => 0x43, MacroStepType.Scroll => 1,
+                    MacroStepType.Click or MacroStepType.MouseDown or MacroStepType.MouseUp or MacroStepType.DoubleClick or MacroStepType.MoveMouse or MacroStepType.MoveTo or MacroStepType.TypeText or MacroStepType.Note => 0,
+                    _ => 0x20,
+                },
+                Value2 = t switch { MacroStepType.RandomWait => 150, MacroStepType.AutoClick => 400, _ => 0 },
+                Value3 = t == MacroStepType.KeyCombo ? Hotkeys.Ctrl : 0,
+                Text = t == MacroStepType.TypeText ? "hello" : "",
+            });
         });
         RemoveStep = new RelayCommand(p => { if (p is MacroStep s) Selected?.Steps.Remove(s); });
         MoveUp = new RelayCommand(p => Move(p as MacroStep, -1));
@@ -205,7 +346,9 @@ public sealed class MacrosViewModel : ObservableObject
     {
         Svc.Hotkeys.Register("macro:" + m.Id, () => m.HotkeyEnabled ? (m.HotkeyVk, m.HotkeyMods) : (0, 0), down =>
         {
-            if (down && (!m.OnlyInRoblox || Svc.Roblox.IsForeground || Svc.Macros.IsRunning(m.Id))) Svc.Macros.Toggle(m);
+            bool allowed = !m.OnlyInRoblox || Svc.Roblox.IsForeground || Svc.Macros.IsRunning(m.Id);
+            if (m.HoldMode) { if (down) { if (allowed && !Svc.Macros.IsRunning(m.Id)) Svc.Macros.Start(m); } else Svc.Macros.Stop(m.Id); }
+            else if (down && allowed) Svc.Macros.Toggle(m);
         });
     }
 }
@@ -220,6 +363,58 @@ public sealed class OverlaysViewModel : ObservableObject
     public bool IsAdmin => Elevation.IsAdmin;
     public string LiveStatus { get => _live; private set => Set(ref _live, value); }
     private string _live = "";
+
+    // ---- presets, style helpers
+    public sealed class OverlayPresetVm { public required string Name { get; init; } public bool BuiltIn { get; init; } public string Kind => BuiltIn ? "Ready-made" : "Yours"; }
+    public ObservableCollection<OverlayPresetVm> Presets { get; } = new();
+    private string _presetName = "", _presetMsg = "";
+    public string PresetName { get => _presetName; set => Set(ref _presetName, value); }
+    public string PresetMessage { get => _presetMsg; private set => Set(ref _presetMsg, value); }
+    public RelayCommand SavePresetCommand { get; }
+    public RelayCommand LoadPresetCommand { get; }
+    public RelayCommand DeletePresetCommand { get; }
+    public RelayCommand ResetStyleCommand { get; }
+    public RelayCommand CopyStyleCommand { get; }
+    public OverlayVisibility[] VisibilityChoices { get; } = Enum.GetValues<OverlayVisibility>();
+    public OverlayVisibility Visibility { get => Settings.Visibility; set { Settings.Visibility = value; OnPropertyChanged(); } }
+    public bool FollowRoblox { get => Settings.FollowRobloxWindow; set { Settings.FollowRobloxWindow = value; OnPropertyChanged(); } }
+    private static string PresetDir => Path.Combine(AppPaths.Root, "overlay-presets");
+
+    private static readonly string[] BuiltInPresets = { "Competitive", "Keys", "Minimal" };
+
+    private static List<OverlayConfig> BuiltIn(string name)
+    {
+        OverlayConfig O(OverlayKind k, string t, double x, double y, bool on = true) => new() { Kind = k, Title = t, X = x, Y = y, Enabled = on };
+        return name switch
+        {
+            "Competitive" => new() { O(OverlayKind.Cps, "CPS", 1, 2), O(OverlayKind.Fps, "FPS", 12, 2), O(OverlayKind.Ping, "Ping", 23, 2), O(OverlayKind.Mouse, "Mouse", 1, 90) },
+            "Keys" => new() { O(OverlayKind.Wasd, "WASD", 2, 78), O(OverlayKind.Mouse, "Mouse", 13, 85), O(OverlayKind.Cps, "CPS", 2, 2) },
+            _ => new() { O(OverlayKind.Cps, "CPS", 1, 2) },
+        };
+    }
+
+    private void RefreshPresets()
+    {
+        Presets.Clear();
+        foreach (var n in BuiltInPresets) Presets.Add(new OverlayPresetVm { Name = n, BuiltIn = true });
+        try
+        {
+            if (Directory.Exists(PresetDir))
+                foreach (var f in Directory.EnumerateFiles(PresetDir, "*.json").OrderBy(f => f)) Presets.Add(new OverlayPresetVm { Name = Path.GetFileNameWithoutExtension(f) });
+        }
+        catch { }
+    }
+
+    /// <summary>Replaces every overlay with the given list; Undo brings the old ones back.</summary>
+    private void ReplaceAll(List<OverlayConfig> list, string? pingHost = null)
+    {
+        _beforeLoad = Items.Select(CloneOverlay).ToList();
+        _beforePing = Settings.PingHost;
+        Items.Clear();
+        foreach (var o in list) { o.Id = Guid.NewGuid(); Items.Add(o); }
+        if (!string.IsNullOrWhiteSpace(pingHost) && pingHost.Length <= 100) Settings.PingHost = pingHost;
+        UndoLoadCommand?.Refresh();
+    }
 
     public RelayCommand AddKeyCommand { get; }
     public RelayCommand AddCrosshairCommand { get; }
@@ -252,6 +447,48 @@ public sealed class OverlaysViewModel : ObservableObject
             Svc.Overlays.Sync();
         };
 
+        RefreshPresets();
+        ResetStyleCommand = new RelayCommand(p => { if (p is OverlayConfig c) { c.ResetStyle(); PresetMessage = "Style reset to the defaults."; } });
+        CopyStyleCommand = new RelayCommand(p =>
+        {
+            if (p is not OverlayConfig src) return;
+            foreach (var o in Items.Where(o => o != src && o.Kind != OverlayKind.Crosshair)) o.CopyStyleFrom(src);
+            PresetMessage = "Every overlay now uses this style.";
+        });
+        SavePresetCommand = new RelayCommand(() =>
+        {
+            var name = PresetName.Trim();
+            if (name.Length == 0) { PresetMessage = "Give the preset a name first."; return; }
+            name = string.Concat(name.Select(ch => Path.GetInvalidFileNameChars().Contains(ch) ? '-' : ch));
+            try
+            {
+                Directory.CreateDirectory(PresetDir);
+                File.WriteAllText(Path.Combine(PresetDir, name + ".json"), System.Text.Json.JsonSerializer.Serialize(new OverlayLayoutFile { PingHost = Settings.PingHost, Items = Items.ToList() }, LayoutJson));
+                PresetMessage = $"Preset “{name}” saved."; PresetName = ""; RefreshPresets();
+            }
+            catch (Exception ex) { PresetMessage = "Couldn't save the preset: " + ex.Message; }
+        });
+        LoadPresetCommand = new RelayCommand(p =>
+        {
+            if (p is not OverlayPresetVm pr) return;
+            try
+            {
+                if (pr.BuiltIn) { ReplaceAll(BuiltIn(pr.Name)); }
+                else
+                {
+                    var f = System.Text.Json.JsonSerializer.Deserialize<OverlayLayoutFile>(File.ReadAllText(Path.Combine(PresetDir, pr.Name + ".json")), LayoutJson);
+                    if (f?.Items == null || f.Items.Count == 0) { PresetMessage = "That preset is empty."; return; }
+                    ReplaceAll(f.Items, f.PingHost);
+                }
+                PresetMessage = $"Loaded “{pr.Name}”. Undo is under Share overlays.";
+            }
+            catch (Exception ex) { PresetMessage = "Couldn't load the preset: " + ex.Message; }
+        });
+        DeletePresetCommand = new RelayCommand(p =>
+        {
+            if (p is not OverlayPresetVm { BuiltIn: false } pr) return;
+            try { File.Delete(Path.Combine(PresetDir, pr.Name + ".json")); RefreshPresets(); PresetMessage = "Preset deleted."; } catch { PresetMessage = "The preset couldn't be deleted."; }
+        });
         AddKeyCommand = new RelayCommand(() =>
         {
             int? vk = Dialogs.CaptureKey("Add key overlay", "Press the key you want to show on screen.");
@@ -368,119 +605,5 @@ public sealed class OverlaysViewModel : ObservableObject
                 }
             }
         };
-    }
-}
-
-// ============================================================ Settings
-
-public sealed class SettingsViewModel : ObservableObject
-{
-    private string _message = "";
-    public GeneralSettings General => Svc.S.General;
-    public IReadOnlyList<ThemeChoice> Themes => ThemeService.Themes;
-    public string SelectedTheme
-    {
-        get => ThemeService.Find(General.Theme).Id;
-        set { General.Theme = value; ThemeService.Apply(value); OnPropertyChanged(); foreach (var w in Swatches) w.IsSelected = w.Choice.Id == value; }
-    }
-    private int _tab;
-    public int Tab { get => _tab; set => Set(ref _tab, value); }
-    public sealed class ThemeSwatch : ObservableObject
-    {
-        private bool _sel;
-        public required ThemeChoice Choice { get; init; }
-        public bool IsSelected { get => _sel; set => Set(ref _sel, value); }
-    }
-    public List<ThemeSwatch> Swatches { get; }
-    public RelayCommand SelectThemeCommand { get; }
-    public bool StartMinimized
-    {
-        get => General.StartMinimized;
-        set
-        {
-            General.StartMinimized = value;
-            if (StartupRegistration.IsEnabled) { try { StartupRegistration.Set(true); } catch (Exception ex) { Message = "Could not update startup entry: " + ex.Message; } }
-            OnPropertyChanged();
-        }
-    }
-    public bool StartWithWindows
-    {
-        get => StartupRegistration.IsEnabled;
-        set { try { StartupRegistration.Set(value); } catch (Exception ex) { Message = "Could not change startup setting: " + ex.Message; } OnPropertyChanged(); }
-    }
-    public string Message { get => _message; private set => Set(ref _message, value); }
-    public IReadOnlyList<ChangelogEntry> Changelog => Nighty.Models.Changelog.Entries;
-    public string Version => typeof(SettingsViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
-    public string AdminText => Elevation.IsAdmin ? "Running as administrator" : "Running as a standard user";
-    public bool IsAdmin => Elevation.IsAdmin;
-    public string SettingsPath => AppPaths.SettingsFile;
-
-    public RelayCommand OpenDataFolder { get; }
-    public RelayCommand OpenLogsFolder { get; }
-    public RelayCommand RelaunchAdmin { get; }
-    public AsyncCommand RestoreAllCommand { get; }
-    public RelayCommand ResetCommand { get; }
-    public RelayCommand ExportProfileCommand { get; }
-    public RelayCommand ImportProfileCommand { get; }
-
-    public SettingsViewModel()
-    {
-        Swatches = ThemeService.Themes.Select(t => new ThemeSwatch { Choice = t, IsSelected = t.Id == ThemeService.Find(Svc.S.General.Theme).Id }).ToList();
-        SelectThemeCommand = new RelayCommand(o => { if (o is string id) SelectedTheme = id; });
-        OpenDataFolder = new RelayCommand(() => Open(AppPaths.Root));
-        OpenLogsFolder = new RelayCommand(() => Open(AppPaths.Logs));
-        RelaunchAdmin = new RelayCommand(() =>
-        {
-            if (Dialogs.Confirm("Restart as administrator?", "Needed only for features such as the FPS overlay. Nighty will restart; your settings are kept.", "Restart"))
-                if (Elevation.RelaunchAsAdmin()) Application.Current.Shutdown();
-        }, () => !Elevation.IsAdmin);
-        RestoreAllCommand = new AsyncCommand(async () =>
-        {
-            Svc.StopAllInput();
-            Svc.S.Utility.Socd.Enabled = false;
-            Svc.Tweaks.RevertAll();
-            await Svc.GameMode.SetActiveAsync(false);
-            var m = Svc.Movement.HasBackup ? Svc.Movement.Restore() : null;
-            var p = Svc.Pointer.HasBackup ? Svc.Pointer.Restore() : null;
-            Message = "Restored: Game Mode" + (m != null ? ", keyboard/accessibility" : "") + (p != null ? ", pointer" : "") +
-                      ". DNS, QoS and mods are restored from their own pages because they need separate approval.";
-        });
-        ExportProfileCommand = new RelayCommand(() =>
-        {
-            var dlg = new Microsoft.Win32.SaveFileDialog { Title = "Export profile", Filter = "Nighty profile (*.json)|*.json", FileName = "nighty-profile", DefaultExt = ".json" };
-            if (dlg.ShowDialog() != true) return;
-            try { Svc.Settings.ExportProfile(dlg.FileName); Message = "Profile exported to " + Path.GetFileName(dlg.FileName) + ". It's plain JSON, so you can share it."; }
-            catch (Exception ex) { Message = "Couldn't export: " + ex.Message; }
-        });
-        ImportProfileCommand = new RelayCommand(() =>
-        {
-            var dlg = new Microsoft.Win32.OpenFileDialog { Title = "Import profile", Filter = "Nighty profile (*.json)|*.json" };
-            if (dlg.ShowDialog() != true) return;
-            if (!Dialogs.Confirm("Import profile?", "This replaces your clicker, macros, overlays and other preferences with the file's, then restarts Nighty. Windows backups and mods are kept.", "Import")) return;
-            var err = Svc.Settings.ImportProfile(dlg.FileName);
-            if (err != null) { Message = err; return; }
-            Svc.StopAllInput();
-            // Start the new copy a moment later, once this one has released its single-instance lock.
-            try { Process.Start(new ProcessStartInfo("cmd.exe", $"/c timeout /t 2 /nobreak >nul & start \"\" \"{Environment.ProcessPath}\"") { CreateNoWindow = true, UseShellExecute = false }); } catch { }
-            Application.Current.Shutdown();
-        });
-        ResetCommand = new RelayCommand(() =>
-        {
-            if (!Dialogs.Confirm("Reset all settings?", "This restores system changes made by Nighty, deletes your presets, macros and overlay layout, and restarts the app.", "Reset", danger: true)) return;
-            Svc.StopAllInput();
-            Svc.GameMode.RestoreOnExit();
-            if (Svc.Movement.HasBackup) Svc.Movement.Restore();
-            if (Svc.Pointer.HasBackup) Svc.Pointer.Restore();
-            Svc.Tweaks.RevertAll();
-            Svc.Settings.Reset();
-            try { Process.Start(new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true }); } catch { }
-            Application.Current.Shutdown();
-        });
-    }
-
-    private static void Open(string path)
-    {
-        try { System.IO.Directory.CreateDirectory(path); Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true }); }
-        catch (Exception ex) { Log.Warn("Open folder failed", ex); }
     }
 }

@@ -15,7 +15,9 @@ namespace Nighty.Services;
 /// <summary>Application-wide paths.</summary>
 public static class AppPaths
 {
-    public static readonly string Root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Nighty");
+    /// <summary>NIGHTY_DATA points the app at a separate data folder (used to test a build next to a running copy).</summary>
+    public static readonly string Root = Environment.GetEnvironmentVariable("NIGHTY_DATA") is { Length: > 0 } dev
+        ? dev : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Nighty");
     public static readonly string Logs = Path.Combine(Root, "logs");
     public static readonly string SettingsFile = Path.Combine(Root, "settings.json");
     public static readonly string ModBackups = Path.Combine(Root, "mod-backups");

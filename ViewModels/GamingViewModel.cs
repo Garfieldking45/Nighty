@@ -65,6 +65,8 @@ public sealed class GamingViewModel : ObservableObject
     public string CpuText { get => _cpuText; private set => Set(ref _cpuText, value); }
     public string RamText { get => _ramText; private set => Set(ref _ramText, value); }
     public string RobloxText { get => _robloxText; private set => Set(ref _robloxText, value); }
+    public string AppsSlowedText => Svc.GameMode.IsActive ? Svc.GameMode.AppsSlowed.ToString() : "-";
+    public string MemoryFreedText => Svc.GameMode.IsActive && Svc.GameMode.MemoryFreedMb > 0 ? $"{Svc.GameMode.MemoryFreedMb:0} MB" : "-";
     public string GameStatus { get => _gameStatus; private set => Set(ref _gameStatus, value); }
     public ObservableCollection<GameOptionViewModel> Options { get; } = new();
     public AsyncCommand PowerCommand { get; }
@@ -90,6 +92,12 @@ public sealed class GamingViewModel : ObservableObject
         Add("priority", "Roblox High CPU priority",
             "Raises the priority of the running Roblox client so it is scheduled ahead of background work. Reset when Game Mode ends.",
             () => g.RobloxHighPriority, v => g.RobloxHighPriority = v);
+        Add("calm", "Calm background apps",
+            "Browsers, launchers and updaters wait while you play (Below normal priority). Discord and music are left alone. Everything goes back when Game Mode ends.",
+            () => g.CalmBackgroundApps, v => g.CalmBackgroundApps = v);
+        Add("memory", "Free up memory",
+            "When Roblox starts, those background apps give back memory they are not using. Windows hands it back to them as they need it.",
+            () => g.FreeMemory, v => g.FreeMemory = v);
         Add("timer", "1 ms timer resolution",
             "Requests a finer system timer, which can make frame pacing and input timing steadier. Released when Game Mode ends.",
             () => g.TimerResolution, v => g.TimerResolution = v);
@@ -157,6 +165,7 @@ public sealed class GamingViewModel : ObservableObject
             if (Svc.GameMode.IsActive && o.Enabled && Svc.GameMode.Results.TryGetValue(o.Key, out var r)) { o.Status = r.Text; o.Kind = r.Kind; }
             else { o.Status = ""; o.Kind = StatusKind.Neutral; }
         }
+        OnPropertyChanged(nameof(AppsSlowedText)); OnPropertyChanged(nameof(MemoryFreedText));
         GameStatus = Svc.GameMode.IsActive ? "Optimizations are applied. Turn Game Mode off to restore your original settings." : "";
     }
 

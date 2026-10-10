@@ -48,6 +48,20 @@
             </Border>
         </StackPanel>
 
+        <StackPanel Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=0}" DataContext="{Binding Brightness}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE706;" Title="Software boost" Subtitle="Make your screen brighter or darker. Over 100% lights up dark areas.">
+                        <Button Content="Reset" Command="{Binding SoftResetCommand}"/>
+                    </c:CardHeader>
+                    <c:ValueStepper Value="{Binding SoftLevel, Mode=TwoWay}" Minimum="40" Maximum="150" Step="5" Suffix="%"/>
+                    <TextBlock Text="{Binding SoftLabel}" FontWeight="Medium" Margin="0,12,0,0"/>
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,0" Text="The boost brightens dark and mid tones on your main display. It goes back to normal when you press Reset or close Nighty."/>
+                    <TextBlock Text="{Binding SoftMessage}" Style="{StaticResource Muted}" Margin="0,8,0,0" Visibility="{Binding SoftMessage, Converter={StaticResource NullVisible}}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
         <!-- ================= Movement helper ================= -->
         <StackPanel Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=1}" DataContext="{Binding Movement}">
             <Border Style="{StaticResource Card}">
@@ -76,7 +90,7 @@
                     <c:SettingRow Title="Left and right" Description="Your strafe keys.">
                         <StackPanel Orientation="Horizontal">
                             <Border Style="{StaticResource Chip}" Padding="14,6"><TextBlock Text="A" FontWeight="SemiBold"/></Border>
-                            <TextBlock Text="&#xE7C9;" Style="{StaticResource Icon}" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE7C9;" Style="{StaticResource Icon}" Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="10,0" VerticalAlignment="Center"/>
                             <Border Style="{StaticResource Chip}" Padding="14,6"><TextBlock Text="D" FontWeight="SemiBold"/></Border>
                             <CheckBox IsChecked="{Binding LeftRight}" Margin="18,0,0,0"/>
                         </StackPanel>
@@ -85,7 +99,7 @@
                     <c:SettingRow Title="Forward and back" Description="Your walk keys.">
                         <StackPanel Orientation="Horizontal">
                             <Border Style="{StaticResource Chip}" Padding="14,6"><TextBlock Text="W" FontWeight="SemiBold"/></Border>
-                            <TextBlock Text="&#xE7C9;" Style="{StaticResource Icon}" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE7C9;" Style="{StaticResource Icon}" Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="10,0" VerticalAlignment="Center"/>
                             <Border Style="{StaticResource Chip}" Padding="14,6"><TextBlock Text="S" FontWeight="SemiBold"/></Border>
                             <CheckBox IsChecked="{Binding ForwardBack}" Margin="18,0,0,0"/>
                         </StackPanel>
@@ -132,11 +146,14 @@
                         <CheckBox IsChecked="{Binding Settings.ApplyOnlyInRoblox}"/>
                     </c:SettingRow>
                     <Border Style="{StaticResource Divider}" Margin="0,14,0,18"/>
-                    <c:SettingRow Title="Slow down in slot 1" Description="While hotbar slot 1 is selected (pick it with the 1 key), the pointer drops to the slow speed below for steadier aim, then returns to normal. Roblox only.">
+                    <c:SettingRow Title="Slow down in slot 1" Description="While hotbar slot 1 is selected (pick it with the 1 key) the pointer uses the slow speed below. In every other slot, or after scrolling the hotbar, it uses the other-slots speed. Roblox only.">
                         <CheckBox IsChecked="{Binding Settings.SlowInSlotOne}"/>
                     </c:SettingRow>
                     <TextBlock Text="SLOW SPEED" Style="{StaticResource Label}" Margin="0,10,0,6"/>
                     <c:ValueStepper Value="{Binding SlowSpeed, Mode=TwoWay}" Minimum="1" Maximum="20" Step="1"/>
+                    <TextBlock Text="SPEED IN OTHER SLOTS" Style="{StaticResource Label}" Margin="0,14,0,6"/>
+                    <c:ValueStepper Value="{Binding OtherSlotSpeed, Mode=TwoWay}" Minimum="1" Maximum="20" Step="1"/>
+                    <TextBlock Text="10 is the Windows default. This replaces the pointer speed above while slot 1 slowdown is on and Roblox is in front." Style="{StaticResource Muted}" Margin="0,6,0,0"/>
                     <Border Style="{StaticResource Divider}" Margin="0,18"/>
                     <c:CardHeader Icon="&#xE945;" Title="Pointer speed" Subtitle="Windows pointer speed, 1–20 (10 is the Windows default)."/>
                     <c:ValueStepper Value="{Binding Speed, Mode=TwoWay}" Minimum="1" Maximum="20" Step="1"/>
@@ -184,6 +201,17 @@
             </Border>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
+                    <c:CardHeader Icon="&#xE962;" Title="Mouse test pad" Subtitle="Check how the pointer follows your mouse, and your polling rate"/>
+                    <c:MouseTestPad x:Name="Pad" MouseDpi="{Binding Dpi}"/>
+                    <TextBlock Text="{Binding MultiplierText, ElementName=Pad}" FontWeight="Medium" Margin="2,12,0,0"/>
+                    <TextBlock Text="{Binding AccelText, ElementName=Pad}" Style="{StaticResource Muted}" Margin="2,4,0,0"/>
+                    <TextBlock Text="{Binding DpiText, ElementName=Pad}" Style="{StaticResource Muted}" Margin="2,4,0,0"/>
+                    <TextBlock Text="{Binding PollingText, ElementName=Pad}" Style="{StaticResource Muted}" Margin="2,4,0,0"/>
+                    <TextBlock Style="{StaticResource Muted}" Margin="2,10,0,0" Text="Games with raw input (most shooters) ignore Windows pointer settings and read the mouse directly. For custom acceleration curves you need a separate driver like Raw Accel."/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
                     <c:CardHeader Icon="&#xE946;" Title="Current Windows state" Subtitle="{Binding CurrentText}"/>
                 </StackPanel>
             </Border>
@@ -225,23 +253,23 @@
                     <ItemsControl ItemsSource="{Binding Providers}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="18,11">
+                                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="18,11">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/><ColumnDefinition Width="1.3*"/><ColumnDefinition Width="90"/><ColumnDefinition Width="70"/><ColumnDefinition Width="120"/><ColumnDefinition Width="80"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="{Binding Name}" FontWeight="Medium" VerticalAlignment="Center"/>
-                                            <Border Style="{StaticResource Chip}" Background="#16301F" Margin="8,0,0,0" Visibility="{Binding IsBest, Converter={StaticResource BoolVisible}}">
-                                                <TextBlock Text="FASTEST" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}"/>
+                                            <Border Style="{StaticResource Chip}" Background="{DynamicResource SuccessSoftBrush}" Margin="8,0,0,0" Visibility="{Binding IsBest, Converter={StaticResource BoolVisible}}">
+                                                <TextBlock Text="FASTEST" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"/>
                                             </Border>
                                             <Border Style="{StaticResource Chip}" Margin="8,0,0,0" Visibility="{Binding IsCurrent, Converter={StaticResource BoolVisible}}">
-                                                <TextBlock Text="IN USE" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource MutedBrush}"/>
+                                                <TextBlock Text="IN USE" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource MutedBrush}"/>
                                             </Border>
                                         </StackPanel>
-                                        <TextBlock Grid.Column="1" Text="{Binding Servers}" Foreground="{StaticResource MutedBrush}" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Servers}" Foreground="{DynamicResource MutedBrush}" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="2" Text="{Binding LatencyText}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="3" Text="{Binding SuccessText}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding SuccessText}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                                         <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
                                             <c:StatusDot Kind="{Binding Kind}"/>
                                             <TextBlock Text="{Binding Status}" Margin="8,0,0,0" FontSize="12.5" Foreground="{Binding Kind, Converter={StaticResource StatusBrush}}"/>
@@ -294,6 +322,9 @@
                     <c:CardHeader Icon="&#xE946;" Title="Roblox traffic policy" Subtitle="{Binding AppName, StringFormat=Applies to {0} on all network profiles.}"/>
                     <TextBlock Text="DSCP VALUE" Style="{StaticResource Label}" Margin="0,0,0,6"/>
                     <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding Choice}" AutomationProperties.Name="DSCP value"/>
+                    <c:SettingRow Title="Use on home Wi-Fi and Ethernet" Description="Without this, Windows only uses the policy on work (domain) networks. Needs administrator approval once." Margin="0,16,0,0">
+                        <CheckBox IsChecked="{Binding UseOnHome}"/>
+                    </c:SettingRow>
                     <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
                         <Button Content="Apply policy" Command="{Binding ApplyCommand}" Style="{StaticResource PrimaryButton}" MinWidth="110"/>
                         <Button Content="Remove policy" Command="{Binding RemoveCommand}" Margin="10,0,0,0"/>

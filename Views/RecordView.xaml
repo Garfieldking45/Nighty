@@ -1,0 +1,197 @@
+<UserControl x:Class="Nighty.Views.RecordView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Nighty.Controls">
+    <StackPanel>
+        <c:PageHeading Title="Record" Subtitle="Save your best moments with one key, or record whole sessions. Built to stay out of your game's way."/>
+
+        <WrapPanel Margin="0,0,0,10">
+            <RadioButton Style="{StaticResource TabButton}" Content="Overview" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Library" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Hotkeys" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Source and quality" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Feedback and files" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}"/>
+        </WrapPanel>
+
+        <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="2,0,0,10" Foreground="{DynamicResource AccentBrush}" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+
+        <!-- ================= Overview ================= -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE7C8;" Title="Instant Replay" Subtitle="Your last moments, ready to save at any time">
+                        <CheckBox IsChecked="{Binding ReplayOn}" AutomationProperties.Name="Instant Replay"/>
+                    </c:CardHeader>
+                    <Border Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="14" Padding="20,16">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <c:StatusDot Kind="Success" Visibility="{Binding ReplayOn, Converter={StaticResource BoolVisible}}"/>
+                                <TextBlock Text="{Binding StatusTitle}" FontSize="18" FontWeight="SemiBold" Margin="10,0,0,0"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding StatusDetail}" Style="{StaticResource Muted}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                    <WrapPanel Margin="0,16,0,0">
+                        <Button Command="{Binding SaveClipCommand}" Style="{StaticResource PrimaryButton}" Padding="22,12" Margin="0,0,10,8">
+                            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE74E;" Style="{StaticResource Icon}" FontSize="14" Foreground="{DynamicResource OnAccentBrush}"/><TextBlock Text="Save clip" Margin="10,0,0,0" Foreground="{DynamicResource OnAccentBrush}" FontWeight="SemiBold"/></StackPanel>
+                        </Button>
+                        <Button Command="{Binding ToggleRecordCommand}" Padding="22,12" Margin="0,0,10,8">
+                            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7C8;" Style="{StaticResource Icon}" FontSize="14" Foreground="{DynamicResource DangerBrush}"/><TextBlock Text="{Binding RecordLabel}" Margin="10,0,0,0"/></StackPanel>
+                        </Button>
+                        <Button Content="Open folder" Command="{Binding OpenFolderCommand}" Padding="22,12" Margin="0,0,0,8"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding ReplayHint}" Style="{StaticResource Muted}" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <c:InfoBanner Kind="Info" Text="Clips are MP4 (H.264): they play everywhere and upload straight to Discord, YouTube or TikTok. Sound isn't recorded in this version. Instant Replay keeps frames in memory only and encodes them when you press the clip key."/>
+        </StackPanel>
+
+        <!-- ================= Library ================= -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE8B7;" Title="Clips and recordings" Subtitle="{Binding LibrarySummary}">
+                        <StackPanel Orientation="Horizontal">
+                            <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="3" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton Style="{StaticResource SegmentButton}" GroupName="rfilter" Content="All" Padding="10,5" IsChecked="{Binding KindFilter, Converter={StaticResource Eq}, ConverterParameter=All}"/>
+                                    <RadioButton Style="{StaticResource SegmentButton}" GroupName="rfilter" Content="Clips" IsChecked="{Binding KindFilter, Converter={StaticResource Eq}, ConverterParameter=Clips}"/>
+                                    <RadioButton Style="{StaticResource SegmentButton}" GroupName="rfilter" Content="Recordings" IsChecked="{Binding KindFilter, Converter={StaticResource Eq}, ConverterParameter=Recordings}"/>
+                                </StackPanel>
+                            </Border>
+                            <Button Content="Refresh" Command="{Binding RefreshLibraryCommand}"/>
+                        </StackPanel>
+                    </c:CardHeader>
+                    <StackPanel Visibility="{Binding LibraryEmpty, Converter={StaticResource BoolVisible}}">
+                        <TextBlock Text="No clips yet" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Text="Turn on Instant Replay and press your clip key in game. Your clips show up here." Style="{StaticResource Muted}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding Items}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,10" Margin="0,0,0,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <Border Width="38" Height="38" CornerRadius="10" Background="{DynamicResource TileBrush}" Margin="0,0,14,0">
+                                            <TextBlock Text="&#xE714;" Style="{StaticResource Icon}" Foreground="{DynamicResource AccentBrush}"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" FontSize="11.5"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                            <Button Content="Play" Padding="14,6" Margin="0,0,6,0" Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                            <Button Style="{StaticResource IconButton}" Content="&#xE838;" ToolTip="Show in folder" Margin="0,0,6,0" Command="{Binding DataContext.ShowInFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                            <Button Style="{StaticResource IconButton}" Content="&#xE8C8;" ToolTip="Save a copy" Margin="0,0,6,0" Command="{Binding DataContext.SaveCopyCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                            <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Delete" Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ================= Hotkeys ================= -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE765;" Title="Hotkeys" Subtitle="Click a key to change it. Works in games and everywhere in Windows."/>
+                    <c:SettingRow Title="Save clip" Description="Saves the last moments while Instant Replay is on.">
+                        <c:HotkeyBox Vk="{Binding Settings.ClipVk, Mode=TwoWay}" Mods="{Binding Settings.ClipMods, Mode=TwoWay}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Start or stop recording" Description="Press once to start, again to save.">
+                        <c:HotkeyBox Vk="{Binding Settings.RecordVk, Mode=TwoWay}" Mods="{Binding Settings.RecordMods, Mode=TwoWay}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Instant Replay on or off" Description="Turn the replay on before a match and off after it.">
+                        <c:HotkeyBox Vk="{Binding Settings.ReplayVk, Mode=TwoWay}" Mods="{Binding Settings.ReplayMods, Mode=TwoWay}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <Button Content="Reset to defaults" Command="{Binding ResetHotkeysCommand}" HorizontalAlignment="Left"/>
+                    <TextBlock Text="Any key, or a mouse side button. Nighty doesn't block the key, so pick one your game doesn't use. Use a different key for each action." Style="{StaticResource Muted}" Margin="0,12,0,0"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ================= Source and quality ================= -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE7F4;" Title="Source" Subtitle="What to record: the screen, or the Roblox window"/>
+                    <UniformGrid Rows="1" Columns="2">
+                        <RadioButton Style="{StaticResource OptionCard}" GroupName="rsrc" Margin="0,0,10,0" IsChecked="{Binding Source, Converter={StaticResource Eq}, ConverterParameter=Screen}">
+                            <StackPanel HorizontalAlignment="Center"><TextBlock Text="Screen" FontWeight="SemiBold" FontSize="15" HorizontalAlignment="Center" Margin="0,4,0,2"/><TextBlock Text="Your main display" Style="{StaticResource Muted}" HorizontalAlignment="Center"/></StackPanel>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource OptionCard}" GroupName="rsrc" IsChecked="{Binding Source, Converter={StaticResource Eq}, ConverterParameter=RobloxWindow}">
+                            <StackPanel HorizontalAlignment="Center"><TextBlock Text="Roblox" FontWeight="SemiBold" FontSize="15" HorizontalAlignment="Center" Margin="0,4,0,2"/><TextBlock Text="Follows the game window" Style="{StaticResource Muted}" HorizontalAlignment="Center"/></StackPanel>
+                        </RadioButton>
+                    </UniformGrid>
+                    <TextBlock Text="{Binding SourceHint}" Style="{StaticResource Muted}" Margin="2,12,0,0"/>
+                    <Border Style="{StaticResource Divider}" Margin="0,14"/>
+                    <c:SettingRow Title="Show the mouse pointer" Description="Draws your cursor into the video.">
+                        <CheckBox IsChecked="{Binding Settings.ShowCursor}"/>
+                    </c:SettingRow>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE9D9;" Title="Quality" Subtitle="Sharper video uses more disk space; the game runs the same"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                        <StackPanel><TextBlock Text="RESOLUTION" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <ComboBox ItemsSource="{Binding Resolutions}" DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding Resolution}"/></StackPanel>
+                        <StackPanel Grid.Column="2"><TextBlock Text="FRAME RATE" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <ComboBox ItemsSource="{Binding FpsChoices}" DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding Fps}"/></StackPanel>
+                        <StackPanel Grid.Row="1" Margin="0,14,0,0"><TextBlock Text="PICTURE QUALITY" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <ComboBox ItemsSource="{Binding Qualities}" DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding Quality}"/></StackPanel>
+                        <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,14,0,0"><TextBlock Text="CLIP LENGTH" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <ComboBox ItemsSource="{Binding Lengths}" DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding ClipSeconds}"/></StackPanel>
+                    </Grid>
+                    <TextBlock Text="{Binding QualityHint}" Style="{StaticResource Muted}" Margin="2,14,0,0"/>
+                    <TextBlock Text="{Binding ReplayHint}" Style="{StaticResource Muted}" Margin="2,4,0,0"/>
+                    <TextBlock Text="Encoder" Style="{StaticResource Label}" Margin="2,14,0,4"/>
+                    <TextBlock Text="{Binding EncoderText}" Style="{StaticResource Muted}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ================= Feedback and files ================= -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE7BA;" Title="Know it worked without leaving the game" Subtitle="A note and a sound when a clip is saved">
+                        <Button Content="Try it" Command="{Binding TestNoteCommand}"/>
+                    </c:CardHeader>
+                    <c:SettingRow Title="On-screen note" Description="A small card in the corner for two seconds. It never takes focus from your game.">
+                        <CheckBox IsChecked="{Binding Settings.OnScreenNote}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Note text" Description="What the note says.">
+                        <TextBox Text="{Binding Settings.NoteText, UpdateSourceTrigger=LostFocus}" Width="220" MaxLength="30" Padding="10,7"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Sound" Description="A short chime when a clip is saved.">
+                        <CheckBox IsChecked="{Binding Settings.ClipSound}"/>
+                    </c:SettingRow>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE8B7;" Title="Files" Subtitle="Where clips and recordings are saved"/>
+                    <c:SettingRow Title="Save to" Description="{Binding FolderText}">
+                        <Button Content="Change" Command="{Binding ChangeFolderCommand}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Sort by app" Description="Keeps a folder per game or app, like Clips\Roblox.">
+                        <CheckBox IsChecked="{Binding Settings.SortByApp}"/>
+                    </c:SettingRow>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

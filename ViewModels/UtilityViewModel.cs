@@ -63,8 +63,32 @@ public sealed class BrightnessViewModel : ObservableObject
     public AsyncCommand RefreshCommand { get; }
     public RelayCommand RestoreCommand { get; }
 
+    // ---- software boost (gamma ramp), works on any display
+    private readonly DispatcherTimer _softApply = new() { Interval = TimeSpan.FromMilliseconds(120) };
+    private double _soft = Svc.SoftBrightness.Level;
+    private string _softMessage = "";
+    public double SoftLevel { get => _soft; set { if (Set(ref _soft, Math.Round(value))) { OnPropertyChanged(nameof(SoftLabel)); _softApply.Stop(); _softApply.Start(); } } }
+    public string SoftLabel => SoftLevel > 100 ? $"+{SoftLevel - 100:0}% boost" : SoftLevel < 100 ? $"{SoftLevel:0}% (dimmed)" : "Normal range";
+    public string SoftMessage { get => _softMessage; private set => Set(ref _softMessage, value); }
+    public RelayCommand SoftResetCommand { get; }
+
     public BrightnessViewModel()
     {
+        _softApply.Tick += (_, _) =>
+        {
+            _softApply.Stop();
+            var (ok, msg) = Svc.SoftBrightness.Set((int)SoftLevel);
+            SoftMessage = msg;
+            if (Svc.SoftBrightness.Level != (int)SoftLevel) { _soft = Svc.SoftBrightness.Level; OnPropertyChanged(nameof(SoftLevel)); OnPropertyChanged(nameof(SoftLabel)); }
+            if (!ok) SoftMessage = msg;
+        };
+        SoftResetCommand = new RelayCommand(() =>
+        {
+            _softApply.Stop();
+            var (_, msg) = Svc.SoftBrightness.Reset();
+            _soft = 100; OnPropertyChanged(nameof(SoftLevel)); OnPropertyChanged(nameof(SoftLabel));
+            SoftMessage = msg;
+        });
         RefreshCommand = new AsyncCommand(Refresh);
         RestoreCommand = new RelayCommand(Restore, () => Selected != null && Svc.S.Backups.BrightnessOriginal.ContainsKey(Selected.Id));
         _apply.Tick += (_, _) =>
@@ -164,7 +188,8 @@ public sealed class TrackingViewModel : ObservableObject
     private string _current = "";
 
     public TrackingSettings Settings => Svc.S.Utility.Tracking;
-    public double SlowSpeed { get => Settings.SlowSpeed; set { Settings.SlowSpeed = (int)value; OnPropertyChanged(); } }
+    public double SlowSpeed { get => Settings.SlowSpeed; set { Settings.SlowSpeed = (int)value; OnPropertyChanged(); Svc.Pointer.UpdateSlotSlowdown(); } }
+    public double OtherSlotSpeed { get => Settings.OtherSlotSpeed; set { Settings.OtherSlotSpeed = (int)value; OnPropertyChanged(); Svc.Pointer.UpdateSlotSlowdown(); } }
     public double ScrollLines { get => Settings.ScrollLines; set { Settings.ScrollLines = (int)value; OnPropertyChanged(); } }
     public double DoubleClickMs { get => Settings.DoubleClickMs; set { Settings.DoubleClickMs = (int)value; OnPropertyChanged(); } }
     public double Speed { get => Settings.PointerSpeed; set { Settings.PointerSpeed = (int)value; OnPropertyChanged(); } }
@@ -411,6 +436,7 @@ public sealed class QosViewModel : ObservableObject
     public StatusKind StatusKind { get => _statusKind; private set => Set(ref _statusKind, value); }
     public bool PolicyExists { get; private set; }
     public string AppName => QosService.AppName;
+    public bool UseOnHome { get => Svc.S.Utility.Qos.UseOnHomeNetworks; set { Svc.S.Utility.Qos.UseOnHomeNetworks = value; OnPropertyChanged(); } }
 
     public AsyncCommand ApplyCommand { get; }
     public AsyncCommand RemoveCommand { get; }
@@ -429,7 +455,7 @@ public sealed class QosViewModel : ObservableObject
     {
         var p = Svc.Qos.ReadPolicy();
         PolicyExists = p.Exists;
-        Status = p.Exists ? $"Policy “{QosService.PolicyName}” is installed: {p.App} → DSCP {p.Dscp}" : "No Nighty QoS policy is installed.";
+        Status = p.Exists ? $"Policy “{QosService.PolicyName}” is installed: {p.App} → DSCP {p.Dscp}. " + (Svc.Qos.NlaDisabled() ? "Policies apply on every network." : "Policies apply on domain networks only.") : "No Nighty QoS policy is installed.";
         StatusKind = p.Exists ? StatusKind.Success : StatusKind.Neutral;
         OnPropertyChanged(nameof(PolicyExists));
         RemoveCommand?.Refresh();
@@ -438,7 +464,7 @@ public sealed class QosViewModel : ObservableObject
     private async Task Apply()
     {
         IsBusy = true; Kind = StatusKind.Info; Message = Elevation.IsAdmin ? "Applying…" : "Waiting for administrator approval…";
-        try { var (ok, msg) = await Svc.Qos.ApplyAsync(Choice.Value); Message = ok ? msg : "Not applied: " + msg; Kind = ok ? StatusKind.Success : StatusKind.Error; }
+        try { var (ok, msg) = await Svc.Qos.ApplyAsync(Choice.Value, UseOnHome); Message = ok ? msg : "Not applied: " + msg; Kind = ok ? StatusKind.Success : StatusKind.Error; }
         finally { IsBusy = false; Refresh(); }
     }
 

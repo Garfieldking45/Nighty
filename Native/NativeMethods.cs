@@ -34,6 +34,10 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint code, uint mapType);
     [DllImport("user32.dll")] public static extern short GetAsyncKeyState(int vKey);
+    [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+    [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p);
     [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
 
@@ -101,6 +105,20 @@ internal static class NativeMethods
     public static extern IntPtr AvSetMmThreadCharacteristicsW(string task, ref uint index);
     [DllImport("avrt.dll", SetLastError = true)]
     public static extern bool AvRevertMmThreadCharacteristics(IntPtr handle);
+    [DllImport("avrt.dll", SetLastError = true)]
+    public static extern bool AvSetMmThreadPriority(IntPtr handle, int priority);
+    public const int AVRT_PRIORITY_CRITICAL = 2;
+
+    // ---------- Thread placement (HitFix) ----------
+    [DllImport("kernel32.dll")] public static extern IntPtr GetCurrentThread();
+    [DllImport("kernel32.dll")] public static extern UIntPtr SetThreadAffinityMask(IntPtr thread, UIntPtr mask);
+    [DllImport("kernel32.dll")] public static extern uint SetThreadIdealProcessor(IntPtr thread, uint processor);
+    [DllImport("kernel32.dll")] public static extern bool SetThreadPriority(IntPtr thread, int priority);
+    [DllImport("kernel32.dll")] public static extern int GetThreadPriority(IntPtr thread);
+    [DllImport("kernel32.dll")] public static extern bool GetProcessAffinityMask(IntPtr process, out UIntPtr processMask, out UIntPtr systemMask);
+    public const int THREAD_PRIORITY_TIME_CRITICAL = 15;
+
+    [DllImport("psapi.dll")] public static extern bool EmptyWorkingSet(IntPtr process);
 
     // ---------- Timing / power ----------
     [DllImport("winmm.dll")] public static extern uint timeBeginPeriod(uint ms);
@@ -155,7 +173,8 @@ internal static class InputSender
     [ThreadStatic] private static NativeMethods.INPUT[]? MouseBuf;
     private static readonly int Size = System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.INPUT>();
 
-    public static void MouseButton(Models.ClickButton b, bool down)
+    /// <summary>Sends one button edge. Returns false when Windows refused it (the focused app runs as administrator and Nighty does not).</summary>
+    public static bool MouseButton(Models.ClickButton b, bool down)
     {
         uint flag = (b, down) switch
         {
@@ -169,7 +188,7 @@ internal static class InputSender
         var buf = MouseBuf ??= new NativeMethods.INPUT[1];
         buf[0] = new NativeMethods.INPUT { type = NativeMethods.INPUT_MOUSE };
         buf[0].u.mi.dwFlags = flag;
-        NativeMethods.SendInput(1, buf, Size);
+        return NativeMethods.SendInput(1, buf, Size) == 1;
     }
 
     /// <summary>A zero-distance mouse move: exercises SendInput exactly like a click without clicking anything.</summary>

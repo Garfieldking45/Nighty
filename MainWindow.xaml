@@ -5,9 +5,12 @@
         xmlns:v="clr-namespace:Nighty.Views"
         xmlns:c="clr-namespace:Nighty.Controls"
         Title="Nighty" Icon="Assets/Nighty.ico" Width="1200" Height="800" MinWidth="940" MinHeight="620"
-        Background="{StaticResource BgBrush}" FontFamily="{StaticResource UiFont}"
+        Background="{DynamicResource BgBrush}" FontFamily="{DynamicResource UiFont}"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True" SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Ideal" Topmost="{Binding General.AlwaysOnTop}">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="46" ResizeBorderThickness="6" GlassFrameThickness="1" CornerRadius="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:CombatViewModel}"><v:CombatView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:GamingViewModel}"><v:GamingView/></DataTemplate>
@@ -16,111 +19,179 @@
         <DataTemplate DataType="{x:Type vm:ExtrasViewModel}"><v:ExtrasView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:MacrosViewModel}"><v:MacrosView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:OverlaysViewModel}"><v:OverlaysView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:RecordViewModel}"><v:RecordView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><v:SettingsView/></DataTemplate>
+        <Style x:Key="StatusPill" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Padding" Value="11,5"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
     </Window.Resources>
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="236"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+    <Grid x:Name="Frame">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="46"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-        <!-- ===== Sidebar ===== -->
-        <Border Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
-            <DockPanel Margin="14,22,14,14">
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,0,0,24">
-                    <Border Width="42" Height="42" CornerRadius="12" Background="{StaticResource PremiumBrush}">
-                        <TextBlock Text="&#xE708;" Style="{StaticResource Icon}" Foreground="White" FontSize="19"/>
+        <!-- ===== Custom top bar ===== -->
+        <Border Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="236"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Brand -->
+                <StackPanel Orientation="Horizontal" Margin="18,0,0,0" VerticalAlignment="Center">
+                    <Border Width="28" Height="28" CornerRadius="8" Background="{DynamicResource PremiumBrush}">
+                        <Border.Effect><DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="14" ShadowDepth="0" Opacity="0.45"/></Border.Effect>
+                        <TextBlock Text="&#xE708;" Style="{StaticResource Icon}" Foreground="White" FontSize="14"/>
                     </Border>
-                    <TextBlock Text="Nighty" FontSize="21" FontWeight="SemiBold" Margin="13,0,0,0" VerticalAlignment="Center"/>
-                    <Border Background="{DynamicResource TileBrush}" BorderBrush="#1F3A6B" BorderThickness="1" CornerRadius="8" Padding="7,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding VersionBadge}" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
+                    <TextBlock Text="Nighty" FontSize="16" FontWeight="SemiBold" Margin="11,0,0,0" VerticalAlignment="Center"/>
+                    <Border Background="{DynamicResource TileBrush}" CornerRadius="6" Padding="6,1" Margin="9,1,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding VersionBadge}" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
                     </Border>
                 </StackPanel>
 
-                <!-- bottom block -->
-                <StackPanel DockPanel.Dock="Bottom">
-                    <Button Command="{Binding OpenGitHubCommand}" Padding="14,11" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" AutomationProperties.Name="Open GitHub">
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <Border Width="30" Height="30" CornerRadius="8" Background="{DynamicResource TileBrush}">
-                                <TextBlock Text="&#xE774;" Style="{StaticResource Icon}" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
-                            </Border>
-                            <TextBlock Grid.Column="1" Text="GitHub" FontSize="14" FontWeight="Medium" Margin="12,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Left"/>
-                            <TextBlock Grid.Column="2" Text="&#xE8A7;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource MutedBrush}"/>
-                        </Grid>
-                    </Button>
-                    <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,11">
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <c:StatusDot Kind="{Binding ClickerKind}" VerticalAlignment="Top" Margin="0,6,0,0"/>
-                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                                <TextBlock Text="{Binding StatusTitle}" FontSize="14" FontWeight="SemiBold"/>
-                                <TextBlock Text="{Binding StatusDetail}" Style="{StaticResource Muted}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-                    <TextBlock Text="{Binding VersionText}" Style="{StaticResource Muted}" Margin="8,12,0,0"/>
+                <!-- Breadcrumb -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="26,0,0,0">
+                    <TextBlock Text="&#xE76C;" Style="{StaticResource Icon}" FontSize="10" Foreground="{DynamicResource DimBrush}" Margin="0,1,10,0"/>
+                    <TextBlock x:Name="Crumb" Text="{Binding Selected.Title}" FontSize="13.5" FontWeight="Medium" Foreground="{DynamicResource MutedBrush}"/>
                 </StackPanel>
 
-                <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
-                    <TextBox x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Padding="32,9,28,9"
-                             AutomationProperties.Name="Search" KeyDown="SearchBox_KeyDown"/>
-                    <TextBlock Text="&#xE721;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource MutedBrush}"
-                               HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False"/>
-                    <TextBlock Text="Search" Foreground="{StaticResource MutedBrush}" FontSize="13" Margin="31,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"
-                               Visibility="{Binding IsSearching, Converter={StaticResource BoolVisible}, ConverterParameter=!}"/>
-                    <Button Content="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="10" Padding="6" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,3,0"
-                            Command="{Binding ClearSearchCommand}" AutomationProperties.Name="Clear search" BorderThickness="0" Background="Transparent"
-                            Visibility="{Binding IsSearching, Converter={StaticResource BoolVisible}}"/>
-                </Grid>
+                <!-- Live status pills -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                    <Border Style="{StaticResource StatusPill}" ToolTip="Auto clicker">
+                        <StackPanel Orientation="Horizontal">
+                            <c:StatusDot Kind="{Binding ClickerKind}"/>
+                            <TextBlock Text="{Binding ClickerText}" Margin="8,0,0,0" FontSize="12" Foreground="{DynamicResource MutedBrush}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource StatusPill}" ToolTip="Roblox client">
+                        <StackPanel Orientation="Horizontal">
+                            <c:StatusDot Kind="{Binding RobloxKind}"/>
+                            <TextBlock Text="{Binding RobloxText, StringFormat=Roblox · {0}}" Margin="8,0,0,0" FontSize="12" Foreground="{DynamicResource MutedBrush}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource StatusPill}" ToolTip="Game Mode">
+                        <StackPanel Orientation="Horizontal">
+                            <c:StatusDot Kind="{Binding GameKind}"/>
+                            <TextBlock Text="{Binding GameText, StringFormat=Game Mode · {0}}" Margin="8,0,0,0" FontSize="12" Foreground="{DynamicResource MutedBrush}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
 
-                <ListBox ItemsSource="{Binding SearchResults}" Background="Transparent" BorderThickness="0" ItemContainerStyle="{StaticResource NavItem}"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Search results"
-                         Visibility="{Binding IsSearching, Converter={StaticResource BoolVisible}}" SelectionChanged="SearchResults_SelectionChanged">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel>
-                                <TextBlock Text="{Binding Label}" FontSize="13" TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Text="{Binding PageTitle}" Foreground="{StaticResource MutedBrush}" FontSize="11.5"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-                <TextBlock Text="No matches" Style="{StaticResource Muted}" Margin="12,6,0,0"
-                           Visibility="{Binding NoResults, Converter={StaticResource BoolVisible}}"/>
-
-                <ListBox ItemsSource="{Binding Items}"
-                         Visibility="{Binding IsSearching, Converter={StaticResource BoolVisible}, ConverterParameter=!}" SelectedItem="{Binding Selected}" Background="Transparent" BorderThickness="0"
-                         ItemContainerStyle="{StaticResource NavItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         AutomationProperties.Name="Navigation">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding Glyph}" Width="26" FontSize="18">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock" BasedOn="{StaticResource Icon}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
-                                                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                                <TextBlock Text="{Binding Title}" Margin="14,0,0,0" FontSize="15" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
+                <!-- Window controls -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal">
+                    <Button x:Name="PinButton" Style="{StaticResource CaptionButton}" Content="&#xE718;" Click="Pin_Click" ToolTip="Keep Nighty on top" AutomationProperties.Name="Keep on top"/>
+                    <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" Click="Min_Click" AutomationProperties.Name="Minimize"/>
+                    <Button x:Name="MaxButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" Click="Max_Click" AutomationProperties.Name="Maximize"/>
+                    <Button Style="{StaticResource CloseCaptionButton}" Content="&#xE8BB;" Click="Close_Click" AutomationProperties.Name="Close"/>
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <!-- ===== Content ===== -->
-        <Border Grid.Column="1" Background="{StaticResource ContentBackgroundBrush}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
-                <ContentControl Content="{Binding Current}" Margin="40,30,40,36" MaxWidth="1180" HorizontalAlignment="Stretch" IsTabStop="False"/>
-            </ScrollViewer>
-        </Border>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="236"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ===== Sidebar ===== -->
+            <Border Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+                <DockPanel Margin="14,16,14,14">
+                    <!-- bottom block -->
+                    <StackPanel DockPanel.Dock="Bottom">
+                        <Button Command="{Binding OpenGitHubCommand}" Padding="14,11" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" AutomationProperties.Name="Open GitHub">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="8" Background="{DynamicResource TileBrush}">
+                                    <TextBlock Text="&#xE774;" Style="{StaticResource Icon}" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
+                                </Border>
+                                <TextBlock Grid.Column="1" Text="GitHub" FontSize="14" FontWeight="Medium" Margin="12,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                <TextBlock Grid.Column="2" Text="&#xE8A7;" Style="{StaticResource Icon}" FontSize="12" Foreground="{DynamicResource MutedBrush}"/>
+                            </Grid>
+                        </Button>
+                        <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,11">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <c:StatusDot Kind="{Binding ClickerKind}" VerticalAlignment="Top" Margin="0,6,0,0"/>
+                                <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                    <TextBlock Text="{Binding StatusTitle}" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding StatusDetail}" Style="{StaticResource Muted}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <TextBlock Text="{Binding VersionText}" Style="{StaticResource Muted}" Margin="8,12,0,0"/>
+                    </StackPanel>
+
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                        <TextBox x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Padding="32,9,28,9"
+                                 AutomationProperties.Name="Search" KeyDown="SearchBox_KeyDown"/>
+                        <TextBlock Text="&#xE721;" Style="{StaticResource Icon}" FontSize="12" Foreground="{DynamicResource MutedBrush}"
+                                   HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False"/>
+                        <TextBlock Text="Search" Foreground="{DynamicResource MutedBrush}" FontSize="13" Margin="31,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"
+                                   Visibility="{Binding IsSearching, Converter={StaticResource BoolVisible}, ConverterParameter=!}"/>
+                        <Button Content="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="10" Padding="6" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,3,0"
+                                Command="{Binding ClearSearchCommand}" AutomationProperties.Name="Clear search" BorderThickness="0" Background="Transparent"
+                                Visibility="{Binding IsSearching, Converter={StaticResource BoolVisible}}"/>
+                    </Grid>
+
+                    <ListBox ItemsSource="{Binding SearchResults}" Background="Transparent" BorderThickness="0" ItemContainerStyle="{StaticResource NavItem}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Search results"
+                             Visibility="{Binding IsSearching, Converter={StaticResource BoolVisible}}" SelectionChanged="SearchResults_SelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Label}" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding PageTitle}" Foreground="{DynamicResource MutedBrush}" FontSize="11.5"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock Text="No matches" Style="{StaticResource Muted}" Margin="12,6,0,0"
+                               Visibility="{Binding NoResults, Converter={StaticResource BoolVisible}}"/>
+
+                    <ListBox ItemsSource="{Binding Items}"
+                             Visibility="{Binding IsSearching, Converter={StaticResource BoolVisible}, ConverterParameter=!}" SelectedItem="{Binding Selected}" Background="Transparent" BorderThickness="0"
+                             ItemContainerStyle="{StaticResource NavItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             AutomationProperties.Name="Navigation">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Glyph}" Width="26" FontSize="18">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource Icon}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Title}" Margin="14,0,0,0" FontSize="15" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <!-- ===== Content ===== -->
+            <Grid Grid.Column="1">
+                <Border Background="{DynamicResource ContentBackgroundBrush}"/>
+                <c:BackdropImage x:Name="Backdrop"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                    <c:PageHost Content="{Binding Current}" Margin="40,30,40,36" MaxWidth="1180" HorizontalAlignment="Stretch"/>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
     </Grid>
 </Window>

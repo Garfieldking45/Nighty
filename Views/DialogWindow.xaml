@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" SizeToContent="Height" Width="440"
-        WindowStartupLocation="CenterOwner" Background="{StaticResource PanelBrush}" FontFamily="{StaticResource UiFont}">
-    <Border BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1" Padding="24,22,24,20" MouseLeftButtonDown="OnDrag">
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource PanelBrush}" FontFamily="{DynamicResource UiFont}">
+    <Border BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1" Padding="24,22,24,20" MouseLeftButtonDown="OnDrag">
         <StackPanel>
             <TextBlock x:Name="TitleText" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/>
             <TextBlock x:Name="MessageText" Style="{StaticResource Muted}" FontSize="13" Margin="0,10,0,0" LineHeight="19"/>

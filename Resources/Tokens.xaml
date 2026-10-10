@@ -43,6 +43,17 @@
     <SolidColorBrush x:Key="NavHoverBrush" Color="#0A0B10"/>
     <SolidColorBrush x:Key="TileBrush" Color="#0F1A30"/>
     <SolidColorBrush x:Key="OptionActiveBrush" Color="#0F1A30"/>
+    <!-- Extra theme tokens (ThemeService replaces every brush above and below at start-up) -->
+    <SolidColorBrush x:Key="Accent2Brush" Color="#9A7CFF"/>
+    <SolidColorBrush x:Key="HoverLayerBrush" Color="#16FFFFFF"/>
+    <SolidColorBrush x:Key="ThumbBrush" Color="#B4B4BF"/>
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#3A3A45"/>
+    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#555563"/>
+    <SolidColorBrush x:Key="DangerSoftBrush" Color="#1E1214"/>
+    <SolidColorBrush x:Key="DangerSoftBorderBrush" Color="#4A2226"/>
+    <SolidColorBrush x:Key="DangerTextBrush" Color="#FF8A8A"/>
+    <SolidColorBrush x:Key="SuccessSoftBrush" Color="#16301F"/>
+    <SolidColorBrush x:Key="ShadowBrush" Color="#99000000"/>
     <LinearGradientBrush x:Key="HeadingBarBrush" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Color="#5B8CFF" Offset="0"/>
         <GradientStop Color="#9A7CFF" Offset="1"/>

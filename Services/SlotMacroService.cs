@@ -26,6 +26,12 @@ public sealed class SlotMacroService
     {
         if (!c.Enabled || Svc.Hotkeys.Suspended || RobloxService.IsOwnWindowForeground()) return;
         if (c.OnlyWhenRobloxFocused && !Svc.Roblox.IsForeground) return;
+        // Auto Crossbow can be limited to slot 1: a different (or unknown, after scrolling) slot means "not now".
+        if (c.Kind == SlotMacroKind.Crossbow && c.OnlyInSlotOne && Svc.Bow.CurrentSlot != 1)
+        {
+            Svc.Toast.Show("Auto Crossbow", "only works in slot 1 (press 1 first)", false);
+            return;
+        }
         var cts = new CancellationTokenSource();
         if (!_running.TryAdd(c.Kind, cts)) { cts.Dispose(); return; }
         var snap = c.Snapshot();

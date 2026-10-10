@@ -40,6 +40,29 @@
                 <TextBlock Text="ms" Style="{StaticResource Muted}" Margin="6,0,0,0" VerticalAlignment="Center"/>
             </StackPanel>
         </DataTemplate>
+        <DataTemplate x:Key="AutoClickEditor">
+            <StackPanel Orientation="Horizontal">
+                <ComboBox ItemsSource="{Binding DataContext.ClickNames, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedIndex="{Binding Value3, Mode=TwoWay}" Width="96" Margin="0,0,8,0"/>
+                <TextBlock Text="at" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}" Width="50" TextAlignment="Right" AutomationProperties.Name="Clicks per second"/>
+                <TextBlock Text="CPS for" Style="{StaticResource Muted}" Margin="6,0,6,0" VerticalAlignment="Center"/>
+                <TextBox Text="{Binding Value2, UpdateSourceTrigger=LostFocus}" Width="64" TextAlignment="Right" AutomationProperties.Name="Duration milliseconds"/>
+                <TextBlock Text="ms" Style="{StaticResource Muted}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="ComboEditor">
+            <c:HotkeyBox Vk="{Binding Value, Mode=TwoWay}" Mods="{Binding Value3, Mode=TwoWay}" MinWidth="170"/>
+        </DataTemplate>
+        <DataTemplate x:Key="SpotEditor">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="x" Style="{StaticResource Muted}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}" Width="64" TextAlignment="Right" AutomationProperties.Name="Screen x"/>
+                <TextBlock Text="y" Style="{StaticResource Muted}" Margin="10,0,6,0" VerticalAlignment="Center"/>
+                <TextBox Text="{Binding Value2, UpdateSourceTrigger=LostFocus}" Width="64" TextAlignment="Right" AutomationProperties.Name="Screen y"/>
+                <Button Content="Pick spot" Margin="10,0,0,0" Padding="10,5"
+                        Command="{Binding DataContext.PickSpotCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"/>
+            </StackPanel>
+        </DataTemplate>
         <DataTemplate x:Key="TextEditor">
             <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Width="260" MaxLength="200" AutomationProperties.Name="Text"/>
         </DataTemplate>
@@ -93,6 +116,7 @@
                                 <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" FontSize="15" FontWeight="SemiBold" MaxLength="40" AutomationProperties.Name="Macro name"/>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0" DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                     <Button Content="{Binding RunLabel}" Command="{Binding RunCommand}" Style="{StaticResource PrimaryButton}" MinWidth="104"/>
+                                    <Button Style="{StaticResource IconButton}" Content="&#xE8C8;" Command="{Binding DuplicateMacro}" Margin="8,0,0,0" ToolTip="Duplicate macro" AutomationProperties.Name="Duplicate macro"/>
                                     <Button Style="{StaticResource IconButton}" Content="&#xE74D;" Command="{Binding DeleteMacro}" Margin="8,0,0,0" ToolTip="Delete macro" AutomationProperties.Name="Delete macro"/>
                                 </StackPanel>
                             </Grid>
@@ -100,8 +124,16 @@
                             <c:SettingRow Title="Hotkey" Description="Press to start the macro; press again to stop it.">
                                 <c:HotkeyBox Vk="{Binding HotkeyVk, Mode=TwoWay}" Mods="{Binding HotkeyMods, Mode=TwoWay}"/>
                             </c:SettingRow>
-                            <c:SettingRow Title="Hotkey enabled">
+                            <c:SettingRow Title="Hotkey enabled" Description="Turn off to keep the key free without forgetting it.">
                                 <CheckBox IsChecked="{Binding HotkeyEnabled}"/>
+                            </c:SettingRow>
+                            <c:SettingRow Title="Hotkey does" Description="Toggle: press to start, press again to stop. Hold: runs while the key is held.">
+                                <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="3">
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="mhold" Content="Toggle" IsChecked="{Binding HoldMode, Converter={StaticResource Eq}, ConverterParameter=False}"/>
+                                        <RadioButton Style="{StaticResource SegmentButton}" GroupName="mhold" Content="Hold" IsChecked="{Binding HoldMode, Converter={StaticResource Eq}, ConverterParameter=True}"/>
+                                    </StackPanel>
+                                </Border>
                             </c:SettingRow>
                             <c:SettingRow Title="Repeat" Description="0 repeats until you stop it (or press the emergency stop hotkey).">
                                 <TextBox Text="{Binding Repeat, UpdateSourceTrigger=LostFocus}" Width="80" TextAlignment="Right" AutomationProperties.Name="Repeat count"/>
@@ -124,7 +156,10 @@
                         <StackPanel>
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <TextBlock Text="Steps" Style="{StaticResource CardTitle}" VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="Steps" Style="{StaticResource CardTitle}" VerticalAlignment="Center"/>
+                                    <Button Content="{Binding RecordLabel}" Command="{Binding RecordCommand}" Margin="14,0,0,0" Padding="12,5"/>
+                                </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                                     <Button Content="+ Key" Command="{Binding AddStep}" CommandParameter="KeyPress" Padding="10,5"/>
                                     <Button Content="+ Click" Command="{Binding AddStep}" CommandParameter="Click" Margin="6,0,0,0" Padding="10,5"/>
@@ -134,16 +169,28 @@
                                     <Button Content="+ Text" Command="{Binding AddStep}" CommandParameter="TypeText" Margin="6,0,0,0" Padding="10,5"/>
                                 </StackPanel>
                             </Grid>
-                            <TextBlock Text="This macro has no steps. Add one above." Style="{StaticResource Muted}" Visibility="{Binding Selected.Steps.Count, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                            <WrapPanel Margin="0,0,0,12">
+                                <Button Content="+ Combo" Command="{Binding AddStep}" CommandParameter="KeyCombo" Margin="0,0,6,6" Padding="10,5"/>
+                                <Button Content="+ Auto-click" Command="{Binding AddStep}" CommandParameter="AutoClick" Margin="0,0,6,6" Padding="10,5"/>
+                                <Button Content="+ Double click" Command="{Binding AddStep}" CommandParameter="DoubleClick" Margin="0,0,6,6" Padding="10,5"/>
+                                <Button Content="+ Button down" Command="{Binding AddStep}" CommandParameter="MouseDown" Margin="0,0,6,6" Padding="10,5"/>
+                                <Button Content="+ Button up" Command="{Binding AddStep}" CommandParameter="MouseUp" Margin="0,0,6,6" Padding="10,5"/>
+                                <Button Content="+ Hold key" Command="{Binding AddStep}" CommandParameter="KeyDown" Margin="0,0,6,6" Padding="10,5"/>
+                                <Button Content="+ Release key" Command="{Binding AddStep}" CommandParameter="KeyUp" Margin="0,0,6,6" Padding="10,5"/>
+                                <Button Content="+ Go to spot" Command="{Binding AddStep}" CommandParameter="MoveTo" Margin="0,0,6,6" Padding="10,5"/>
+                                <Button Content="+ Random wait" Command="{Binding AddStep}" CommandParameter="RandomWait" Margin="0,0,6,6" Padding="10,5"/>
+                                <Button Content="+ Note" Command="{Binding AddStep}" CommandParameter="Note" Margin="0,0,6,6" Padding="10,5"/>
+                            </WrapPanel>
+                            <TextBlock Text="This macro has no steps. Press Record, or add blocks above." Style="{StaticResource Muted}" Visibility="{Binding Selected.Steps.Count, Converter={StaticResource Eq}, ConverterParameter=0}"/>
                             <ItemsControl ItemsSource="{Binding Selected.Steps}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="{StaticResource Panel2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,6">
+                                        <Border Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,6">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto"/><ColumnDefinition Width="170"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Text="&#xE700;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource DimBrush}" Margin="2,0,10,0"/>
+                                                <TextBlock Text="&#xE700;" Style="{StaticResource Icon}" FontSize="12" Foreground="{DynamicResource DimBrush}" Margin="2,0,10,0"/>
                                                 <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.StepTypes, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                           DisplayMemberPath="Label" SelectedValuePath="Type" SelectedValue="{Binding Type, Mode=TwoWay}" Margin="0,0,10,0" AutomationProperties.Name="Step type"/>
                                                 <ContentControl Grid.Column="2" Content="{Binding}" VerticalAlignment="Center" HorizontalAlignment="Left">
@@ -152,6 +199,12 @@
                                                             <Setter Property="ContentTemplate" Value="{StaticResource KeyEditor}"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding Type}" Value="Click"><Setter Property="ContentTemplate" Value="{StaticResource ClickEditor}"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding Type}" Value="MouseDown"><Setter Property="ContentTemplate" Value="{StaticResource ClickEditor}"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding Type}" Value="MouseUp"><Setter Property="ContentTemplate" Value="{StaticResource ClickEditor}"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding Type}" Value="DoubleClick"><Setter Property="ContentTemplate" Value="{StaticResource ClickEditor}"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding Type}" Value="AutoClick"><Setter Property="ContentTemplate" Value="{StaticResource AutoClickEditor}"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding Type}" Value="KeyCombo"><Setter Property="ContentTemplate" Value="{StaticResource ComboEditor}"/></DataTrigger>
+                                                                <DataTrigger Binding="{Binding Type}" Value="MoveTo"><Setter Property="ContentTemplate" Value="{StaticResource SpotEditor}"/></DataTrigger>
                                                                 <DataTrigger Binding="{Binding Type}" Value="Wait"><Setter Property="ContentTemplate" Value="{StaticResource WaitEditor}"/></DataTrigger>
                                                                 <DataTrigger Binding="{Binding Type}" Value="RandomWait"><Setter Property="ContentTemplate" Value="{StaticResource RandomWaitEditor}"/></DataTrigger>
                                                                 <DataTrigger Binding="{Binding Type}" Value="Scroll"><Setter Property="ContentTemplate" Value="{StaticResource ScrollEditor}"/></DataTrigger>
@@ -178,6 +231,35 @@
                         </StackPanel>
                     </Border>
                 </StackPanel>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <c:CardHeader Icon="&#xE72D;" Title="Share and download" Subtitle="Send a macro to a friend, or add one someone made"/>
+                        <c:SettingRow Title="Share this macro" Description="A code to paste in chat, or a .nightymacro file to send.">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Save file" Command="{Binding SaveFileCommand}"/>
+                                <Button Content="Copy code" Command="{Binding CopyCodeCommand}" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </c:SettingRow>
+                        <Border Style="{StaticResource Divider}"/>
+                        <c:SettingRow Title="Add a shared macro" Description="Paste a code you copied, or open a .nightymacro file.">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Open file" Command="{Binding OpenFileCommand}"/>
+                                <Button Content="Paste code" Command="{Binding PasteCodeCommand}" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </c:SettingRow>
+                        <Border Style="{StaticResource Divider}"/>
+                        <TextBlock Text="Download from a link" FontSize="13.5" FontWeight="Medium"/>
+                        <TextBlock Text="An https link to a .nightymacro file, or to a page with a macro code (a Discord attachment, a raw paste)." Style="{StaticResource Muted}" Margin="0,2,0,8"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding DownloadUrl, UpdateSourceTrigger=PropertyChanged}" Padding="12,9" AutomationProperties.Name="Macro link"/>
+                            <Button Grid.Column="1" Content="Download" Command="{Binding DownloadCommand}" Margin="8,0,0,0" Padding="16,9"/>
+                        </Grid>
+                        <TextBlock Text="{Binding ShareMessage}" Style="{StaticResource Muted}" Margin="0,10,0,0" Foreground="{DynamicResource AccentBrush}" Visibility="{Binding ShareMessage, Converter={StaticResource NullVisible}}"/>
+                        <TextBlock Text="Shared macros arrive with their hotkey switched off, so they can't clash with your keys. Look through the steps before you run one." Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </Grid>
     </StackPanel>

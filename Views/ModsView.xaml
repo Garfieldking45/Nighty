@@ -2,61 +2,497 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="clr-namespace:Nighty.Controls">
+    <UserControl.Resources>
+        <!-- transparent-checker backdrop for cursor previews -->
+        <DrawingBrush x:Key="CheckerBrush" TileMode="Tile" Viewport="0,0,16,16" ViewportUnits="Absolute" Viewbox="0,0,16,16" ViewboxUnits="Absolute">
+            <DrawingBrush.Drawing>
+                <DrawingGroup>
+                    <GeometryDrawing Brush="#1C1E26"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,16,16"/></GeometryDrawing.Geometry></GeometryDrawing>
+                    <GeometryDrawing Brush="#2A2D38"><GeometryDrawing.Geometry><GeometryGroup><RectangleGeometry Rect="0,0,8,8"/><RectangleGeometry Rect="8,8,8,8"/></GeometryGroup></GeometryDrawing.Geometry></GeometryDrawing>
+                </DrawingGroup>
+            </DrawingBrush.Drawing>
+        </DrawingBrush>
+
+        <!-- a tile in the cursor library -->
+        <Style x:Key="CursorTile" TargetType="ListBoxItem">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" Width="118" Margin="0,0,10,10" Padding="8,12" CornerRadius="12" Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}"/></Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource OptionActiveBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="ListRow" TargetType="ListBoxItem">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" Margin="0,0,0,4" Padding="12,9" CornerRadius="9" Background="Transparent" BorderThickness="1" BorderBrush="Transparent">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverLayerBrush}"/></Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource OptionActiveBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <StackPanel>
-        <StackPanel Margin="0,0,0,18">
-            <c:PageHeading Title="Mods" Subtitle="Swap cosmetic Roblox assets (cursors, sounds, fonts, textures) with your own files — fully reversible." Margin="0"/>
-        </StackPanel>
+        <c:PageHeading Title="Mods" Subtitle="Change Roblox's cursor and font, or make your own cursor. Everything is reversible."/>
 
-        <c:InfoBanner Kind="Warning" Text="Mods only copy whitelisted asset files (png, jpg, ogg, mp3, ttf, otf, ktx, tga) into Roblox's content folder. Nothing is injected into Roblox. Originals are backed up first, Roblox updates may reset your changes, and you use mods at your own risk."/>
+        <WrapPanel Margin="0,0,0,10">
+            <RadioButton Style="{StaticResource TabButton}" Content="Cursors" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Fonts" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Cursor Builder" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="From a picture" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Content mods" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}"/>
+        </WrapPanel>
 
-        <Border Style="{StaticResource Card}">
-            <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <StackPanel>
+        <!-- ================= Where Roblox is (cursors + fonts) ================= -->
+        <Border Style="{StaticResource Card}" DataContext="{Binding Location}">
+            <Border.Visibility>
+                <Binding Path="DataContext.Tab" RelativeSource="{RelativeSource AncestorType=UserControl}" Converter="{StaticResource Eq}" ConverterParameter="0"/>
+            </Border.Visibility>
+            <StackPanel>
+                <c:CardHeader Icon="&#xE721;" Title="Roblox" Subtitle="Where Roblox is, and what Nighty changed in it">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding InstallText}" FontWeight="Medium"/>
+                        <Button Content="Find again" Command="{Binding FindAgainCommand}"/>
+                        <Button Content="Choose folder" Command="{Binding ChooseFolderCommand}" Margin="8,0,0,0"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding AppliedText}" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
-                </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button Content="Apply mods" Command="{Binding ApplyCommand}" Style="{StaticResource PrimaryButton}" MinWidth="104"/>
-                    <Button Content="Revert" Command="{Binding RevertCommand}" Margin="10,0,0,0"/>
-                </StackPanel>
-            </Grid>
+                </c:CardHeader>
+                <TextBlock Text="{Binding Found}" Style="{StaticResource Muted}" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="0,6,0,0" Foreground="{DynamicResource WarningBrush}" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+                <Border Style="{StaticResource Divider}"/>
+                <c:SettingRow Title="Keep after updates" Description="Roblox updates often and resets its files. Nighty puts your cursor and font back. Works with Roblox, Bloxstrap, Fishstrap, Voidstrap and Froststrap; originals are saved first, so Restore always brings them back.">
+                    <CheckBox IsChecked="{Binding KeepAfterUpdates}"/>
+                </c:SettingRow>
+            </StackPanel>
         </Border>
 
-        <c:InfoBanner Kind="{Binding Kind}" Text="{Binding Message}" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
-
-        <Border Style="{StaticResource Card}">
+        <!-- ================= Cursors ================= -->
+        <Grid Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=0}" DataContext="{Binding Cursors}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="340"/></Grid.ColumnDefinitions>
             <StackPanel>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <c:CardHeader Icon="&#xE962;" Title="Your cursors" Subtitle="Pick a cursor and use it in Roblox"/>
+                        <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" ItemContainerStyle="{StaticResource CursorTile}" Background="Transparent" BorderThickness="0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled" AutomationProperties.Name="Cursors">
+                            <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <Grid>
+                                            <Border Width="56" Height="56" CornerRadius="10" Background="{StaticResource CheckerBrush}" HorizontalAlignment="Center">
+                                                <Image Source="{Binding Thumb}" Width="48" Height="48" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+                                            </Border>
+                                            <Border Background="{DynamicResource AccentBrush}" CornerRadius="6" Padding="5,1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-6,-2,0" Visibility="{Binding IsApplied, Converter={StaticResource BoolVisible}}">
+                                                <TextBlock Text="IN USE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource OnAccentBrush}"/>
+                                            </Border>
+                                        </Grid>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12.5" TextAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,9,0,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <c:CardHeader Icon="&#xE706;" Title="Brightness" Subtitle="Makes every cursor brighter or darker: here, in exports and in Roblox."/>
+                        <c:ValueStepper Value="{Binding Brightness, Mode=TwoWay}" Minimum="-100" Maximum="100" Step="5"/>
+                        <TextBlock Text="{Binding BrightnessText}" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+                        <Border Style="{StaticResource Divider}" Margin="0,16"/>
+                        <c:SettingRow Title="Size in Roblox" Description="How big the cursor looks in game.">
+                            <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="3">
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton Style="{StaticResource SegmentButton}" GroupName="csize" Content="Small" IsChecked="{Binding CursorSize, Converter={StaticResource Eq}, ConverterParameter=small}"/>
+                                    <RadioButton Style="{StaticResource SegmentButton}" GroupName="csize" Content="Medium" IsChecked="{Binding CursorSize, Converter={StaticResource Eq}, ConverterParameter=medium}"/>
+                                    <RadioButton Style="{StaticResource SegmentButton}" GroupName="csize" Content="Large" IsChecked="{Binding CursorSize, Converter={StaticResource Eq}, ConverterParameter=large}"/>
+                                </StackPanel>
+                            </Border>
+                        </c:SettingRow>
+                        <Border Style="{StaticResource Divider}"/>
+                        <c:SettingRow Title="Use in first person" Description="Also uses this cursor in shift lock and first person (the cursor in the middle of the screen).">
+                            <CheckBox IsChecked="{Binding FirstPerson}"/>
+                        </c:SettingRow>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <Border Background="{StaticResource CheckerBrush}" CornerRadius="12" Height="190" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <Image Source="{Binding Preview}" Width="160" Height="160" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+                        </Border>
+                        <TextBlock Text="{Binding SelectedName}" FontSize="17" FontWeight="SemiBold" Margin="0,14,0,0"/>
+                        <TextBlock Text="{Binding SelectedDescription}" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <TextBlock Text="REAL SIZE" Style="{StaticResource Label}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <Border Background="{StaticResource CheckerBrush}" Width="68" Height="68" CornerRadius="8"><Image Source="{Binding PreviewReal}" Width="64" Height="64"/></Border>
+                        </StackPanel>
+                        <Button Content="Use in Roblox" Style="{StaticResource PrimaryButton}" Command="{Binding UseCommand}" Margin="0,18,0,0" Padding="14,11"/>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Button Content="Restore Roblox's own" Command="{Binding RestoreCommand}"/>
+                            <Button Grid.Column="2" Content="Edit a copy" Command="{Binding EditCopyCommand}"/>
+                        </Grid>
+                        <Button Content="Delete cursor" Style="{StaticResource DangerButton}" Command="{Binding DeleteCommand}" Margin="0,8,0,0" Visibility="{Binding CanDelete, Converter={StaticResource BoolVisible}}"/>
+                        <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="0,12,0,0" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <c:CardHeader Icon="&#xE896;" Title="Save as files" Subtitle="PNG and .cur files for other games and for Windows."/>
+                        <TextBlock Text="FILE SIZE" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <ComboBox ItemsSource="{Binding ExportSizes}" SelectedItem="{Binding ExportSize}" AutomationProperties.Name="Export size"/>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Button Content="Export" Command="{Binding ExportCommand}"/>
+                            <Button Grid.Column="2" Content="Open folder" Command="{Binding OpenExportFolderCommand}"/>
+                        </Grid>
+                        <TextBlock Text="Exported files go to Documents\Nighty\Cursors. The .cur file has every size." Style="{StaticResource Muted}" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- ================= Fonts ================= -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}">
+            <Border Style="{StaticResource Card}" DataContext="{Binding Location}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE721;" Title="Roblox" Subtitle="Where Roblox is">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Find again" Command="{Binding FindAgainCommand}"/>
+                            <Button Content="Choose folder" Command="{Binding ChooseFolderCommand}" Margin="8,0,0,0"/>
+                        </StackPanel>
+                    </c:CardHeader>
+                    <TextBlock Text="{Binding Found}" Style="{StaticResource Muted}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+            <Grid DataContext="{Binding Fonts}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="340"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <c:CardHeader Icon="&#xE8D2;" Title="Fonts" Subtitle="{Binding Count}">
+                            <Button Content="Add a font" Command="{Binding AddCommand}"/>
+                        </c:CardHeader>
+                        <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" Padding="12,9" AutomationProperties.Name="Search fonts"/>
+                        <TextBlock Text="Loading fonts…" Style="{StaticResource Muted}" Margin="2,12,0,0" Visibility="{Binding IsLoading, Converter={StaticResource BoolVisible}}"/>
+                        <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" ItemContainerStyle="{StaticResource ListRow}" Background="Transparent" BorderThickness="0" MaxHeight="440" Margin="0,10,0,0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="True" AutomationProperties.Name="Font list">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" FontFamily="{Binding Family}" FontSize="17" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Source}" Style="{StaticResource Muted}" FontSize="11"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Selected.Name, FallbackValue=Pick a font on the left}" FontSize="22" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" Margin="0,2,0,14"/>
+                        <Border Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="20,18">
+                            <TextBlock Text="{Binding Sample}" FontFamily="{Binding Selected.Family}" FontSize="34" TextWrapping="Wrap" MinHeight="90"/>
+                        </Border>
+                        <TextBox Text="{Binding Sample, UpdateSourceTrigger=PropertyChanged}" Padding="12,9" Margin="0,10,0,0" AutomationProperties.Name="Preview text"/>
+                        <WrapPanel Margin="0,16,0,0">
+                            <Button Content="Use in Roblox" Style="{StaticResource PrimaryButton}" Command="{Binding UseInRobloxCommand}" Margin="0,0,8,8"/>
+                            <Button Content="Roblox's own font" Command="{Binding DefaultRobloxCommand}" Margin="0,0,8,8"/>
+                            <Button Content="Use in Nighty" Command="{Binding UseInNightyCommand}" Margin="0,0,8,8"/>
+                            <Button Content="Default font" Command="{Binding DefaultNightyCommand}" Margin="0,0,8,8"/>
+                        </WrapPanel>
+                        <WrapPanel>
+                            <Button Content="Install for me" Command="{Binding InstallCommand}" Margin="0,0,8,8"/>
+                            <Button Content="Export copy" Command="{Binding ExportCommand}" Margin="0,0,8,8"/>
+                            <Button Content="Remove" Style="{StaticResource DangerButton}" Command="{Binding RemoveCommand}" Margin="0,0,8,8" Visibility="{Binding CanRemove, Converter={StaticResource BoolVisible}}"/>
+                        </WrapPanel>
+                        <TextBlock Text="Use in Roblox changes the font of Roblox's menus and chat. Fonts in a collection (.ttc) can't be used in Roblox." Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+                        <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="0,10,0,0" Foreground="{DynamicResource AccentBrush}" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+
+        <!-- ================= Cursor Builder ================= -->
+        <Grid Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=2}" DataContext="{Binding Builder}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="360"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <StackPanel>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <c:CardHeader Icon="&#xE70F;" Title="{Binding Heading}" Subtitle="Stack shapes, then save it to your cursors."/>
+                        <Border Background="{StaticResource CheckerBrush}" CornerRadius="12" Height="230" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <Image Source="{Binding Preview}" Width="200" Height="200" RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </Border>
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <TextBlock Text="REAL SIZE" Style="{StaticResource Label}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <Border Width="68" Height="68" CornerRadius="8" Background="{StaticResource CheckerBrush}"><Image Source="{Binding PreviewReal}" Width="64" Height="64"/></Border>
+                        </StackPanel>
+                        <TextBlock Text="NAME" Style="{StaticResource Label}" Margin="0,16,0,6"/>
+                        <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" MaxLength="40" Padding="12,9" AutomationProperties.Name="Cursor name"/>
+                        <Button Content="Save cursor" Style="{StaticResource PrimaryButton}" Command="{Binding SaveCommand}" Margin="0,12,0,0" Padding="14,10"/>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Button Content="Save as new" Command="{Binding SaveAsNewCommand}"/>
+                            <Button Grid.Column="2" Content="Start over" Command="{Binding NewCommand}"/>
+                        </Grid>
+                        <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="0,10,0,0" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <c:CardHeader Icon="&#xE8FD;" Title="Layers" Subtitle="{Binding LayersText}"/>
+                        <ListBox ItemsSource="{Binding Layers}" SelectedItem="{Binding SelectedLayer}" ItemContainerStyle="{StaticResource ListRow}" Background="Transparent" BorderThickness="0" AutomationProperties.Name="Layers">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="16" Height="16" CornerRadius="8" BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1">
+                                            <Border.Background><SolidColorBrush Color="{Binding Color}"/></Border.Background>
+                                        </Border>
+                                        <TextBlock Text="{Binding Title}" Margin="12,0,0,0" FontWeight="Medium"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock Text="ADD A SHAPE" Style="{StaticResource Label}" Margin="0,12,0,6"/>
+                        <WrapPanel>
+                            <Button Content="Plus" Command="{Binding AddLayerCommand}" CommandParameter="Plus" Margin="0,0,6,6" Padding="10,5"/>
+                            <Button Content="Split" Command="{Binding AddLayerCommand}" CommandParameter="Split" Margin="0,0,6,6" Padding="10,5"/>
+                            <Button Content="X" Command="{Binding AddLayerCommand}" CommandParameter="X" Margin="0,0,6,6" Padding="10,5"/>
+                            <Button Content="Dot" Command="{Binding AddLayerCommand}" CommandParameter="Dot" Margin="0,0,6,6" Padding="10,5"/>
+                            <Button Content="Ring" Command="{Binding AddLayerCommand}" CommandParameter="Ring" Margin="0,0,6,6" Padding="10,5"/>
+                            <Button Content="Square" Command="{Binding AddLayerCommand}" CommandParameter="Square" Margin="0,0,6,6" Padding="10,5"/>
+                            <Button Content="Diamond" Command="{Binding AddLayerCommand}" CommandParameter="Diamond" Margin="0,0,6,6" Padding="10,5"/>
+                            <Button Content="Triangle" Command="{Binding AddLayerCommand}" CommandParameter="Triangle" Margin="0,0,6,6" Padding="10,5"/>
+                            <Button Content="Star" Command="{Binding AddLayerCommand}" CommandParameter="Star" Margin="0,0,6,6" Padding="10,5"/>
+                            <Button Content="Arrow" Command="{Binding AddLayerCommand}" CommandParameter="Arrow" Margin="0,0,6,6" Padding="10,5"/>
+                            <Button Content="Line" Command="{Binding AddLayerCommand}" CommandParameter="Line" Margin="0,0,6,6" Padding="10,5"/>
+                        </WrapPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <Button Style="{StaticResource IconButton}" Content="&#xE74A;" ToolTip="Move up" Command="{Binding UpCommand}" Margin="0,0,6,0"/>
+                            <Button Style="{StaticResource IconButton}" Content="&#xE74B;" ToolTip="Move down" Command="{Binding DownCommand}" Margin="0,0,6,0"/>
+                            <Button Style="{StaticResource IconButton}" Content="&#xE8C8;" ToolTip="Duplicate layer" Command="{Binding DuplicateCommand}" Margin="0,0,6,0"/>
+                            <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Delete layer" Command="{Binding RemoveCommand}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <Border Grid.Column="2" Style="{StaticResource Card}" VerticalAlignment="Top" Visibility="{Binding HasLayer, Converter={StaticResource BoolVisible}}">
+                <StackPanel DataContext="{Binding}">
+                    <c:CardHeader Icon="&#xE70F;" Title="Selected layer" Subtitle="Shape, color and effects"/>
+                    <TextBlock Text="SHAPE" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                    <ComboBox ItemsSource="{Binding Shapes}" SelectedItem="{Binding SelectedShape}" AutomationProperties.Name="Shape"/>
+
+                    <TextBlock Text="COLOR" Style="{StaticResource Label}" Margin="0,16,0,6"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding SelectedLayer.Color, UpdateSourceTrigger=LostFocus}" Width="110" MaxLength="9" Padding="10,7" AutomationProperties.Name="Color"/>
+                        <ItemsControl Grid.Column="1" ItemsSource="{Binding ColorPresets}" Margin="12,0,0,0">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Width="26" Height="26" Padding="0" Margin="0,0,6,6" ToolTip="{Binding}"
+                                            Command="{Binding DataContext.SetColorCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}">
+                                        <Border CornerRadius="13" Width="20" Height="20"><Border.Background><SolidColorBrush Color="{Binding Mode=OneWay}"/></Border.Background></Border>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+
+                    <UniformGrid Columns="2" Margin="0,16,0,0">
+                        <StackPanel Margin="0,0,10,12"><TextBlock Text="SIZE" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding SelectedLayer.Size, Mode=TwoWay}" Minimum="2" Maximum="60" Step="1"/></StackPanel>
+                        <StackPanel Margin="10,0,0,12" Visibility="{Binding ShowThickness, Converter={StaticResource BoolVisible}}"><TextBlock Text="THICKNESS" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding SelectedLayer.Thickness, Mode=TwoWay}" Minimum="1" Maximum="30" Step="1"/></StackPanel>
+                        <StackPanel Margin="0,0,10,12" Visibility="{Binding ShowGap, Converter={StaticResource BoolVisible}}"><TextBlock Text="CENTER GAP" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding SelectedLayer.Gap, Mode=TwoWay}" Minimum="0" Maximum="28" Step="1"/></StackPanel>
+                        <StackPanel Margin="10,0,0,12"><TextBlock Text="ROTATION" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding SelectedLayer.Rotation, Mode=TwoWay}" Minimum="-180" Maximum="180" Step="5"/></StackPanel>
+                        <StackPanel Margin="0,0,10,12"><TextBlock Text="OPACITY" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding SelectedLayer.Opacity, Mode=TwoWay}" Minimum="5" Maximum="100" Step="5" Suffix="%"/></StackPanel>
+                        <StackPanel Margin="10,0,0,12"><TextBlock Text="MOVE LEFT / RIGHT" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding SelectedLayer.OffsetX, Mode=TwoWay}" Minimum="-30" Maximum="30" Step="1"/></StackPanel>
+                        <StackPanel Margin="0,0,10,12"><TextBlock Text="MOVE UP / DOWN" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding SelectedLayer.OffsetY, Mode=TwoWay}" Minimum="-30" Maximum="30" Step="1"/></StackPanel>
+                    </UniformGrid>
+                    <c:SettingRow Title="Solid shape" Description="Off draws only the outline line." Visibility="{Binding ShowFilled, Converter={StaticResource BoolVisible}}">
+                        <CheckBox IsChecked="{Binding SelectedLayer.Filled}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Outline" Description="A thin edge so the cursor shows on any background.">
+                        <CheckBox IsChecked="{Binding SelectedLayer.Outline}"/>
+                    </c:SettingRow>
+                    <Grid Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <StackPanel><TextBlock Text="OUTLINE COLOR" Style="{StaticResource Label}" Margin="0,0,0,6"/><TextBox Text="{Binding SelectedLayer.OutlineColor, UpdateSourceTrigger=LostFocus}" MaxLength="9" Padding="10,7"/></StackPanel>
+                        <StackPanel Grid.Column="2"><TextBlock Text="OUTLINE WIDTH" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding SelectedLayer.OutlineWidth, Mode=TwoWay}" Minimum="0" Maximum="6" Step="0.5" Decimals="1"/></StackPanel>
+                    </Grid>
+                    <Border Style="{StaticResource Divider}" Margin="0,16"/>
+                    <TextBlock Text="GLOW" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <StackPanel><TextBlock Text="GLOW SIZE" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding SelectedLayer.GlowSize, Mode=TwoWay}" Minimum="0" Maximum="14" Step="1"/></StackPanel>
+                        <StackPanel Grid.Column="2"><TextBlock Text="GLOW COLOR" Style="{StaticResource Label}" Margin="0,0,0,6"/><TextBox Text="{Binding SelectedLayer.GlowColor, UpdateSourceTrigger=LostFocus}" MaxLength="9" Padding="10,7"/></StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ================= From a picture ================= -->
+        <StackPanel Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=3}" DataContext="{Binding Picture}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xEB9F;" Title="Turn any picture into a cursor" Subtitle="Nighty removes the background, makes it sharp and shows you the result before saving.">
+                        <Button Content="Choose picture" Style="{StaticResource PrimaryButton}" Command="{Binding ChooseCommand}"/>
+                    </c:CardHeader>
+                    <TextBlock Text="{Binding FileName}" Style="{StaticResource Muted}"/>
+                    <TextBlock Text="PNG, JPG or BMP. Your file isn't changed." Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Border>
+            <Grid Visibility="{Binding HasPicture, Converter={StaticResource BoolVisible}}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <StackPanel>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <c:CardHeader Icon="&#xE91B;" Title="Original and result"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="ORIGINAL" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                                    <Border Background="{StaticResource CheckerBrush}" CornerRadius="10" Height="220" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"><Image Source="{Binding Original}" Margin="12"/></Border>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="RESULT" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                                    <Border Background="{StaticResource CheckerBrush}" CornerRadius="10" Height="220" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"><Image Source="{Binding Result}" Margin="12" RenderOptions.BitmapScalingMode="NearestNeighbor"/></Border>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding Notes}" Style="{StaticResource Muted}" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <c:CardHeader Icon="&#xE74E;" Title="Done?" Subtitle="Add it to your cursors, or save it as files."/>
+                            <TextBlock Text="NAME" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" MaxLength="40" Padding="12,9"/>
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Button Content="Discard" Command="{Binding DiscardCommand}"/>
+                                <Button Grid.Column="2" Content="Save files" Command="{Binding SaveFilesCommand}"/>
+                                <Button Grid.Column="4" Content="Add to cursors" Style="{StaticResource PrimaryButton}" Command="{Binding AddCommand}"/>
+                            </Grid>
+                            <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="0,10,0,0" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <c:CardHeader Icon="&#xE790;" Title="Adjust"/>
+                            <c:SettingRow Title="Remove background" Description="Removes the solid color around the picture.">
+                                <CheckBox IsChecked="{Binding RemoveBackground}"/>
+                            </c:SettingRow>
+                            <TextBlock Text="STRENGTH" Style="{StaticResource Label}" Margin="0,10,0,6"/>
+                            <c:ValueStepper Value="{Binding Strength, Mode=TwoWay}" Minimum="0" Maximum="100" Step="5"/>
+                            <TextBlock Text="Higher removes more colors close to the background." Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+                            <Border Style="{StaticResource Divider}" Margin="0,14"/>
+                            <c:SettingRow Title="Keep inside areas" Description="Keeps holes, like the middle of a ring.">
+                                <CheckBox IsChecked="{Binding KeepInside}"/>
+                            </c:SettingRow>
+                            <Border Style="{StaticResource Divider}"/>
+                            <c:SettingRow Title="Remove specks" Description="Cleans up faint pixels and dots.">
+                                <CheckBox IsChecked="{Binding RemoveSpecks}"/>
+                            </c:SettingRow>
+                            <Border Style="{StaticResource Divider}"/>
+                            <c:SettingRow Title="Clean edges" Description="No leftover outline of the old background.">
+                                <CheckBox IsChecked="{Binding CleanEdges}"/>
+                            </c:SettingRow>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <c:CardHeader Icon="&#xE8B9;" Title="Enlarging"/>
+                            <c:SettingRow Title="Pixel art" Description="Keeps blocky pixel art sharp. Leave off for everything else.">
+                                <CheckBox IsChecked="{Binding PixelArt}"/>
+                            </c:SettingRow>
+                            <TextBlock Text="SHARPEN" Style="{StaticResource Label}" Margin="0,10,0,6"/>
+                            <c:ValueStepper Value="{Binding Sharpen, Mode=TwoWay}" Minimum="0" Maximum="100" Step="5"/>
+                            <TextBlock Text="Makes a smooth result crisper." Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+
+        <!-- ================= Content mods ================= -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}">
+            <c:InfoBanner Kind="Warning" Text="Content mods only copy whitelisted asset files (png, jpg, ogg, mp3, ttf, otf, ktx, tga) into Roblox's content folder. Nothing is injected into Roblox. Originals are backed up first, Roblox updates may reset your changes, and you use mods at your own risk."/>
+
+            <Border Style="{StaticResource Card}">
                 <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                     <StackPanel>
-                        <c:CardHeader Icon="&#xE7B8;" Title="Your mods" Subtitle="Each mod is a folder whose files mirror Roblox's content folder (for example content\textures\ArrowCursor.png)."/>
+                        <TextBlock Text="{Binding InstallText}" FontWeight="Medium"/>
+                        <TextBlock Text="{Binding AppliedText}" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
                     </StackPanel>
-                    <Button Grid.Column="1" Content="Add mod folder" Command="{Binding AddCommand}" VerticalAlignment="Top"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Content="Apply mods" Command="{Binding ApplyCommand}" Style="{StaticResource PrimaryButton}" MinWidth="104"/>
+                        <Button Content="Revert" Command="{Binding RevertCommand}" Margin="10,0,0,0"/>
+                    </StackPanel>
                 </Grid>
-                <TextBlock Text="No mods added yet." Style="{StaticResource Muted}" Margin="0,16,0,0" Visibility="{Binding Rows.Count, Converter={StaticResource Eq}, ConverterParameter=0}"/>
-                <ItemsControl ItemsSource="{Binding Rows}" Margin="0,14,0,0">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="{StaticResource Panel2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14,11" Margin="0,0,0,8">
-                                <Grid>
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                    <StackPanel Margin="0,0,14,0">
-                                        <TextBlock Text="{Binding Entry.Name}" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding Entry.SourcePath}" Style="{StaticResource Muted}" FontSize="11.5" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
-                                        <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" FontSize="11.5"/>
-                                    </StackPanel>
-                                    <CheckBox Grid.Column="1" IsChecked="{Binding Entry.Enabled}" Margin="0,0,12,0" ToolTip="Include when applying" AutomationProperties.Name="Enable mod"/>
-                                    <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Remove mod from list" AutomationProperties.Name="Remove mod"
-                                            Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </Border>
+            </Border>
+
+            <c:InfoBanner Kind="{Binding Kind}" Text="{Binding Message}" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <c:CardHeader Icon="&#xE7B8;" Title="Your mods" Subtitle="Each mod is a folder whose files mirror Roblox's content folder (for example content\textures\ArrowCursor.png)."/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Add mod folder" Command="{Binding AddCommand}" VerticalAlignment="Top"/>
+                    </Grid>
+                    <TextBlock Text="No mods added yet." Style="{StaticResource Muted}" Margin="0,16,0,0" Visibility="{Binding Rows.Count, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                    <ItemsControl ItemsSource="{Binding Rows}" Margin="0,14,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14,11" Margin="0,0,0,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel Margin="0,0,14,0">
+                                            <TextBlock Text="{Binding Entry.Name}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Entry.SourcePath}" Style="{StaticResource Muted}" FontSize="11.5" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                                            <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" FontSize="11.5"/>
+                                        </StackPanel>
+                                        <CheckBox Grid.Column="1" IsChecked="{Binding Entry.Enabled}" Margin="0,0,12,0" ToolTip="Include when applying" AutomationProperties.Name="Enable mod"/>
+                                        <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Remove mod from list" AutomationProperties.Name="Remove mod"
+                                                Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
     </StackPanel>
 </UserControl>

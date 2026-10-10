@@ -20,6 +20,22 @@ public sealed class CombatViewModel : ObservableObject
     public ObservableCollection<ClickerPreset> Presets => Svc.S.Presets;
 
     public double ClicksPerHit { get => Settings.ClicksPerHit; set { Settings.ClicksPerHit = (int)value; OnPropertyChanged(); } }
+    public double StopAfterClicks { get => Settings.StopAfterClicks; set { Settings.StopAfterClicks = (int)Math.Round(value); OnPropertyChanged(); OnPropertyChanged(nameof(AutoStopHint)); } }
+    public double TimeLimitSec { get => Settings.TimeLimitSec; set { Settings.TimeLimitSec = (int)Math.Round(value); OnPropertyChanged(); OnPropertyChanged(nameof(AutoStopHint)); } }
+    public double StartDelaySec { get => Settings.StartDelayMs / 1000.0; set { Settings.StartDelayMs = (int)Math.Round(value * 1000); OnPropertyChanged(); OnPropertyChanged(nameof(AutoStopHint)); } }
+    public string AutoStopHint
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (Settings.StartDelayMs > 0) parts.Add($"The first click comes {Settings.StartDelayMs / 1000.0:0.0} s after you start.");
+            if (Settings.StopAfterClicks > 0) parts.Add($"Each start sends {Settings.StopAfterClicks:N0} click{(Settings.StopAfterClicks == 1 ? "" : "s")}, then stops.");
+            if (Settings.TimeLimitSec > 0) parts.Add($"Stops by itself after {Settings.TimeLimitSec} s.");
+            return parts.Count == 0 ? "0 means never. Set a number of clicks for bursts, or a time limit." : string.Join(" ", parts);
+        }
+    }
+    public string EngineText => Svc.Clicker.IsClicking && Svc.Clicker.EngineInfo.Length > 0 ? Svc.Clicker.EngineInfo
+        : Settings.HitFix ? "HitFix is on. It takes effect every time the clicker starts." : "Standard timing. Turn HitFix on for steadier clicks.";
     // ---- hero card
     private bool _manualRun;
     public string ChipText => Svc.Clicker.IsClicking ? "CLICKING" : Settings.Enabled ? "ARMED" : "IDLE";
@@ -49,7 +65,7 @@ public sealed class CombatViewModel : ObservableObject
     {
         foreach (var n in new[] { nameof(ChipText), nameof(HeroTitle), nameof(HeroSummary), nameof(TargetValue), nameof(MeasuredValue), nameof(DutyValue),
                                   nameof(ButtonValue), nameof(ModeValue), nameof(ClicksValue), nameof(StartLabel), nameof(StartGlyph), nameof(StartHint),
-                                  nameof(CpsText), nameof(PeriodText), nameof(DutyText) })
+                                  nameof(CpsText), nameof(PeriodText), nameof(DutyText), nameof(EngineText) })
             OnPropertyChanged(n);
     }
 
@@ -128,6 +144,8 @@ public sealed class CombatViewModel : ObservableObject
             RefreshHero();
         };
         Svc.Clicker.StateChanged += () => System.Windows.Application.Current.Dispatcher.BeginInvoke(UpdateState);
+        Svc.Clicker.AutoStopped += reason => Svc.Toast.Show("Auto Clicker", reason, true);
+        Svc.Clicker.Blocked += () => Svc.Toast.Show("Auto Clicker", "Windows blocked the clicks. The game may be running as administrator: restart Nighty as administrator.", false);
 
         _timer.Tick += (_, _) => UpdateState();
         _timer.Start();

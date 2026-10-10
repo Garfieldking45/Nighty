@@ -61,9 +61,39 @@ public sealed class BowSwitchService
     public event Action? SlotChanged;
     private Thread? _slotWatch;
 
+    // Scrolling the hotbar (or any mouse wheel turn in Roblox) changes the slot without a number key, so the slot becomes unknown (0).
+    // Unknown counts as "not slot 1", which keeps the pointer at its normal speed instead of leaving it slowed.
+    /// <summary>True when something depends on knowing the slot: the slot-1 pointer speed, or an Auto Crossbow limited to slot 1.</summary>
+    private static bool NeedsSlot() => Svc.S.Utility.Tracking.SlowInSlotOne || Svc.S.SlotMacros.Any(m => m.Kind == SlotMacroKind.Crossbow && m.Enabled && m.OnlyInSlotOne);
+
+    private NativeMethods.LowLevelProc? _wheelProc;
+    private IntPtr _wheelHook;
+
+    private void StartWheelWatch()
+    {
+        var t = new Thread(() =>
+        {
+            _wheelProc = (code, wParam, lParam) =>
+            {
+                if (code >= 0 && (int)wParam == 0x20A && _slot != 0 && NeedsSlot() && Svc.Roblox.IsForeground)
+                {
+                    _slot = 0;
+                    try { SlotChanged?.Invoke(); } catch { }
+                }
+                return NativeMethods.CallNextHookEx(_wheelHook, code, wParam, lParam);
+            };
+            _wheelHook = NativeMethods.SetWindowsHookEx(NativeMethods.WH_MOUSE_LL, _wheelProc, NativeMethods.GetModuleHandle(null), 0);
+            if (_wheelHook == IntPtr.Zero) { Log.Warn("Mouse wheel watcher could not be installed"); return; }
+            while (NativeMethods.GetMessage(out _, IntPtr.Zero, 0, 0) > 0) { }
+        }) { IsBackground = true, Name = "Nighty wheel watcher" };
+        t.SetApartmentState(ApartmentState.STA);
+        t.Start();
+    }
+
     public void StartSlotTracking()
     {
         if (_slotWatch != null) return;
+        StartWheelWatch();
         _slotWatch = new Thread(() =>
         {
             var wasDown = new bool[9];

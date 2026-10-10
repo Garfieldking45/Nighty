@@ -13,7 +13,7 @@
                         <Grid Width="40" Height="40" Margin="6,0,0,0" Background="Transparent">
                             <Ellipse x:Name="Ring" Stroke="{TemplateBinding BorderBrush}" StrokeThickness="2" Visibility="Collapsed"/>
                             <Ellipse Margin="5" Fill="{TemplateBinding Background}"/>
-                            <TextBlock x:Name="Check" Text="&#xE73E;" Style="{StaticResource Icon}" FontSize="13" Foreground="#06101F" Visibility="Collapsed"/>
+                            <TextBlock x:Name="Check" Text="&#xE73E;" Style="{StaticResource Icon}" FontSize="13" Foreground="{DynamicResource OnAccentBrush}" Visibility="Collapsed"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
@@ -28,36 +28,52 @@
     </UserControl.Resources>
 
     <StackPanel>
-        <c:PageHeading Title="Settings" Subtitle="How Nighty looks, starts and stays safe."/>
+        <c:PageHeading Title="Settings" Subtitle="How Nighty looks, sounds, performs and starts."/>
 
         <WrapPanel Margin="0,0,0,10">
             <RadioButton Style="{StaticResource TabButton}" Content="Appearance" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Startup" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Safety" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Configuration" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Changelog" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Themes" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Background" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Performance" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Startup" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Discord" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=5}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Safety" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=6}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Configuration" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=7}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Changelog" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=8}"/>
         </WrapPanel>
 
         <!-- ===== Appearance ===== -->
         <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}">
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <c:CardHeader Icon="&#xE790;" Title="Appearance" Subtitle="Colors and window"/>
-                    <c:SettingRow Title="Accent color" Description="The color of buttons and highlights across the app.">
-                        <ItemsControl ItemsSource="{Binding Swatches}">
+                    <c:CardHeader Icon="&#xE790;" Title="Colors, font and window" Subtitle="Make Nighty yours"/>
+                    <c:SettingRow Title="Accent color" Description="The color of buttons and highlights. The first one matches the theme.">
+                        <ItemsControl ItemsSource="{Binding AccentSwatches}">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <RadioButton Style="{StaticResource Swatch}" GroupName="swatch" ToolTip="{Binding Choice.Name}" AutomationProperties.Name="{Binding Choice.Name}"
-                                                 Background="{Binding Choice.Accent}" BorderBrush="{Binding Choice.Accent}" IsChecked="{Binding IsSelected, Mode=OneWay}"
-                                                 Command="{Binding DataContext.SelectThemeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                 CommandParameter="{Binding Choice.Id}"/>
+                                    <RadioButton Style="{StaticResource Swatch}" GroupName="swatch" ToolTip="{Binding Name}" AutomationProperties.Name="{Binding Name}"
+                                                 Background="{Binding Fill}" BorderBrush="{Binding Fill}" IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                                 Command="{Binding DataContext.SelectAccentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                 CommandParameter="{Binding}"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </c:SettingRow>
                     <Border Style="{StaticResource Divider}"/>
-                    <c:SettingRow Title="Keep window on top" Description="Keeps the Nighty window above other windows.">
+                    <c:SettingRow Title="Nighty's font" Description="The font used across the whole interface.">
+                        <ComboBox ItemsSource="{Binding Fonts}" SelectedItem="{Binding SelectedFont, Mode=TwoWay}" Width="260" AutomationProperties.Name="Font"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Animations" Description="Smooth motion everywhere. Turn off for instant changes.">
+                        <CheckBox IsChecked="{Binding General.Animations}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Sound effects" Description="Little sounds when you press buttons and start or stop clicking.">
+                        <CheckBox IsChecked="{Binding General.SoundEffects}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Keep window on top" Description="Keeps the Nighty window above other windows. Also the pin in the top bar.">
                         <CheckBox IsChecked="{Binding General.AlwaysOnTop}"/>
                     </c:SettingRow>
                     <Border Style="{StaticResource Divider}"/>
@@ -68,8 +84,143 @@
             </Border>
         </StackPanel>
 
-        <!-- ===== Startup ===== -->
+        <!-- ===== Themes ===== -->
         <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE790;" Title="Themes" Subtitle="Pick a look, then change any color you like"/>
+                    <ItemsControl ItemsSource="{Binding ThemeCards}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <RadioButton Style="{StaticResource OptionCard}" GroupName="themecard" Margin="0,0,10,10" AutomationProperties.Name="{Binding Def.Name}"
+                                             IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                             Command="{Binding DataContext.SelectThemeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding Def.Id}">
+                                    <StackPanel>
+                                        <!-- miniature of the theme -->
+                                        <Border Background="{Binding Bg}" BorderBrush="{Binding Border}" BorderThickness="1" CornerRadius="8" Height="74" ClipToBounds="True">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="26"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                <Border Background="{Binding Sidebar}" BorderBrush="{Binding Border}" BorderThickness="0,0,1,0">
+                                                    <StackPanel Margin="6,8">
+                                                        <Border Height="5" CornerRadius="2" Background="{Binding Accent}" Margin="0,0,0,5"/>
+                                                        <Border Height="4" CornerRadius="2" Background="{Binding Border}" Margin="0,0,0,4"/>
+                                                        <Border Height="4" CornerRadius="2" Background="{Binding Border}"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <StackPanel Grid.Column="1" Margin="8,8">
+                                                    <Border Background="{Binding Panel}" BorderBrush="{Binding Border}" BorderThickness="1" CornerRadius="5" Height="26">
+                                                        <Border Width="34" Height="5" CornerRadius="2" Background="{Binding Text}" HorizontalAlignment="Left" Margin="7,0,0,0" Opacity="0.7"/>
+                                                    </Border>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
+                                                        <Border Width="34" Height="12" CornerRadius="6" Background="{Binding Accent}"/>
+                                                        <Border Width="20" Height="12" CornerRadius="6" Background="{Binding Accent2}" Margin="5,0,0,0"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                        <TextBlock Text="{Binding Def.Name}" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                                    </StackPanel>
+                                </RadioButton>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE771;" Title="Your colors" Subtitle="Kept when you switch themes. Type a #RRGGBB value.">
+                        <Button Content="Reset colors" Command="{Binding ResetColorsCommand}"/>
+                    </c:CardHeader>
+                    <ItemsControl ItemsSource="{Binding ColorRows}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,16,12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="110"/></Grid.ColumnDefinitions>
+                                    <Border Width="30" Height="30" CornerRadius="15" Background="{Binding Swatch}" BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Label}" Margin="12,0,0,0" VerticalAlignment="Center" FontWeight="Medium"/>
+                                    <TextBox Grid.Column="2" Text="{Binding Hex, UpdateSourceTrigger=LostFocus}" MaxLength="7" Padding="10,6" AutomationProperties.Name="{Binding Label}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <c:InfoBanner Kind="Warning" Text="{Binding ContrastWarning}" Margin="0,4,0,0" Visibility="{Binding HasContrastWarning, Converter={StaticResource BoolVisible}}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ===== Background ===== -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xEB9F;" Title="Background" Subtitle="Put your own picture behind Nighty"/>
+                    <c:SettingRow Title="Picture" Description="PNG, JPG or GIF. GIFs play while Nighty is open. Cards keep their solid colors, so text stays readable over any image.">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Remove" Command="{Binding RemoveBackgroundCommand}" Visibility="{Binding HasBackground, Converter={StaticResource BoolVisible}}" Margin="0,0,8,0"/>
+                            <Button Content="Choose picture" Style="{StaticResource PrimaryButton}" Command="{Binding ChooseBackgroundCommand}"/>
+                        </StackPanel>
+                    </c:SettingRow>
+                    <TextBlock Text="{Binding BackgroundName}" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Fit" Description="Fill covers the whole window. Fit shows the whole picture.">
+                        <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="3">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton Style="{StaticResource SegmentButton}" GroupName="bgfit" Content="Fill" IsChecked="{Binding BackgroundFit, Converter={StaticResource Eq}, ConverterParameter=False}"/>
+                                <RadioButton Style="{StaticResource SegmentButton}" GroupName="bgfit" Content="Fit" IsChecked="{Binding BackgroundFit, Converter={StaticResource Eq}, ConverterParameter=True}"/>
+                            </StackPanel>
+                        </Border>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Strength" Description="How much the picture shows through.">
+                        <Slider Width="240" Minimum="5" Maximum="100" Value="{Binding BackgroundStrengthPct, Mode=TwoWay}" SmallChange="5" LargeChange="10"/>
+                    </c:SettingRow>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ===== Performance ===== -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE9D9;" Title="Timing precision" Subtitle="How exact the clicker is, and how much CPU it uses"/>
+                    <UniformGrid Rows="1" Columns="3">
+                        <RadioButton Style="{StaticResource OptionCard}" GroupName="prec" Margin="0,0,10,0" IsChecked="{Binding Precision, Converter={StaticResource Eq}, ConverterParameter=Efficient}">
+                            <StackPanel HorizontalAlignment="Center"><TextBlock Text="Efficient" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,2"/><TextBlock Text="Least CPU" Style="{StaticResource Muted}" HorizontalAlignment="Center"/></StackPanel>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource OptionCard}" GroupName="prec" Margin="0,0,10,0" IsChecked="{Binding Precision, Converter={StaticResource Eq}, ConverterParameter=Balanced}">
+                            <StackPanel HorizontalAlignment="Center"><TextBlock Text="Balanced" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,2"/><TextBlock Text="Best for most" Style="{StaticResource Muted}" HorizontalAlignment="Center"/></StackPanel>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource OptionCard}" GroupName="prec" IsChecked="{Binding Precision, Converter={StaticResource Eq}, ConverterParameter=Precise}">
+                            <StackPanel HorizontalAlignment="Center"><TextBlock Text="Precise" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,2"/><TextBlock Text="Most exact" Style="{StaticResource Muted}" HorizontalAlignment="Center"/></StackPanel>
+                        </RadioButton>
+                    </UniformGrid>
+                    <TextBlock Text="{Binding PrecisionHint}" Style="{StaticResource Muted}" Margin="2,12,0,0"/>
+                    <TextBlock Text="HitFix (Combat page) always uses the most exact waiting, whatever is chosen here." Style="{StaticResource Muted}" Margin="2,4,0,0"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE916;" Title="Timing test" Subtitle="Checks how exact the clicker is for 5 seconds. Nothing gets clicked.">
+                        <Button Content="Run test" Style="{StaticResource PrimaryButton}" Command="{Binding RunTimingTestCommand}" MinWidth="110"/>
+                    </c:CardHeader>
+                    <TextBlock Text="{Binding TestMessage}" Style="{StaticResource Muted}" Margin="0,0,0,10"/>
+                    <UniformGrid Columns="4" Visibility="{Binding HasReport, Converter={StaticResource BoolVisible}}">
+                        <StackPanel Margin="0,0,0,16"><TextBlock Text="REQUESTED" Style="{StaticResource Label}"/><TextBlock Text="{Binding Report.RequestedCps, StringFormat={}{0:0.00} CPS}" FontSize="19" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel>
+                        <StackPanel><TextBlock Text="MEASURED" Style="{StaticResource Label}"/><TextBlock Text="{Binding Report.MeasuredCps, StringFormat={}{0:0.000} CPS}" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/></StackPanel>
+                        <StackPanel><TextBlock Text="AVG INTERVAL" Style="{StaticResource Label}"/><TextBlock Text="{Binding Report.AvgIntervalMs, StringFormat={}{0:0.000} ms}" FontSize="19" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel>
+                        <StackPanel><TextBlock Text="JITTER" Style="{StaticResource Label}"/><TextBlock Text="{Binding Report.JitterMs, StringFormat={}{0:0.000} ms}" FontSize="19" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel>
+                        <StackPanel><TextBlock Text="AVG ERROR" Style="{StaticResource Label}"/><TextBlock Text="{Binding Report.AvgErrorMs, StringFormat={}{0:0.000} ms}" FontSize="19" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel>
+                        <StackPanel><TextBlock Text="P99 ERROR" Style="{StaticResource Label}"/><TextBlock Text="{Binding Report.P99ErrorMs, StringFormat={}{0:0.000} ms}" FontSize="19" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel>
+                        <StackPanel><TextBlock Text="MIN / MAX" Style="{StaticResource Label}"/><TextBlock FontSize="19" FontWeight="SemiBold" Margin="0,4,0,0"><Run Text="{Binding Report.MinMs, Mode=OneWay, StringFormat={}{0:0.00}}"/><Run Text=" / "/><Run Text="{Binding Report.MaxMs, Mode=OneWay, StringFormat={}{0:0.00}}"/><Run Text=" ms" FontSize="13"/></TextBlock></StackPanel>
+                        <StackPanel><TextBlock Text="PROCESS CPU" Style="{StaticResource Label}"/><TextBlock Text="{Binding Report.CpuPercent, StringFormat={}{0:0.0}% of a core}" FontSize="19" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel>
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ===== Startup ===== -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}">
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <c:CardHeader Icon="&#xE7E8;" Title="How Nighty opens" Subtitle="Startup and closing"/>
@@ -81,6 +232,14 @@
                         <CheckBox IsChecked="{Binding StartMinimized}"/>
                     </c:SettingRow>
                     <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Remember where I was" Description="Open on the same page, in the same place and size.">
+                        <CheckBox IsChecked="{Binding General.RememberWindow}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Loading screen" Description="Show the loading screen while Nighty starts.">
+                        <CheckBox IsChecked="{Binding General.ShowSplash}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
                     <c:SettingRow Title="Restore Windows settings on close" Description="When Nighty closes, put the pointer, keyboard and accessibility settings, PC tweaks and Game Mode back to normal. Tweaks come back on at the next start.">
                         <CheckBox IsChecked="{Binding General.RestoreOnClose}"/>
                     </c:SettingRow>
@@ -88,8 +247,33 @@
             </Border>
         </StackPanel>
 
+        <!-- ===== Discord ===== -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=5}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE8F2;" Title="Discord status" Subtitle="Show Nighty on your Discord profile"/>
+                    <c:SettingRow Title="Show Nighty on your Discord profile" Description="Your profile shows you're using Nighty while it's open. Needs the Discord app. Talks to Discord on your PC only.">
+                        <CheckBox IsChecked="{Binding General.DiscordPresence}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Application id" Description="From discord.com/developers → New Application → General Information. Name the application “Nighty” so that is what friends see.">
+                        <TextBox Text="{Binding General.DiscordAppId, UpdateSourceTrigger=LostFocus}" Width="240" Padding="10,7" AutomationProperties.Name="Discord application id"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Show what I'm doing" Description="Like “Clicking at 12 CPS”. Off just says “Using Nighty”.">
+                        <CheckBox IsChecked="{Binding General.DiscordShowActivity}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Show time" Description="How long Nighty has been open.">
+                        <CheckBox IsChecked="{Binding General.DiscordShowTime}"/>
+                    </c:SettingRow>
+                    <TextBlock Text="{Binding DiscordStatus}" Style="{StaticResource Muted}" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
         <!-- ===== Safety ===== -->
-        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}">
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=6}">
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <c:CardHeader Icon="&#xE72E;" Title="Safety" Subtitle="Stop everything, and put Windows back"/>
@@ -100,13 +284,12 @@
                     <c:SettingRow Title="Restore system changes" Description="Turns Game Mode off and restores keyboard and pointer settings. DNS, QoS and mods are restored from their own pages.">
                         <Button Content="Restore now" Command="{Binding RestoreAllCommand}"/>
                     </c:SettingRow>
-                    <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="0,8,0,0" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
                 </StackPanel>
             </Border>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <c:CardHeader Icon="&#xE7EF;" Title="Permissions" Subtitle="Nighty runs without administrator rights"/>
-                    <c:SettingRow Title="{Binding AdminText}" Description="It asks for approval only for DNS, QoS and the FPS overlay.">
+                    <c:SettingRow Title="{Binding AdminText}" Description="It asks for approval only for DNS, QoS and the FPS overlay. Run it as administrator if a game that runs as administrator ignores the clicker.">
                         <Button Content="Restart as administrator" Command="{Binding RelaunchAdmin}"/>
                     </c:SettingRow>
                 </StackPanel>
@@ -114,23 +297,30 @@
         </StackPanel>
 
         <!-- ===== Configuration ===== -->
-        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}">
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=7}">
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <c:CardHeader Icon="&#xE8B7;" Title="Configuration" Subtitle="Your settings, backups and logs"/>
-                    <c:SettingRow Title="App data folder" Description="{Binding SettingsPath}">
-                        <Button Content="Open" Command="{Binding OpenDataFolder}"/>
+                    <c:CardHeader Icon="&#xE8B7;" Title="Configuration" Subtitle="Your settings save by themselves"/>
+                    <c:SettingRow Title="Settings file" Description="{Binding SettingsPath}">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Save now" Command="{Binding SaveNowCommand}" Margin="0,0,8,0"/>
+                            <Button Content="Open folder" Command="{Binding OpenDataFolder}"/>
+                        </StackPanel>
                     </c:SettingRow>
                     <Border Style="{StaticResource Divider}"/>
                     <c:SettingRow Title="Logs" Description="Diagnostic logs for troubleshooting.">
                         <Button Content="Open logs folder" Command="{Binding OpenLogsFolder}"/>
                     </c:SettingRow>
                     <Border Style="{StaticResource Divider}"/>
-                    <c:SettingRow Title="Profile" Description="Save your whole setup as plain JSON to back it up or share it, or load someone else's. Importing restarts Nighty.">
+                    <c:SettingRow Title="Backup" Description="Save your whole setup as plain JSON to back it up or share it, or load someone else's. Importing restarts Nighty.">
                         <StackPanel Orientation="Horizontal">
-                            <Button Content="Export" Command="{Binding ExportProfileCommand}"/>
-                            <Button Content="Import" Command="{Binding ImportProfileCommand}" Margin="8,0,0,0"/>
+                            <Button Content="Save to file" Command="{Binding ExportProfileCommand}"/>
+                            <Button Content="Load file" Command="{Binding ImportProfileCommand}" Margin="8,0,0,0"/>
                         </StackPanel>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Support info" Description="Copies Nighty's version and setup, to paste when you ask for help.">
+                        <Button Content="Copy" Command="{Binding CopySupportCommand}" MinWidth="90"/>
                     </c:SettingRow>
                     <Border Style="{StaticResource Divider}"/>
                     <c:SettingRow Title="Reset everything" Description="Restores system changes, deletes presets, macros and layout, and restarts.">
@@ -141,7 +331,7 @@
         </StackPanel>
 
         <!-- ===== Changelog ===== -->
-        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}">
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=8}">
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <c:CardHeader Icon="&#xE81C;" Title="Changelog" Subtitle="What changed in each version"/>
@@ -159,6 +349,7 @@
             </Border>
         </StackPanel>
 
+        <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="2,0,0,8" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
         <TextBlock Style="{StaticResource Muted}" Margin="2,2,0,0">
             <Run Text="Nighty"/><Run Text=" "/><Run Text="{Binding Version, Mode=OneWay}"/>
         </TextBlock>

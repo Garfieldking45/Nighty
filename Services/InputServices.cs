@@ -6,8 +6,8 @@ using Nighty.Native;
 namespace Nighty.Services;
 
 /// <summary>
-/// Precise waits. Coarse part uses a high-resolution waitable timer (sub-millisecond on Windows 10 1803+),
-/// the last ~0.4 ms is a busy-wait for exact landing. Always returns promptly when cancelled.
+/// Precise waits. The coarse part uses a high-resolution waitable timer (sub-millisecond on Windows 10 1803+); the last
+/// <see cref="SpinMs"/> is a busy-wait for exact landing. Always returns promptly when cancelled.
 /// </summary>
 internal static class Wait
 {
@@ -15,20 +15,26 @@ internal static class Wait
     [ThreadStatic] private static IntPtr _timer;
     [ThreadStatic] private static bool _timerFailed;
 
+    /// <summary>How long before a deadline the timer hands over to the spin loop. The clicker raises it for Precise and HitFix.</summary>
+    public static volatile float SpinMsValue = 0.4f;
+    public static double SpinMs { get => SpinMsValue; set => SpinMsValue = (float)value; }
+
     public static long Now => Stopwatch.GetTimestamp();
     public static long FromMs(double ms) => (long)(ms * TicksPerMs);
+    public static double ToMs(long ticks) => ticks / TicksPerMs;
 
     public static void Ms(double ms, CancellationToken ct) => Until(Now + FromMs(ms), ct);
 
-    public static void Until(long target, CancellationToken ct)
+    public static void Until(long target, CancellationToken ct) => Until(target, ct, SpinMsValue);
+
+    public static void Until(long target, CancellationToken ct, double spinMs)
     {
-        const double SpinMs = 0.4;
         while (!ct.IsCancellationRequested)
         {
             double left = (target - Now) / TicksPerMs;
             if (left <= 0) return;
-            if (left > SpinMs + 0.1) Sleep(Math.Min(left - SpinMs, 15));
-            else Thread.SpinWait(20);
+            if (left > spinMs + 0.1) Sleep(Math.Min(left - spinMs, 15));
+            else Thread.SpinWait(8);
         }
     }
 
@@ -53,8 +59,58 @@ internal static class Wait
 }
 
 /// <summary>
+/// Gives the calling thread the best scheduling Windows will allow: multimedia-scheduler "Games" class at critical
+/// priority, and with HitFix a time-critical thread pinned to one core (never core 0, which takes the interrupts).
+/// Dispose on the same thread to undo it.
+/// </summary>
+internal sealed class ThreadBoost : IDisposable
+{
+    private IntPtr _mmcss;
+    private UIntPtr _oldMask;
+    private bool _pinned;
+    private int _oldPriority;
+    private readonly IntPtr _thread = NativeMethods.GetCurrentThread();
+
+    /// <summary>Core the thread was pinned to, or -1.</summary>
+    public int Core { get; private set; } = -1;
+
+    public static ThreadBoost Apply(bool hitFix)
+    {
+        var b = new ThreadBoost();
+        uint idx = 0;
+        b._mmcss = NativeMethods.AvSetMmThreadCharacteristicsW("Games", ref idx);
+        if (b._mmcss != IntPtr.Zero) NativeMethods.AvSetMmThreadPriority(b._mmcss, NativeMethods.AVRT_PRIORITY_CRITICAL);
+        b._oldPriority = NativeMethods.GetThreadPriority(b._thread);
+        NativeMethods.SetThreadPriority(b._thread, hitFix ? NativeMethods.THREAD_PRIORITY_TIME_CRITICAL : 2);
+
+        // Pinning only helps when there is a spare core; on 2-core PCs it would fight the game for it.
+        if (hitFix && Environment.ProcessorCount >= 4 && NativeMethods.GetProcessAffinityMask(NativeMethods.GetCurrentProcess(), out var procMask, out _))
+        {
+            ulong mask = procMask.ToUInt64();
+            int core = -1;
+            for (int i = Math.Min(63, Environment.ProcessorCount - 1); i >= 1; i--)
+                if ((mask >> i & 1) != 0) { core = i; break; }
+            if (core > 0)
+            {
+                var old = NativeMethods.SetThreadAffinityMask(b._thread, (UIntPtr)(1UL << core));
+                if (old != UIntPtr.Zero) { b._oldMask = old; b._pinned = true; b.Core = core; NativeMethods.SetThreadIdealProcessor(b._thread, (uint)core); }
+            }
+        }
+        return b;
+    }
+
+    public void Dispose()
+    {
+        if (_pinned) NativeMethods.SetThreadAffinityMask(_thread, _oldMask);
+        NativeMethods.SetThreadPriority(_thread, _oldPriority);
+        if (_mmcss != IntPtr.Zero) NativeMethods.AvRevertMmThreadCharacteristics(_mmcss);
+    }
+}
+
+/// <summary>
 /// Background auto-clicker. Uses SendInput and an absolute timeline (each click is scheduled from the previous
-/// deadline, so timing error never accumulates). Honours the duty cycle and measures the clicks it really sent.
+/// deadline, so timing error never accumulates). Honours the duty cycle, measures the clicks it really sent, and with
+/// HitFix runs on a time-critical, core-pinned thread with an exact final spin before every click.
 /// </summary>
 public sealed class ClickerService
 {
@@ -66,6 +122,7 @@ public sealed class ClickerService
 
     private System.Runtime.GCLatencyMode _gcMode;
     private ProcessPriorityClass _priorClass = ProcessPriorityClass.Normal;
+    private bool _noGcRegion;
 
     public ClickerService(ClickerSettings settings) { _s = settings; }
 
@@ -75,9 +132,16 @@ public sealed class ClickerService
 
     public bool IsClicking => _cts != null;
     public event Action? StateChanged;
+    /// <summary>Raised (from the clicker thread) when the clicker stops itself: click count or time limit reached.</summary>
+    public event Action<string>? AutoStopped;
+    /// <summary>Raised when Windows refuses the clicks, usually because the focused app runs as administrator.</summary>
+    public event Action? Blocked;
+
+    /// <summary>One line describing how the engine is running right now, for the Settings page.</summary>
+    public string EngineInfo { get; private set; } = "";
 
     private long _total;
-    /// <summary>Hits sent since the clicker was last started.</summary>
+    /// <summary>Clicks sent since the clicker was last started.</summary>
     public long TotalClicks => Interlocked.Read(ref _total);
 
     /// <summary>Clicks actually sent during the last second.</summary>
@@ -94,20 +158,56 @@ public sealed class ClickerService
         }
     }
 
+    /// <summary>Spin window before each click, from the precision setting. HitFix always spins at least 2.5 ms.</summary>
+    internal static double SpinFor(PrecisionMode mode, bool hitFix)
+    {
+        double spin = mode switch { PrecisionMode.Efficient => 0.25, PrecisionMode.Precise => 2.0, _ => 0.6 };
+        return hitFix ? Math.Max(spin, 2.5) : spin;
+    }
+
+    /// <summary>Touches the timing code once at start-up so the first real click doesn't pay for JIT or timer creation.</summary>
+    public static void Prewarm()
+    {
+        NativeMethods.timeBeginPeriod(1);
+        try
+        {
+            for (int i = 0; i < 4; i++) Wait.Ms(1.5, CancellationToken.None);
+            using var boost = ThreadBoost.Apply(false);
+            SpinFor(PrecisionMode.Balanced, false);
+        }
+        catch { }
+        finally { NativeMethods.timeEndPeriod(1); }
+    }
+
     public void Start()
     {
         if (_cts != null) return;
         var cts = new CancellationTokenSource();
         _cts = cts;
         Interlocked.Exchange(ref _total, 0);
+        bool hitFix = _s.HitFix;
         NativeMethods.timeBeginPeriod(1);
         _gcMode = System.Runtime.GCSettings.LatencyMode;
         try { System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency; } catch { }   // avoid long GC pauses mid-fight
-        try { _priorClass = System.Diagnostics.Process.GetCurrentProcess().PriorityClass; System.Diagnostics.Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.AboveNormal; } catch { }
-        var t = new Thread(() => Loop(cts.Token)) { IsBackground = true, Priority = ThreadPriority.Highest, Name = "Nighty clicker" };
+        try
+        {
+            using var proc = Process.GetCurrentProcess();
+            _priorClass = proc.PriorityClass;
+            // High, never Real-time: a time-critical clicker thread inside a High process lands on the same scheduling
+            // level without letting the whole app (and its UI thread) outrank Windows' own system work.
+            proc.PriorityClass = hitFix ? ProcessPriorityClass.High : ProcessPriorityClass.AboveNormal;
+        }
+        catch { }
+        var t = new Thread(() => Loop(cts.Token, hitFix)) { IsBackground = true, Priority = ThreadPriority.Highest, Name = "Nighty clicker" };
         t.Start();
-        Log.Info("Clicker started");
+        Log.Info("Clicker started" + (hitFix ? " (HitFix)" : ""));
+        PlaySound(start: true);
         StateChanged?.Invoke();
+    }
+
+    private static void PlaySound(bool start)
+    {
+        try { Application.Current?.Dispatcher.BeginInvoke(() => { if (start) Controls.Sfx.Start(); else Controls.Sfx.Stop(); }); } catch { }
     }
 
     public void Stop()
@@ -117,31 +217,59 @@ public sealed class ClickerService
         _cts = null;
         cts.Cancel();
         NativeMethods.timeEndPeriod(1);
+        if (_noGcRegion)
+        {
+            _noGcRegion = false;
+            try { if (System.Runtime.GCSettings.LatencyMode == System.Runtime.GCLatencyMode.NoGCRegion) GC.EndNoGCRegion(); } catch { }
+        }
         try { System.Runtime.GCSettings.LatencyMode = _gcMode; } catch { }
-        try { System.Diagnostics.Process.GetCurrentProcess().PriorityClass = _priorClass; } catch { }
+        try { using var proc = Process.GetCurrentProcess(); proc.PriorityClass = _priorClass; } catch { }
+        Wait.SpinMs = 0.4;
         lock (_gate) _stamps.Clear();
+        EngineInfo = "";
         Log.Info("Clicker stopped");
+        PlaySound(start: false);
         StateChanged?.Invoke();
     }
 
-    private void Loop(CancellationToken ct)
+    private void AutoStop(string reason)
     {
-        // Ask Windows' multimedia scheduler to keep this thread ahead of ordinary work.
-        uint taskIndex = 0;
-        IntPtr mmcss = NativeMethods.AvSetMmThreadCharacteristicsW("Games", ref taskIndex);
-        try { RunLoop(ct); }
-        finally { if (mmcss != IntPtr.Zero) NativeMethods.AvRevertMmThreadCharacteristics(mmcss); }
+        Log.Info("Clicker auto-stop: " + reason);
+        Stop();
+        AutoStopped?.Invoke(reason);
     }
 
-    private void RunLoop(CancellationToken ct)
+    private void Loop(CancellationToken ct, bool hitFix)
+    {
+        using var boost = ThreadBoost.Apply(hitFix);
+        EngineInfo = hitFix
+            ? $"HitFix on · {(boost.Core > 0 ? $"core {boost.Core}" : "shared cores")} · time-critical thread"
+            : "Standard timing";
+        if (hitFix)
+        {
+            // Take the garbage collector out of the picture while clicking. Starting the region does one collection,
+            // which is why it happens here on the clicker thread and not on the UI.
+            try { _noGcRegion = GC.TryStartNoGCRegion(24 * 1024 * 1024); } catch { _noGcRegion = false; }
+        }
+        RunLoop(ct, hitFix);
+    }
+
+    private void RunLoop(CancellationToken ct, bool hitFix)
     {
         bool allowed = true;
         long nextCheck = 0;
+        int refused = 0;
+
+        if (_s.StartDelayMs > 0) Wait.Ms(_s.StartDelayMs, ct);
         long next = Wait.Now;
+        long deadline = _s.TimeLimitSec > 0 ? Wait.Now + Wait.FromMs(_s.TimeLimitSec * 1000.0) : long.MaxValue;
 
         while (!ct.IsCancellationRequested)
         {
             if (KeepClicking is { } keep && !keep()) { Stop(); break; }
+
+            double spin = SpinFor(Svc.S.General.Precision, hitFix);
+            Wait.SpinMs = spin;
 
             // Foreground checks involve process lookups, so refresh them every 40 ms instead of every click.
             if (Wait.Now >= nextCheck)
@@ -166,192 +294,34 @@ public sealed class ClickerService
             double holdMs = Math.Clamp(sliceMs * _s.DutyCycle / 100.0, Math.Min(4, sliceMs - 0.3), Math.Max(0.5, sliceMs - 1));
             var button = _s.Button;
 
-            Wait.Until(next, ct);
+            Wait.Until(next, ct, spin);
             if (ct.IsCancellationRequested) break;
             if (Svc.Bow.IsRunning) { next = Wait.Now + Wait.FromMs(1); continue; }   // don't interleave sword clicks with the crossbow shot
-            long clickStart = Wait.Now;
             for (int k = 0; k < perHit && !ct.IsCancellationRequested; k++)
             {
-                InputSender.MouseButton(button, true);
+                if (!InputSender.MouseButton(button, true))
+                {
+                    // SendInput returns 0 when Windows blocks injected input into a higher-integrity window.
+                    if (++refused >= 3) { Stop(); Blocked?.Invoke(); return; }
+                    continue;
+                }
+                refused = 0;
                 try { Wait.Ms(holdMs, ct); }
                 finally { InputSender.MouseButton(button, false); }   // never leave the button stuck down
+                lock (_gate) _stamps.Enqueue(Environment.TickCount64);
+                Interlocked.Increment(ref _total);
                 if (k < perHit - 1) Wait.Ms(sliceMs - holdMs, ct);
             }
 
-            lock (_gate) _stamps.Enqueue(Environment.TickCount64);
-            Interlocked.Increment(ref _total);
             Svc.Bow.TryAuto();   // react right after a click instead of waiting for the UI timer
+
+            if (_s.StopAfterClicks > 0 && Interlocked.Read(ref _total) >= _s.StopAfterClicks) { AutoStop($"Stopped after {_s.StopAfterClicks:N0} clicks."); return; }
+            if (Wait.Now >= deadline) { AutoStop("Stopped: the time limit is up."); return; }
 
             // Accumulate so an overshoot never compounds into a slow CPS, and resync after a stall instead of bursting.
             next += Wait.FromMs(periodMs);
             long now = Wait.Now;
             if (next < now) next = now + Wait.FromMs(periodMs);
         }
-    }
-}
-
-/// <summary>Plays user-authored macros (key presses, clicks, waits). Cancels cleanly and releases held keys.</summary>
-public sealed class MacroPlayer
-{
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, CancellationTokenSource> _running = new();
-    public event Action? Changed;
-
-    public bool IsRunning(Guid id) => _running.ContainsKey(id);
-
-    public void Toggle(MacroDef m, int startDelayMs = 0)
-    {
-        if (IsRunning(m.Id)) Stop(m.Id); else Start(m, startDelayMs);
-    }
-
-    public void Start(MacroDef m, int startDelayMs = 0)
-    {
-        if (IsRunning(m.Id) || m.Steps.Count == 0) return;
-        var cts = new CancellationTokenSource();
-        _running[m.Id] = cts;
-        var steps = m.Steps.Select(s => new MacroStep { Type = s.Type, Value = s.Value, Value2 = s.Value2, Text = s.Text }).ToList();
-        double speed = m.Speed <= 0 ? 1 : m.Speed;
-        int repeatDelay = m.RepeatDelayMs;
-        int repeat = m.Repeat;
-        Changed?.Invoke();
-        Task.Run(() => Run(m.Id, steps, repeat, startDelayMs, speed, repeatDelay, cts));
-    }
-
-    public void Stop(Guid id)
-    {
-        if (_running.TryRemove(id, out var cts)) cts.Cancel();
-        Changed?.Invoke();
-    }
-
-    public void StopAll()
-    {
-        foreach (var id in _running.Keys.ToList()) Stop(id);
-    }
-
-    private void Run(Guid id, List<MacroStep> steps, int repeat, int startDelay, double speed, int repeatDelay, CancellationTokenSource cts)
-    {
-        var ct = cts.Token;
-        var held = new HashSet<int>();
-        try
-        {
-            NativeMethods.timeBeginPeriod(1);
-            if (startDelay > 0) Wait.Ms(startDelay, ct);
-            for (int i = 0; (repeat == 0 || i < repeat) && !ct.IsCancellationRequested; i++)
-            {
-                foreach (var step in steps)
-                {
-                    var type = step.Type; int value = step.Value;
-                    if (ct.IsCancellationRequested) break;
-                    switch (type)
-                    {
-                        case MacroStepType.KeyPress:
-                            InputSender.Key(value, true); Wait.Ms(20, ct); InputSender.Key(value, false); break;
-                        case MacroStepType.KeyDown:
-                            InputSender.Key(value, true); held.Add(value); break;
-                        case MacroStepType.KeyUp:
-                            InputSender.Key(value, false); held.Remove(value); break;
-                        case MacroStepType.Click:
-                            var b = (ClickButton)Math.Clamp(value, 0, 2);
-                            InputSender.MouseButton(b, true); Wait.Ms(20, ct); InputSender.MouseButton(b, false); break;
-                        case MacroStepType.Wait:
-                            Wait.Ms(value / speed, ct); break;
-                        case MacroStepType.RandomWait:
-                            int lo = Math.Min(value, step.Value2), hi = Math.Max(value, step.Value2);
-                            Wait.Ms(Random.Shared.Next(lo, hi + 1) / speed, ct); break;
-                        case MacroStepType.Scroll:
-                            InputSender.Scroll(value); break;
-                        case MacroStepType.MoveMouse:
-                            InputSender.MoveRelative(value, step.Value2); break;
-                        case MacroStepType.TypeText:
-                            InputSender.TypeText(step.Text, ct); break;
-                    }
-                }
-                if (repeatDelay > 0) Wait.Ms(repeatDelay, ct);
-                if (repeatDelay == 0 && steps.All(s => s.Type is not (MacroStepType.Wait or MacroStepType.RandomWait))) Wait.Ms(5, ct);   // avoid a hot loop with no delays
-            }
-        }
-        catch (Exception ex) { Log.Error("Macro failed", ex); }
-        finally
-        {
-            foreach (var vk in held) InputSender.Key(vk, false);
-            NativeMethods.timeEndPeriod(1);
-            _running.TryRemove(new KeyValuePair<Guid, CancellationTokenSource>(id, cts));   // only our own entry, never a newer run
-            cts.Dispose();
-            Application.Current?.Dispatcher.BeginInvoke(() => Changed?.Invoke());
-        }
-    }
-}
-
-/// <summary>
-/// Counts real mouse clicks (including synthetic ones) with a low-level mouse hook. The hook is only installed
-/// while something needs it and is always removed on <see cref="Stop"/>.
-/// </summary>
-public sealed class CpsMonitor
-{
-    private IntPtr _hook;
-    private NativeMethods.LowLevelProc? _proc;   // keep the delegate alive
-    private uint _threadId;
-    private bool _running;
-    private readonly Queue<long> _left = new(), _right = new();
-    private readonly object _gate = new();
-
-    public bool IsActive => _running;
-
-    /// <summary>
-    /// The hook lives on its own message-pump thread. A low-level hook on the UI thread makes every injected click
-    /// (the auto clicker's SendInput) wait for the UI thread, which can freeze the app while clicking.
-    /// </summary>
-    public void Start()
-    {
-        if (_running) return;
-        _running = true;
-        var ready = new ManualResetEventSlim();
-        var t = new Thread(() =>
-        {
-            _proc = Callback;
-            _hook = NativeMethods.SetWindowsHookEx(NativeMethods.WH_MOUSE_LL, _proc, NativeMethods.GetModuleHandle(null), 0);
-            _threadId = NativeMethods.GetCurrentThreadId();
-            if (_hook == IntPtr.Zero) Log.Warn("Mouse hook could not be installed");
-            ready.Set();
-            if (_hook == IntPtr.Zero) return;
-            while (NativeMethods.GetMessage(out _, IntPtr.Zero, 0, 0) > 0) { }
-            NativeMethods.UnhookWindowsHookEx(_hook);
-            _hook = IntPtr.Zero;
-        }) { IsBackground = true, Name = "Nighty CPS hook" };
-        t.SetApartmentState(ApartmentState.STA);
-        t.Start();
-        ready.Wait(2000);
-        if (_hook == IntPtr.Zero) _running = false;
-    }
-
-    public void Stop()
-    {
-        if (!_running) return;
-        _running = false;
-        NativeMethods.PostThreadMessage(_threadId, NativeMethods.WM_QUIT, IntPtr.Zero, IntPtr.Zero);
-    }
-
-    public (int Left, int Right) Read()
-    {
-        lock (_gate)
-        {
-            long now = Environment.TickCount64;
-            while (_left.Count > 0 && now - _left.Peek() > 1000) _left.Dequeue();
-            while (_right.Count > 0 && now - _right.Peek() > 1000) _right.Dequeue();
-            return (_left.Count, _right.Count);
-        }
-    }
-
-    private IntPtr Callback(int code, IntPtr wParam, IntPtr lParam)
-    {
-        if (code >= 0)
-        {
-            int msg = (int)wParam;
-            lock (_gate)
-            {
-                if (msg == NativeMethods.WM_LBUTTONDOWN) _left.Enqueue(Environment.TickCount64);
-                else if (msg == NativeMethods.WM_RBUTTONDOWN) _right.Enqueue(Environment.TickCount64);
-            }
-        }
-        return NativeMethods.CallNextHookEx(_hook, code, wParam, lParam);
     }
 }

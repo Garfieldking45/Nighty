@@ -10,10 +10,10 @@
             <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <StackPanel>
-                    <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="16" Padding="14,7" HorizontalAlignment="Left">
+                    <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="16" Padding="14,7" HorizontalAlignment="Left">
                         <StackPanel Orientation="Horizontal">
                             <c:StatusDot Kind="{Binding StateKind}"/>
-                            <TextBlock Text="{Binding ChipText}" Margin="9,0,0,0" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"/>
+                            <TextBlock Text="{Binding ChipText}" Margin="9,0,0,0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                     </Border>
                     <TextBlock Text="{Binding HeroTitle}" FontSize="28" FontWeight="SemiBold" Margin="0,16,0,0"/>
@@ -21,7 +21,7 @@
                     <UniformGrid Rows="1" Columns="6" Margin="0,26,0,0">
                         <StackPanel>
                             <TextBlock Text="TARGET" Style="{StaticResource Label}"/>
-                            <TextBlock Margin="0,4,0,0"><Run Text="{Binding TargetValue, Mode=OneWay}" FontSize="24" FontWeight="SemiBold"/><Run Text=" CPS" FontSize="13" Foreground="{StaticResource MutedBrush}"/></TextBlock>
+                            <TextBlock Margin="0,4,0,0"><Run Text="{Binding TargetValue, Mode=OneWay}" FontSize="24" FontWeight="SemiBold"/><Run Text=" CPS" FontSize="13" Foreground="{DynamicResource MutedBrush}"/></TextBlock>
                         </StackPanel>
                         <StackPanel>
                             <TextBlock Text="MEASURED" Style="{StaticResource Label}"/>
@@ -29,7 +29,7 @@
                         </StackPanel>
                         <StackPanel>
                             <TextBlock Text="DUTY" Style="{StaticResource Label}"/>
-                            <TextBlock Margin="0,4,0,0"><Run Text="{Binding DutyValue, Mode=OneWay}" FontSize="24" FontWeight="SemiBold"/><Run Text=" %" FontSize="13" Foreground="{StaticResource MutedBrush}"/></TextBlock>
+                            <TextBlock Margin="0,4,0,0"><Run Text="{Binding DutyValue, Mode=OneWay}" FontSize="24" FontWeight="SemiBold"/><Run Text=" %" FontSize="13" Foreground="{DynamicResource MutedBrush}"/></TextBlock>
                         </StackPanel>
                         <StackPanel>
                             <TextBlock Text="BUTTON" Style="{StaticResource Label}"/>
@@ -48,8 +48,8 @@
                 <StackPanel Grid.Column="1" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="30,12,0,0">
                     <Button Style="{StaticResource HeroButton}" Command="{Binding StartCommand}" AutomationProperties.Name="Start or stop clicking">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding StartGlyph}" Style="{StaticResource Icon}" FontSize="16" Foreground="{StaticResource OnAccentBrush}"/>
-                            <TextBlock Text="{Binding StartLabel}" Margin="12,0,0,0" Foreground="{StaticResource OnAccentBrush}" FontSize="17" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding StartGlyph}" Style="{StaticResource Icon}" FontSize="16" Foreground="{DynamicResource OnAccentBrush}"/>
+                            <TextBlock Text="{Binding StartLabel}" Margin="12,0,0,0" Foreground="{DynamicResource OnAccentBrush}" FontSize="17" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
                     <TextBlock Text="{Binding StartHint}" Style="{StaticResource Muted}" HorizontalAlignment="Center" Margin="0,14,0,0"/>
@@ -69,7 +69,7 @@
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <c:CardHeader Icon="&#xE945;" Title="Click speed" Subtitle="Clicks per second">
-                            <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="3">
+                            <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="3">
                                 <StackPanel Orientation="Horizontal">
                                     <RadioButton Style="{StaticResource SegmentButton}" GroupName="speedmode" Content="Exact"
                                                  IsChecked="{Binding Settings.UseRange, Converter={StaticResource Eq}, ConverterParameter=False}"/>
@@ -82,23 +82,23 @@
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource BigNumberBox}">
-                                    <TextBlock VerticalAlignment="Center"><Run Text="{Binding CpsText, Mode=OneWay}" FontSize="40" FontWeight="SemiBold"/><Run Text=" CPS" FontSize="20" Foreground="{StaticResource MutedBrush}"/></TextBlock>
+                                    <TextBlock VerticalAlignment="Center"><Run Text="{Binding CpsText, Mode=OneWay}" FontSize="40" FontWeight="SemiBold"/><Run Text=" CPS" FontSize="20" Foreground="{DynamicResource MutedBrush}"/></TextBlock>
                                 </Border>
                                 <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE738;" Width="52" Height="52" Margin="18,0,8,0" Command="{Binding CpsDown}" AutomationProperties.Name="Decrease CPS"/>
                                 <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE710;" Width="52" Height="52" Command="{Binding CpsUp}" AutomationProperties.Name="Increase CPS"/>
                             </Grid>
-                            <Slider Margin="0,22,0,0" Minimum="1" Maximum="50" Value="{Binding Settings.Cps, Mode=TwoWay}" TickFrequency="0.5" IsSnapToTickEnabled="True" SmallChange="0.5" LargeChange="2"/>
+                            <Slider Margin="0,22,0,0" Minimum="1" Maximum="100" Value="{Binding Settings.Cps, Mode=TwoWay}" TickFrequency="0.5" IsSnapToTickEnabled="True" SmallChange="0.5" LargeChange="2"/>
                             <Grid Margin="0,6,0,0">
                                 <TextBlock Text="1" Style="{StaticResource Muted}" HorizontalAlignment="Left"/>
                                 <TextBlock Text="{Binding PeriodText}" FontWeight="Medium" HorizontalAlignment="Center"/>
-                                <TextBlock Text="50" Style="{StaticResource Muted}" HorizontalAlignment="Right"/>
+                                <TextBlock Text="100" Style="{StaticResource Muted}" HorizontalAlignment="Right"/>
                             </Grid>
                         </StackPanel>
                         <StackPanel Visibility="{Binding Settings.UseRange, Converter={StaticResource Eq}, ConverterParameter=True}">
                             <TextBlock Text="MINIMUM CPS" Style="{StaticResource Label}" Margin="0,0,0,6"/>
-                            <c:ValueStepper Value="{Binding Settings.MinCps, Mode=TwoWay}" Minimum="1" Maximum="50" Step="0.5" Decimals="1"/>
+                            <c:ValueStepper Value="{Binding Settings.MinCps, Mode=TwoWay}" Minimum="1" Maximum="100" Step="0.5" Decimals="1"/>
                             <TextBlock Text="MAXIMUM CPS" Style="{StaticResource Label}" Margin="0,14,0,6"/>
-                            <c:ValueStepper Value="{Binding Settings.MaxCps, Mode=TwoWay}" Minimum="1" Maximum="50" Step="0.5" Decimals="1"/>
+                            <c:ValueStepper Value="{Binding Settings.MaxCps, Mode=TwoWay}" Minimum="1" Maximum="100" Step="0.5" Decimals="1"/>
                             <TextBlock Style="{StaticResource Muted}" Margin="0,10,0,0" Text="Each click picks a new random speed between the two values."/>
                         </StackPanel>
                         <Border Style="{StaticResource Divider}" Margin="0,18"/>
@@ -110,7 +110,7 @@
                             </StackPanel>
                             <Button Grid.Column="1" Content="Calibrate" Command="{Binding Calibrate}" MinWidth="110"/>
                         </Grid>
-                        <TextBlock Text="{Binding CalibrationMessage}" Style="{StaticResource Muted}" Margin="0,8,0,0" Foreground="{StaticResource SuccessBrush}"
+                        <TextBlock Text="{Binding CalibrationMessage}" Style="{StaticResource Muted}" Margin="0,8,0,0" Foreground="{DynamicResource SuccessBrush}"
                                    Visibility="{Binding CalibrationMessage, Converter={StaticResource NullVisible}}"/>
                     </StackPanel>
                 </Border>
@@ -121,13 +121,13 @@
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <Border Style="{StaticResource BigNumberBox}">
-                                <TextBlock VerticalAlignment="Center"><Run Text="{Binding DutyText, Mode=OneWay}" FontSize="40" FontWeight="SemiBold"/><Run Text=" %" FontSize="20" Foreground="{StaticResource MutedBrush}"/></TextBlock>
+                                <TextBlock VerticalAlignment="Center"><Run Text="{Binding DutyText, Mode=OneWay}" FontSize="40" FontWeight="SemiBold"/><Run Text=" %" FontSize="20" Foreground="{DynamicResource MutedBrush}"/></TextBlock>
                             </Border>
                             <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE738;" Width="52" Height="52" Margin="18,0,8,0" Command="{Binding DutyDown}" AutomationProperties.Name="Decrease duty cycle"/>
                             <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE710;" Width="52" Height="52" Command="{Binding DutyUp}" AutomationProperties.Name="Increase duty cycle"/>
                         </Grid>
                         <Slider Margin="0,22,0,0" Minimum="5" Maximum="95" Value="{Binding Settings.DutyCycle, Mode=TwoWay}" TickFrequency="5" IsSnapToTickEnabled="True" SmallChange="5" LargeChange="10"/>
-                        <Border Background="{StaticResource Panel2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Margin="0,16,0,0">
+                        <Border Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Margin="0,16,0,0">
                             <c:DutyWaveform Height="104" DutyCycle="{Binding Settings.DutyCycle}"/>
                         </Border>
                     </StackPanel>
@@ -140,6 +140,16 @@
                         <c:SettingRow Title="Randomize" Description="Varies the gap between hits (60-140% of the base) so the rhythm is never exactly even." Margin="0,14,0,0">
                             <CheckBox IsChecked="{Binding Settings.Jitter}"/>
                         </c:SettingRow>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <c:CardHeader Icon="&#xE7C1;" Title="HitFix" Subtitle="Steadier, more consistent clicks"/>
+                        <c:SettingRow Title="Enable HitFix" Description="While clicking, the clicker thread runs at time-critical priority, pinned to its own fast CPU core, with the garbage collector paused and an exact final wait before every click. Clicks land within a fraction of a millisecond, every time. It keeps one core busy while clicking, so leave it off on 2-core PCs.">
+                            <CheckBox IsChecked="{Binding Settings.HitFix}" AutomationProperties.Name="Enable HitFix"/>
+                        </c:SettingRow>
+                        <c:InfoBanner Kind="Info" Text="{Binding EngineText}" Margin="0,12,0,0"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
@@ -181,7 +191,7 @@
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <c:CardHeader Icon="&#xE765;" Title="Activation" Subtitle="How your hotkey starts and stops clicking"/>
-                        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="14" Padding="4">
+                        <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="14" Padding="4">
                             <UniformGrid Rows="1" Columns="2">
                                 <RadioButton Style="{StaticResource SegmentButton}" GroupName="act" Content="Toggle" ToolTip="Press once to start, again to stop"
                                              IsChecked="{Binding Settings.Mode, Converter={StaticResource Eq}, ConverterParameter=Toggle}"/>
@@ -206,6 +216,19 @@
 
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
+                        <c:CardHeader Icon="&#xE916;" Title="Auto stop" Subtitle="Bursts, time limits and a head start"/>
+                        <TextBlock Text="STOP AFTER (CLICKS)" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <c:ValueStepper Value="{Binding StopAfterClicks, Mode=TwoWay}" Minimum="0" Maximum="1000" Step="1"/>
+                        <TextBlock Text="TIME LIMIT (SECONDS)" Style="{StaticResource Label}" Margin="0,14,0,6"/>
+                        <c:ValueStepper Value="{Binding TimeLimitSec, Mode=TwoWay}" Minimum="0" Maximum="300" Step="1"/>
+                        <TextBlock Text="START DELAY (SECONDS)" Style="{StaticResource Label}" Margin="0,14,0,6"/>
+                        <c:ValueStepper Value="{Binding StartDelaySec, Mode=TwoWay}" Minimum="0" Maximum="10" Step="0.5" Decimals="1"/>
+                        <TextBlock Text="{Binding AutoStopHint}" Style="{StaticResource Muted}" Margin="0,12,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
                         <c:CardHeader Icon="&#xE74E;" Title="Presets" Subtitle="Save this setup and load it any time"/>
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -219,7 +242,7 @@
                         <ItemsControl ItemsSource="{Binding Presets}" Margin="0,10,0,0">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="{StaticResource Panel2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,10" Margin="0,0,0,8">
+                                    <Border Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,10" Margin="0,0,0,8">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
