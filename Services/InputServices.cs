@@ -33,12 +33,15 @@ internal static class Wait
         {
             double left = (target - Now) / TicksPerMs;
             if (left <= 0) return;
-            if (left > spinMs + 0.1) Sleep(Math.Min(left - spinMs, 15));
+            if (left > spinMs + 0.1) Sleep(Math.Min(left - spinMs, 15), ct);
             else Thread.SpinWait(8);
         }
     }
 
-    private static void Sleep(double ms)
+    [ThreadStatic] private static IntPtr[]? _handles;
+
+    /// <summary>Sleeps on the high-resolution timer, but wakes immediately when the token is cancelled, so Stop() never waits out a 15 ms sleep.</summary>
+    private static void Sleep(double ms, CancellationToken ct)
     {
         if (!_timerFailed && _timer == IntPtr.Zero)
         {
@@ -50,7 +53,14 @@ internal static class Wait
             long due = -(long)(ms * 10_000);   // 100 ns units, negative = relative
             if (NativeMethods.SetWaitableTimer(_timer, ref due, 0, IntPtr.Zero, IntPtr.Zero, false))
             {
-                NativeMethods.WaitForSingleObject(_timer, 50);
+                var h = _handles ??= new IntPtr[2];
+                h[0] = _timer;
+                if (ct.CanBeCanceled)
+                {
+                    h[1] = ct.WaitHandle.SafeWaitHandle.DangerousGetHandle();
+                    NativeMethods.WaitForMultipleObjects(2, h, false, 50);
+                }
+                else NativeMethods.WaitForSingleObject(_timer, 50);
                 return;
             }
         }
@@ -107,6 +117,31 @@ internal sealed class ThreadBoost : IDisposable
     }
 }
 
+/// <summary>Where the clicker's mouse presses go. The real one is SendInput; tests plug in a recorder.</summary>
+internal interface IClickSink
+{
+    /// <summary>Sends one button edge. False = Windows refused it.</summary>
+    bool Button(ClickButton button, bool down);
+}
+
+internal sealed class SendInputSink : IClickSink
+{
+    public bool Button(ClickButton button, bool down) => InputSender.MouseButton(button, down);
+}
+
+/// <summary>The few things the clicker asks the rest of the app. Defaults use the live app; tests replace them.</summary>
+internal sealed class ClickerHost
+{
+    public Func<PrecisionMode> Precision { get; init; } = () => Svc.S.General.Precision;
+    /// <summary>False pauses clicking (Nighty itself in front, or Roblox not in front when that option is on).</summary>
+    public Func<ClickerSettings, bool> Allowed { get; init; } = s => !RobloxService.IsOwnWindowForeground() && (!s.OnlyWhenRobloxFocused || Svc.Roblox.IsForeground);
+    /// <summary>True while another macro owns the mouse (the crossbow shot).</summary>
+    public Func<bool> Busy { get; init; } = () => Svc.Bow.IsRunning;
+    public Action AfterClick { get; init; } = () => Svc.Bow.TryAuto();
+    /// <summary>Process priority class and GC latency mode. Off in tests so they don't change the test runner.</summary>
+    public bool ProcessTuning { get; init; } = true;
+}
+
 /// <summary>
 /// Background auto-clicker. Uses SendInput and an absolute timeline (each click is scheduled from the previous
 /// deadline, so timing error never accumulates). Honours the duty cycle, measures the clicks it really sent, and with
@@ -114,23 +149,43 @@ internal sealed class ThreadBoost : IDisposable
 /// </summary>
 public sealed class ClickerService
 {
+    /// <summary>
+    /// One run of the clicker. Start() makes a new one, and every Stop (from the UI, the hotkey or the loop itself) names the exact
+    /// session it means, so an old loop that is still winding down can never stop the one that replaced it.
+    /// </summary>
+    private sealed class Session
+    {
+        public readonly CancellationTokenSource Cts = new();
+        public Thread? Thread;
+        /// <summary>A button-down was sent and its release has not been (set and cleared by the loop thread).</summary>
+        public volatile bool Pressed;
+        public ClickButton Button;
+        public bool TuningHeld;
+    }
+
     private readonly ClickerSettings _s;
     private readonly Random _rng = new();
-    private CancellationTokenSource? _cts;
     private readonly Queue<long> _stamps = new();
     private readonly object _gate = new();
+    private readonly object _life = new();        // guards _cur / _winding / tuning counts
+    private Session? _cur;                         // the running session, or null
+    private Session? _winding;                     // the last one to stop: Start() waits for it so two loops never overlap
 
     private System.Runtime.GCLatencyMode _gcMode;
     private ProcessPriorityClass _priorClass = ProcessPriorityClass.Normal;
-    private bool _noGcRegion;
+    private int _tuneHolders;                      // sessions that currently hold the process tuning (timer resolution, priority)
 
-    public ClickerService(ClickerSettings settings) { _s = settings; }
+    private readonly IClickSink _sink;
+    private readonly ClickerHost _host;
+
+    public ClickerService(ClickerSettings settings) : this(settings, new SendInputSink(), new ClickerHost()) { }
+    internal ClickerService(ClickerSettings settings, IClickSink sink, ClickerHost host) { _s = settings; _sink = sink; _host = host; }
 
     /// <summary>Hold mode: returns true while the activation key is still down. Checked on the clicker thread so a
     /// UI stall can never keep it swinging after release.</summary>
     public Func<bool>? KeepClicking { get; set; }
 
-    public bool IsClicking => _cts != null;
+    public bool IsClicking => Volatile.Read(ref _cur) != null;
     public event Action? StateChanged;
     /// <summary>Raised (from the clicker thread) when the clicker stops itself: click count or time limit reached.</summary>
     public event Action<string>? AutoStopped;
@@ -181,25 +236,32 @@ public sealed class ClickerService
 
     public void Start()
     {
-        if (_cts != null) return;
-        var cts = new CancellationTokenSource();
-        _cts = cts;
+        Session s;
+        Session? previous;
+        lock (_life)
+        {
+            if (_cur != null) return;
+            s = new Session { Button = _s.Button };
+            _cur = s;
+            previous = _winding;
+        }
+        // A session that stopped itself (hold key released, click limit) may still be finishing its last release; let it end first.
+        previous?.Thread?.Join(250);
+
         Interlocked.Exchange(ref _total, 0);
         bool hitFix = _s.HitFix;
-        NativeMethods.timeBeginPeriod(1);
-        _gcMode = System.Runtime.GCSettings.LatencyMode;
-        try { System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency; } catch { }   // avoid long GC pauses mid-fight
+        AcquireTuning(s);
         try
         {
-            using var proc = Process.GetCurrentProcess();
-            _priorClass = proc.PriorityClass;
-            // High, never Real-time: a time-critical clicker thread inside a High process lands on the same scheduling
-            // level without letting the whole app (and its UI thread) outrank Windows' own system work.
-            proc.PriorityClass = hitFix ? ProcessPriorityClass.High : ProcessPriorityClass.AboveNormal;
+            s.Thread = new Thread(() => Loop(s, hitFix)) { IsBackground = true, Priority = ThreadPriority.Highest, Name = "Nighty clicker" };
+            s.Thread.Start();
         }
-        catch { }
-        var t = new Thread(() => Loop(cts.Token, hitFix)) { IsBackground = true, Priority = ThreadPriority.Highest, Name = "Nighty clicker" };
-        t.Start();
+        catch (Exception ex)
+        {
+            Log.Error("Clicker thread could not start", ex);
+            StopSession(s);
+            return;
+        }
         Log.Info("Clicker started" + (hitFix ? " (HitFix)" : ""));
         PlaySound(start: true);
         StateChanged?.Invoke();
@@ -210,21 +272,38 @@ public sealed class ClickerService
         try { Application.Current?.Dispatcher.BeginInvoke(() => { if (start) Controls.Sfx.Start(); else Controls.Sfx.Stop(); }); } catch { }
     }
 
+    /// <summary>
+    /// Stops the running session. When this returns the clicker thread has finished: nothing more will be sent and no
+    /// button is left held (unless it was stopped from the clicker thread itself, which returns straight away).
+    /// </summary>
     public void Stop()
     {
-        var cts = _cts;
-        if (cts == null) return;
-        _cts = null;
-        cts.Cancel();
-        NativeMethods.timeEndPeriod(1);
-        if (_noGcRegion)
+        var s = Volatile.Read(ref _cur);
+        if (s != null) StopSession(s);
+    }
+
+    private void StopSession(Session s)
+    {
+        lock (_life)
         {
-            _noGcRegion = false;
-            try { if (System.Runtime.GCSettings.LatencyMode == System.Runtime.GCLatencyMode.NoGCRegion) GC.EndNoGCRegion(); } catch { }
+            if (!ReferenceEquals(_cur, s)) return;   // already stopped, or a newer session owns the clicker now
+            _cur = null;
+            _winding = s;
         }
-        try { System.Runtime.GCSettings.LatencyMode = _gcMode; } catch { }
-        try { using var proc = Process.GetCurrentProcess(); proc.PriorityClass = _priorClass; } catch { }
-        Wait.SpinMs = 0.4;
+        s.Cts.Cancel();
+        if (s.Thread != null && s.Thread != Thread.CurrentThread)
+        {
+            // Waiting here is what makes "Stop() returned" mean "the mouse is quiet". The loop notices the cancel
+            // within a fraction of a millisecond; the generous limit only guards against a stuck thread.
+            if (!s.Thread.Join(1000)) Log.Warn("Clicker thread did not finish within 1 s of Stop");
+        }
+        // If the thread died or hung while a button was down, release it here so it can never stay stuck.
+        if (s.Pressed)
+        {
+            s.Pressed = false;
+            try { _sink.Button(s.Button, false); } catch { }
+        }
+        ReleaseTuning(s);
         lock (_gate) _stamps.Clear();
         EngineInfo = "";
         Log.Info("Clicker stopped");
@@ -232,30 +311,84 @@ public sealed class ClickerService
         StateChanged?.Invoke();
     }
 
-    private void AutoStop(string reason)
+    // Process-wide settings are shared by every session, so they are applied by the first and restored by the last.
+    private void AcquireTuning(Session s)
     {
-        Log.Info("Clicker auto-stop: " + reason);
-        Stop();
-        AutoStopped?.Invoke(reason);
-    }
-
-    private void Loop(CancellationToken ct, bool hitFix)
-    {
-        using var boost = ThreadBoost.Apply(hitFix);
-        EngineInfo = hitFix
-            ? $"HitFix on · {(boost.Core > 0 ? $"core {boost.Core}" : "shared cores")} · time-critical thread"
-            : "Standard timing";
-        if (hitFix)
+        lock (_life)
         {
-            // Take the garbage collector out of the picture while clicking. Starting the region does one collection,
-            // which is why it happens here on the clicker thread and not on the UI.
-            try { _noGcRegion = GC.TryStartNoGCRegion(24 * 1024 * 1024); } catch { _noGcRegion = false; }
+            s.TuningHeld = true;
+            if (_tuneHolders++ > 0) return;
+            NativeMethods.timeBeginPeriod(1);
+            if (!_host.ProcessTuning) return;
+            _gcMode = System.Runtime.GCSettings.LatencyMode;
+            try { System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency; } catch { }   // avoid long GC pauses mid-fight
+            try
+            {
+                using var proc = Process.GetCurrentProcess();
+                _priorClass = proc.PriorityClass;
+                // High, never Real-time: a time-critical clicker thread inside a High process lands on the same scheduling
+                // level without letting the whole app (and its UI thread) outrank Windows' own system work.
+                proc.PriorityClass = _s.HitFix ? ProcessPriorityClass.High : ProcessPriorityClass.AboveNormal;
+            }
+            catch { }
         }
-        RunLoop(ct, hitFix);
     }
 
-    private void RunLoop(CancellationToken ct, bool hitFix)
+    private void ReleaseTuning(Session s)
     {
+        lock (_life)
+        {
+            if (!s.TuningHeld) return;
+            s.TuningHeld = false;
+            if (--_tuneHolders > 0) return;
+            NativeMethods.timeEndPeriod(1);
+            Wait.SpinMs = 0.4;
+            if (!_host.ProcessTuning) return;
+            try { System.Runtime.GCSettings.LatencyMode = _gcMode; } catch { }
+            try { using var proc = Process.GetCurrentProcess(); proc.PriorityClass = _priorClass; } catch { }
+        }
+    }
+
+    private void Loop(Session s, bool hitFix)
+    {
+        try
+        {
+            using var boost = ThreadBoost.Apply(hitFix);
+            EngineInfo = hitFix
+                ? $"HitFix on · {(boost.Core > 0 ? $"core {boost.Core}" : "shared cores")} · time-critical thread"
+                : "Standard timing";
+            RunLoop(s, hitFix);
+        }
+        catch (Exception ex)
+        {
+            // Whatever went wrong, the clicker must not be left looking "on" with nothing running.
+            Log.Error("Clicker loop failed", ex);
+            StopSession(s);
+        }
+    }
+
+    /// <summary>
+    /// Waits for the next click, but keeps looking at the hold key so letting go cancels it right away.
+    /// False = do not click (stopped, or the key was released).
+    /// </summary>
+    private bool WaitForNext(Session s, long next, double spin)
+    {
+        var ct = s.Cts.Token;
+        long spinTicks = Wait.FromMs(spin), chunk = Wait.FromMs(4);
+        while (!ct.IsCancellationRequested)
+        {
+            if (KeepClicking is { } keep && !keep()) return false;
+            long now = Wait.Now, left = next - now;
+            if (left <= 0) break;
+            if (left > spinTicks + Wait.FromMs(0.2)) Wait.Until(now + Math.Min(left - spinTicks, chunk), ct, 0.1);   // sleep in short slices
+            else { Wait.Until(next, ct, spin); break; }                                                              // last stretch: exact spin
+        }
+        return !ct.IsCancellationRequested && !(KeepClicking is { } k2 && !k2());
+    }
+
+    private void RunLoop(Session s, bool hitFix)
+    {
+        var ct = s.Cts.Token;
         bool allowed = true;
         long nextCheck = 0;
         int refused = 0;
@@ -266,15 +399,15 @@ public sealed class ClickerService
 
         while (!ct.IsCancellationRequested)
         {
-            if (KeepClicking is { } keep && !keep()) { Stop(); break; }
+            if (KeepClicking is { } keep && !keep()) { StopSession(s); return; }
 
-            double spin = SpinFor(Svc.S.General.Precision, hitFix);
+            double spin = SpinFor(_host.Precision(), hitFix);
             Wait.SpinMs = spin;
 
             // Foreground checks involve process lookups, so refresh them every 40 ms instead of every click.
             if (Wait.Now >= nextCheck)
             {
-                allowed = !RobloxService.IsOwnWindowForeground() && (!_s.OnlyWhenRobloxFocused || Svc.Roblox.IsForeground);
+                allowed = _host.Allowed(_s);
                 nextCheck = Wait.Now + Wait.FromMs(40);
             }
             if (!allowed)
@@ -293,35 +426,48 @@ public sealed class ClickerService
             double sliceMs = periodMs / perHit;
             double holdMs = Math.Clamp(sliceMs * _s.DutyCycle / 100.0, Math.Min(4, sliceMs - 0.3), Math.Max(0.5, sliceMs - 1));
             var button = _s.Button;
+            s.Button = button;
 
-            Wait.Until(next, ct, spin);
-            if (ct.IsCancellationRequested) break;
-            if (Svc.Bow.IsRunning) { next = Wait.Now + Wait.FromMs(1); continue; }   // don't interleave sword clicks with the crossbow shot
+            if (!WaitForNext(s, next, spin))
+            {
+                if (ct.IsCancellationRequested) break;
+                StopSession(s);   // the hold key was let go while waiting: no click
+                return;
+            }
+            if (_host.Busy()) { next = Wait.Now + Wait.FromMs(1); continue; }   // don't interleave sword clicks with the crossbow shot
             for (int k = 0; k < perHit && !ct.IsCancellationRequested; k++)
             {
-                if (!InputSender.MouseButton(button, true))
+                if (!_sink.Button(button, true))
                 {
                     // SendInput returns 0 when Windows blocks injected input into a higher-integrity window.
-                    if (++refused >= 3) { Stop(); Blocked?.Invoke(); return; }
+                    if (++refused >= 3) { StopSession(s); Blocked?.Invoke(); return; }
                     continue;
                 }
                 refused = 0;
+                s.Pressed = true;
                 try { Wait.Ms(holdMs, ct); }
-                finally { InputSender.MouseButton(button, false); }   // never leave the button stuck down
+                finally { _sink.Button(button, false); s.Pressed = false; }   // never leave the button stuck down
                 lock (_gate) _stamps.Enqueue(Environment.TickCount64);
                 Interlocked.Increment(ref _total);
                 if (k < perHit - 1) Wait.Ms(sliceMs - holdMs, ct);
             }
 
-            Svc.Bow.TryAuto();   // react right after a click instead of waiting for the UI timer
+            _host.AfterClick();   // react right after a click instead of waiting for the UI timer
 
-            if (_s.StopAfterClicks > 0 && Interlocked.Read(ref _total) >= _s.StopAfterClicks) { AutoStop($"Stopped after {_s.StopAfterClicks:N0} clicks."); return; }
-            if (Wait.Now >= deadline) { AutoStop("Stopped: the time limit is up."); return; }
+            if (_s.StopAfterClicks > 0 && Interlocked.Read(ref _total) >= _s.StopAfterClicks) { Finish(s, $"Stopped after {_s.StopAfterClicks:N0} clicks."); return; }
+            if (Wait.Now >= deadline) { Finish(s, "Stopped: the time limit is up."); return; }
 
             // Accumulate so an overshoot never compounds into a slow CPS, and resync after a stall instead of bursting.
             next += Wait.FromMs(periodMs);
             long now = Wait.Now;
             if (next < now) next = now + Wait.FromMs(periodMs);
         }
+    }
+
+    private void Finish(Session s, string reason)
+    {
+        Log.Info("Clicker auto-stop: " + reason);
+        StopSession(s);
+        AutoStopped?.Invoke(reason);
     }
 }

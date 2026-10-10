@@ -44,6 +44,14 @@ public sealed class SlotMacroConfig : ObservableObject
     public SlotMacroKind Kind { get; set; }
     public bool Enabled { get => _enabled; set => Set(ref _enabled, value); }
     public bool OnlyWhenRobloxFocused { get => _onlyRoblox; set => Set(ref _onlyRoblox, value); }
+    private double _equipMs = 35, _shotHoldMs = 35, _swapMs = 25;
+    /// <summary>Crossbow and Whim: time from pressing the weapon's number key to the shot. Too short and the click lands before the weapon is equipped.</summary>
+    public double EquipDelayMs { get => _equipMs; set => Set(ref _equipMs, Math.Clamp(Math.Round(value), 22, 200)); }
+    /// <summary>How long the shot is held down. At least two frames at 60 FPS, because a game that reads the mouse once per frame can miss a shorter press.</summary>
+    public double ShotHoldMs { get => _shotHoldMs; set => Set(ref _shotHoldMs, Math.Clamp(Math.Round(value), 10, 150)); }
+    /// <summary>Pause between the shot and swapping to the sword, so the swap can't cancel a shot that is still leaving.</summary>
+    public double SwapDelayMs { get => _swapMs; set => Set(ref _swapMs, Math.Clamp(Math.Round(value), 0, 150)); }
+    [JsonIgnore] public bool IsSwapAndSwing => Kind is SlotMacroKind.Crossbow or SlotMacroKind.Whim;
     private bool _onlySlotOne = true;
     /// <summary>Auto Crossbow only: start only while hotbar slot 1 is the slot you are holding (pick it with the 1 key). Other macros ignore this.</summary>
     public bool OnlyInSlotOne { get => _onlySlotOne; set => Set(ref _onlySlotOne, value); }

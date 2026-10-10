@@ -11,11 +11,22 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.0.1", "2026-10-10", new[]
+        {
+            "Auto clicker reliability: Stop now waits until the clicker has really stopped, so no click can arrive after you turn it off and a button can never be left held down",
+            "Fixed a hold-mode race where a clicker run that was already finishing could stop the next run you had just started",
+            "Fixed letting go of the hold key during the gap between two clicks still sending one more click (most noticeable at low CPS)",
+            "Waits now wake the moment the clicker is stopped instead of finishing a sleep of up to 15 ms",
+            "Removed HitFix's blocking garbage-collection step at every start, which could stall the UI and delay the first click",
+            "Auto Crossbow and Auto Whim: the shot now waits longer for the weapon to equip, is held for at least two frames, and pauses before swapping to the sword, so it fires more reliably. Equip delay, Shot hold and Swap delay are adjustable on the Extras page",
+            "Added an automated test suite for the clicker (tests folder)",
+        }),
+
         new("2.0.0", "2026-10-10", new[]
         {
             "New shell: custom top bar (breadcrumb, live Clicker / Roblox / Game Mode status, pin, window buttons), a loading screen that reports each real start-up step, and smooth motion everywhere: animated page changes with cards rising in, hover glow and press squish on buttons, sliding switches, an animated sidebar indicator",
             "8 themes (Midnight, Light, Cyberpunk, Monochrome, Ocean, Forest, Sunset, Sakura) that fade into each other, accent swatches, your own colors for every part of the interface that survive theme changes, a contrast warning, a font picker, a background picture (PNG, JPG or animated GIF), optional sound effects, and an Animations switch",
-            "Auto clicker, better hit registration: HitFix (time-critical thread pinned to its own core, garbage collector paused while clicking, exact final wait before every click), Efficient / Balanced / Precise timing, clicks are checked and you are told when Windows blocks them (a game running as administrator), a timing test that reports measured CPS, jitter, average and 99th-percentile error, and the process CPU it used",
+            "Auto clicker, better hit registration: HitFix (time-critical thread pinned to its own core, no long garbage-collection pauses while clicking, exact final wait before every click), Efficient / Balanced / Precise timing, clicks are checked and you are told when Windows blocks them (a game running as administrator), a timing test that reports measured CPS, jitter, average and 99th-percentile error, and the process CPU it used",
             "Auto stop: stop after a number of clicks or a time limit, and a start delay",
             "Gaming: Calm background apps (browsers, launchers and updaters wait while Roblox runs) and Free up memory, with live counters; everything is put back when Game Mode ends",
             "Utility: software brightness boost and dimming, a mouse test pad (real pointer multiplier, acceleration check, polling rate), and QoS 'use on home Wi-Fi and Ethernet'",

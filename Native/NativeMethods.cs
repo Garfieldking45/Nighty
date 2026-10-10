@@ -91,6 +91,7 @@ internal static class NativeMethods
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern bool SetWaitableTimer(IntPtr timer, ref long dueTime, int period, IntPtr fn, IntPtr arg, bool resume);
     [DllImport("kernel32.dll")] public static extern uint WaitForSingleObject(IntPtr h, uint ms);
+    [DllImport("kernel32.dll")] public static extern uint WaitForMultipleObjects(uint count, IntPtr[] handles, bool waitAll, uint ms);
     public const uint CREATE_WAITABLE_TIMER_HIGH_RESOLUTION = 0x2, TIMER_ALL_ACCESS = 0x1F0003;
 
     // ---------- Scheduling hints ----------

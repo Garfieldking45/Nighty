@@ -146,7 +146,7 @@
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <c:CardHeader Icon="&#xE7C1;" Title="HitFix" Subtitle="Steadier, more consistent clicks"/>
-                        <c:SettingRow Title="Enable HitFix" Description="While clicking, the clicker thread runs at time-critical priority, pinned to its own fast CPU core, with the garbage collector paused and an exact final wait before every click. Clicks land within a fraction of a millisecond, every time. It keeps one core busy while clicking, so leave it off on 2-core PCs.">
+                        <c:SettingRow Title="Enable HitFix" Description="While clicking, the clicker thread runs at time-critical priority, pinned to its own fast CPU core, without long garbage-collection pauses, and with an exact final wait before every click. Clicks land within a fraction of a millisecond, every time. It keeps one core busy while clicking, so leave it off on 2-core PCs.">
                             <CheckBox IsChecked="{Binding Settings.HitFix}" AutomationProperties.Name="Enable HitFix"/>
                         </c:SettingRow>
                         <c:InfoBanner Kind="Info" Text="{Binding EngineText}" Margin="0,12,0,0"/>

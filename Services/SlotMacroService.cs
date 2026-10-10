@@ -86,10 +86,10 @@ public sealed class SlotMacroService
         finally { InputSender.KeyScan(vk, false); }
     }
 
-    private static void Click(CancellationToken ct, ClickButton b = ClickButton.Left)
+    private static void Click(CancellationToken ct, ClickButton b = ClickButton.Left, double holdMs = ClickHoldMs)
     {
         InputSender.MouseButton(b, true);
-        try { Wait.Ms(ClickHoldMs, ct); }
+        try { Wait.Ms(holdMs, ct); }
         finally { InputSender.MouseButton(b, false); }   // never leave the button stuck down
     }
 
@@ -145,6 +145,19 @@ public sealed class SlotMacroService
     /// Weapon slot, fire, then press the sword key and swing while it is still held (the sword selects on key down, so
     /// there is no swap delay), and keep swinging through the cooldown. Repeats until stopped; Press mode does one cycle.
     /// </summary>
+    /// <summary>When each part of one shot happens, in ms from the moment the weapon key goes down. Pure, so it can be tested.</summary>
+    internal readonly record struct ShotPlan(double KeyDown, double KeyUp, double ShotDown, double ShotUp, double SwordKey);
+
+    internal static ShotPlan PlanShot(SlotMacroConfig c)
+    {
+        // The shot must come after the weapon key has been released and the weapon has had time to equip,
+        // be held for at least a frame or two, and only then is the sword selected.
+        double equip = Math.Max(c.EquipDelayMs, KeyHoldMs + 2);
+        double hold = Math.Max(c.ShotHoldMs, ClickHoldMs);
+        double swap = Math.Max(0, c.SwapDelayMs);
+        return new ShotPlan(0, KeyHoldMs, equip, equip + hold, equip + hold + swap);
+    }
+
     private static void RunSwapAndSwing(SlotMacroConfig c, double cooldownMs, CancellationToken ct)
     {
         double gap = GapMs();
@@ -154,10 +167,20 @@ public sealed class SlotMacroService
             // Holding blocks: leave them alone (this also ends the run if you pick the block slot mid-fight).
             if (c.BlockSlot > 0 && Svc.Bow.CurrentSlot == (int)c.BlockSlot) return;
 
-            Tap(c.SlotA, ct);
-            Wait.Ms(5, ct);
-            Click(ct);
+            // One schedule from a single start time, so waits can't pile up and shift the shot.
+            var plan = PlanShot(c);
+            long t0 = Wait.Now;
+            int weaponVk = SlotVk(c.SlotA);
+            InputSender.KeyScan(weaponVk, true);
+            try { Wait.Until(t0 + Wait.FromMs(plan.KeyUp), ct); }
+            finally { InputSender.KeyScan(weaponVk, false); }
+            Wait.Until(t0 + Wait.FromMs(plan.ShotDown), ct);
+            if (ct.IsCancellationRequested) return;
             long fired = Wait.Now;
+            InputSender.MouseButton(ClickButton.Left, true);
+            try { Wait.Until(t0 + Wait.FromMs(plan.ShotUp), ct); }
+            finally { InputSender.MouseButton(ClickButton.Left, false); }   // never leave the shot held
+            Wait.Until(t0 + Wait.FromMs(plan.SwordKey), ct);
 
             InputSender.KeyScan(swordVk, true);
             try { Click(ct); }
