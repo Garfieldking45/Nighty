@@ -130,7 +130,7 @@ public sealed class MainViewModel : ObservableObject
         Add("Utility", "Brightness", "Movement Helper", "Tracking Helper", "Best DNS", "Apply the fastest automatically", "QoS Policy", "Disable Sticky Keys shortcut",
             "Disable Filter Keys shortcut", "Disable Toggle Keys shortcut", "Enhance pointer precision", "Fast key repeat", "Pointer speed", "Sensitivity calculator", "Network adapter", "Roblox traffic policy");
         Add("Mods", "Your mods");
-        Add("Extras", "Bow slot", "Shoot automatically", "Only while fighting", "Switch back afterwards", "Trigger", "Try it");
+        Add("Extras", "Auto Crossbow", "Hotbar macros", "Auto Whim", "Auto Lasso", "Auto Build Up", "Auto Melody", "Auto fish");
         Add("Macros", "Your macros", "Steps", "Repeat", "Hotkey enabled");
         Add("Overlays", "Ping host", "Preview and position", "Crosshair", "Add crosshair");
         Add("Settings", "Emergency stop hotkey", "Keep window on top", "Start with Windows", "Permissions", "Logs", "App data folder", "Restore system changes", "Reset everything", "Safety");

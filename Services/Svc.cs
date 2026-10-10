@@ -58,6 +58,7 @@ public static class Svc
         Clicker = new ClickerService(S.Clicker);
         Macros = new MacroPlayer();
         Bow = new BowSwitchService();
+        S.Bow.Enabled = false;   // the old Bow Switch is replaced by the Auto Crossbow hotbar macro
         Bow.StartSlotTracking();
         Cps = new CpsMonitor();
         GameMode = new GameModeService();

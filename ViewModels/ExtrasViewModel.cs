@@ -64,7 +64,11 @@ public sealed class ExtrasViewModel : ObservableObject
             Svc.Toast.Toggled("Bow Switch", Bow.Enabled);
         });
         foreach (var kind in Enum.GetValues<SlotMacroKind>())
-            if (!QuickMacros.Any(m => m.Kind == kind)) QuickMacros.Add(SlotMacroConfig.Create(kind));
+            if (!QuickMacros.Any(m => m.Kind == kind))
+            {
+                var made = SlotMacroConfig.Create(kind);
+                if (kind == SlotMacroKind.Crossbow) QuickMacros.Insert(0, made); else QuickMacros.Add(made);
+            }
         foreach (var m in QuickMacros.ToList()) RegisterQuick(m);
         ResetFishCommand = new RelayCommand(() => Svc.Fishing.ResetStats());
         FishCommand = new RelayCommand(() => { Svc.Fishing.Toggle(); Svc.Toast.Toggled("Auto Fish", Svc.Fishing.IsRunning); });

@@ -10,7 +10,7 @@ namespace Nighty.Services;
 /// </summary>
 public sealed class SlotMacroService
 {
-    private const double WhimCooldownMs = 1100;
+    private const double WhimCooldownMs = 1100, CrossbowCooldownMs = 1320;
     private readonly ConcurrentDictionary<SlotMacroKind, CancellationTokenSource> _running = new();
     public event Action? Changed;
 
@@ -98,7 +98,8 @@ public sealed class SlotMacroService
         {
             switch (c.Kind)
             {
-                case SlotMacroKind.Whim: RunWhim(c, ct); break;
+                case SlotMacroKind.Crossbow: RunSwapAndClick(c, CrossbowCooldownMs, ct); break;
+                case SlotMacroKind.Whim: RunSwapAndClick(c, WhimCooldownMs, ct); break;
                 case SlotMacroKind.Lasso: RunLasso(c, ct); break;
                 case SlotMacroKind.BuildUp: RunBuildUp(c, ct); break;
                 case SlotMacroKind.Melody: RunMelody(c, ct); break;
@@ -115,8 +116,8 @@ public sealed class SlotMacroService
         }
     }
 
-    /// <summary>Book out, fire, sword back, then click through the cooldown; repeats until stopped.</summary>
-    private static void RunWhim(SlotMacroConfig c, CancellationToken ct)
+    /// <summary>Weapon out, fire, sword back, then click through the cooldown; repeats until stopped.</summary>
+    private static void RunSwapAndClick(SlotMacroConfig c, double cooldownMs, CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
         {
@@ -124,7 +125,7 @@ public sealed class SlotMacroService
             Tap(c.SlotA, ct); Wait.Ms(14, ct);
             Click(ClickButton.Left, ct, 16); Wait.Ms(30, ct);
             Tap(c.SlotB, ct);
-            SpamClicks(ct, start + Wait.FromMs(WhimCooldownMs));
+            SpamClicks(ct, start + Wait.FromMs(cooldownMs));
         }
     }
 

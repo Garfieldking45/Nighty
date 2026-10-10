@@ -25,7 +25,7 @@ public static class CrosshairOptions
     };
 }
 public enum SocdMode { LastInput, Neutral, FirstInput }
-public enum SlotMacroKind { Whim, Lasso, BuildUp, Melody, GingerBread }
+public enum SlotMacroKind { Crossbow, Whim, Lasso, BuildUp, Melody, GingerBread }
 public enum SlotMacroStyle { Toggle, Press, Hold }
 
 public sealed class SlotMacroConfig : ObservableObject
@@ -51,16 +51,17 @@ public sealed class SlotMacroConfig : ObservableObject
     [JsonIgnore] public SlotMacroStyle Style => Kind switch
     {
         SlotMacroKind.Whim => SlotMacroStyle.Toggle,
-        SlotMacroKind.BuildUp or SlotMacroKind.Melody => SlotMacroStyle.Hold,
+        SlotMacroKind.Crossbow or SlotMacroKind.BuildUp or SlotMacroKind.Melody => SlotMacroStyle.Hold,
         _ => SlotMacroStyle.Press,
     };
     [JsonIgnore] public string Title => Kind switch
     {
-        SlotMacroKind.Whim => "Auto Whim", SlotMacroKind.Lasso => "Auto Lasso", SlotMacroKind.BuildUp => "Auto Build Up",
+        SlotMacroKind.Crossbow => "Auto Crossbow", SlotMacroKind.Whim => "Auto Whim", SlotMacroKind.Lasso => "Auto Lasso", SlotMacroKind.BuildUp => "Auto Build Up",
         SlotMacroKind.Melody => "Auto Melody", _ => "Auto GingerBread Man",
     };
     [JsonIgnore] public string Description => Kind switch
     {
+        SlotMacroKind.Crossbow => "Hold. Fires the crossbow, swaps to the sword, clicks through the cooldown, then repeats while the key is held.",
         SlotMacroKind.Whim => "Toggle. Swaps to the book, fires, swaps to the sword and clicks through the 1.1 s cooldown, then repeats.",
         SlotMacroKind.Lasso => "Press. Holds the lasso, looks down, swaps to blocks, then places one under you.",
         SlotMacroKind.BuildUp => "Hold. Swaps to blocks, looks down and spam clicks at the Auto Clicker speed; on release restores your view and swaps back to the sword.",
@@ -71,7 +72,7 @@ public sealed class SlotMacroConfig : ObservableObject
     [JsonIgnore] public string KeyHint => $"{StyleText}: click, then press a key or side button.";
     [JsonIgnore] public string LabelA => Kind switch
     {
-        SlotMacroKind.Whim => "BOOK SLOT", SlotMacroKind.Lasso => "LASSO SLOT", SlotMacroKind.BuildUp => "BLOCK SLOT",
+        SlotMacroKind.Crossbow => "CROSSBOW SLOT", SlotMacroKind.Whim => "BOOK SLOT", SlotMacroKind.Lasso => "LASSO SLOT", SlotMacroKind.BuildUp => "BLOCK SLOT",
         SlotMacroKind.Melody => "GUITAR SLOT", _ => "GUMDROP SLOT",
     };
     [JsonIgnore] public string LabelB => Kind switch
@@ -88,6 +89,7 @@ public sealed class SlotMacroConfig : ObservableObject
 
     public static SlotMacroConfig Create(SlotMacroKind k) => k switch
     {
+        SlotMacroKind.Crossbow => new() { Kind = k, HotkeyVk = 0x05, SlotA = 3, SlotB = 1 },
         SlotMacroKind.Whim => new() { Kind = k, HotkeyVk = 0x05, SlotA = 3, SlotB = 1 },
         SlotMacroKind.Lasso => new() { Kind = k, HotkeyVk = 0x06, SlotA = 1, SlotB = 2, DelayMs = 1000, LookDown = 1200 },
         SlotMacroKind.BuildUp => new() { Kind = k, HotkeyVk = 0x06, SlotA = 2, SlotB = 1, LookDown = 1200 },

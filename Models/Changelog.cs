@@ -11,6 +11,10 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("1.6.1", "2026-10-10", new[]
+        {
+            "Auto Crossbow replaces Bow Switch: a hold-key hotbar macro that fires the crossbow, swaps to the sword, clicks through the cooldown and repeats",
+        }),
         new("1.6.0", "2026-10-10", new[]
         {
             "Hotbar macros on the Extras tab: Auto Whim, Auto Lasso, Auto Build Up, Auto Melody and Auto GingerBread Man, each with its own key and slots",
