@@ -58,6 +58,11 @@
                                 <c:SettingRow Title="Key" Description="{Binding KeyHint}">
                                     <c:HotkeyBox Vk="{Binding HotkeyVk, Mode=TwoWay}" Mods="{Binding HotkeyMods, Mode=TwoWay}"/>
                                 </c:SettingRow>
+                                <c:SettingRow Title="Mode" Description="Toggle: press to start, press again to stop. Hold: runs while the key is held. Press: runs once."
+                                              Visibility="{Binding HasModes, Converter={StaticResource BoolVisible}}">
+                                    <ComboBox ItemsSource="{Binding DataContext.StyleChoices, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                              SelectedItem="{Binding Style, Mode=TwoWay}" MinWidth="110" AutomationProperties.Name="Macro mode"/>
+                                </c:SettingRow>
                                 <c:SettingRow Title="Only while Roblox is focused">
                                     <CheckBox IsChecked="{Binding OnlyWhenRobloxFocused}"/>
                                 </c:SettingRow>
@@ -69,6 +74,10 @@
                                     <StackPanel Margin="0,0,0,10">
                                         <TextBlock Text="{Binding LabelB}" Style="{StaticResource Label}" Margin="0,0,0,6"/>
                                         <c:ValueStepper Value="{Binding SlotB, Mode=TwoWay}" Minimum="1" Maximum="9" Step="1"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,10,10" Visibility="{Binding LabelBlock, Converter={StaticResource NullVisible}}">
+                                        <TextBlock Text="{Binding LabelBlock}" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                                        <c:ValueStepper Value="{Binding BlockSlot, Mode=TwoWay}" Minimum="0" Maximum="9" Step="1"/>
                                     </StackPanel>
                                     <StackPanel Margin="0,0,10,0" Visibility="{Binding LabelDelay, Converter={StaticResource NullVisible}}">
                                         <TextBlock Text="{Binding LabelDelay}" Style="{StaticResource Label}" Margin="0,0,0,6"/>

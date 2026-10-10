@@ -6,18 +6,22 @@ namespace Nighty.Services;
 
 /// <summary>
 /// Hotbar macros: each one swaps between numbered hotbar slots, clicks and (for some) looks down, on its own
-/// high-priority thread. Every run can be cancelled at any moment; held buttons and the camera are always restored.
+/// high-priority thread. Keys are sent as hardware scancodes. Every run can be cancelled at any moment; held keys,
+/// buttons and the camera are always restored.
 /// </summary>
 public sealed class SlotMacroService
 {
-    private const double WhimCooldownMs = 1100, CrossbowCooldownMs = 1320;
+    // Hold long enough to span a frame at 60 fps, or the game never sees the press.
+    private const int KeyHoldMs = 20, ClickHoldMs = 10;
+    private const double CrossbowCooldownMs = 1300, WhimCooldownMs = 1100;
+
     private readonly ConcurrentDictionary<SlotMacroKind, CancellationTokenSource> _running = new();
     public event Action? Changed;
 
     public bool IsRunning(SlotMacroKind kind) => _running.ContainsKey(kind);
     public bool AnyRunning => !_running.IsEmpty;
 
-    /// <summary>Press: start a run (ignored while one is running). Toggle: start or stop.</summary>
+    /// <summary>Starts a run (ignored while one is already running).</summary>
     public void Start(SlotMacroConfig c)
     {
         if (!c.Enabled || Svc.Hotkeys.Suspended || RobloxService.IsOwnWindowForeground()) return;
@@ -27,6 +31,7 @@ public sealed class SlotMacroService
         var snap = c.Snapshot();
         Changed?.Invoke();
         new Thread(() => Run(snap, cts)) { IsBackground = true, Priority = ThreadPriority.Highest, Name = "Nighty " + c.Kind }.Start();
+        new Thread(() => Watch(snap, cts)) { IsBackground = true, Name = "Nighty " + c.Kind + " watch" }.Start();
     }
 
     public void Toggle(SlotMacroConfig c)
@@ -44,49 +49,63 @@ public sealed class SlotMacroService
         foreach (var k in _running.Keys.ToList()) Stop(k);
     }
 
+    /// <summary>Ends a run the moment its hold key is let go or Roblox loses focus, without waiting for the UI timer.</summary>
+    private static void Watch(SlotMacroConfig c, CancellationTokenSource cts)
+    {
+        try
+        {
+            long nextFocusCheck = 0;
+            while (!cts.IsCancellationRequested)
+            {
+                if (c.Style == SlotMacroStyle.Hold && !HotkeyService.IsDown((c.HotkeyVk, c.HotkeyMods))) { cts.Cancel(); return; }
+                if (c.OnlyWhenRobloxFocused && Environment.TickCount64 >= nextFocusCheck)
+                {
+                    nextFocusCheck = Environment.TickCount64 + 100;
+                    if (!Svc.Roblox.IsForeground) { cts.Cancel(); return; }
+                }
+                Thread.Sleep(1);
+            }
+        }
+        catch (ObjectDisposedException) { }
+    }
+
     private static int SlotVk(double slot) => 0x31 + (int)Math.Clamp(slot, 1, 9) - 1;
 
+    /// <summary>Press and release a hotbar number key.</summary>
     private static void Tap(double slot, CancellationToken ct)
     {
         int vk = SlotVk(slot);
-        InputSender.Key(vk, true);
-        Wait.Ms(5, ct);
-        InputSender.Key(vk, false);
+        InputSender.KeyScan(vk, true);
+        try { Wait.Ms(KeyHoldMs, ct); }
+        finally { InputSender.KeyScan(vk, false); }
     }
 
-    private static void Click(ClickButton b, CancellationToken ct, double holdMs = 12)
+    private static void Click(CancellationToken ct, ClickButton b = ClickButton.Left)
     {
         InputSender.MouseButton(b, true);
-        try { Wait.Ms(holdMs, ct); }
+        try { Wait.Ms(ClickHoldMs, ct); }
         finally { InputSender.MouseButton(b, false); }   // never leave the button stuck down
     }
 
-    /// <summary>Clicks at the auto clicker's speed until <paramref name="untilTicks"/> (or forever when 0).</summary>
-    private static void SpamClicks(CancellationToken ct, long untilTicks = 0)
+    /// <summary>Gap between spam clicks: the Auto Clicker's speed, never faster than 20 ms.</summary>
+    private static double GapMs()
     {
-        double cps = Math.Clamp(Svc.S.Clicker.UseRange ? Svc.S.Clicker.MaxCps : Svc.S.Clicker.Cps, 1, 50);
-        double period = 1000.0 / cps;
-        long next = Wait.Now;
-        while (!ct.IsCancellationRequested && (untilTicks == 0 || Wait.Now < untilTicks))
-        {
-            Wait.Until(next, ct);
-            if (ct.IsCancellationRequested) break;
-            Click(ClickButton.Left, ct, Math.Min(12, period * 0.5));
-            next += Wait.FromMs(period);
-            if (Wait.Now - next > Wait.FromMs(period * 4)) next = Wait.Now;
-        }
+        var c = Svc.S.Clicker;
+        double cps = Math.Clamp(c.UseRange ? c.MaxCps : c.Cps, 1, 50);
+        return Math.Max(20, 1000.0 / cps);
     }
 
-    /// <summary>Moves the mouse in small steps so the game's camera follows instead of dropping one huge delta.</summary>
-    private static void Look(int dy, CancellationToken ct)
+    /// <summary>Smooth pitch flick over several steps. Positive looks down.</summary>
+    private static void Flick(int totalDy, CancellationToken ct)
     {
-        int left = Math.Abs(dy), sign = dy < 0 ? -1 : 1;
-        while (left > 0)
+        const int steps = 14;
+        int per = totalDy / steps, acc = 0;
+        for (int i = 0; i < steps; i++)
         {
-            int part = Math.Min(left, 150);
-            InputSender.MoveRelative(0, sign * part);
-            left -= part;
-            if (left > 0) Wait.Ms(2, CancellationToken.None);
+            int d = i == steps - 1 ? totalDy - acc : per;
+            acc += d;
+            InputSender.MoveRelative(0, d);
+            Wait.Ms(3, ct);
         }
     }
 
@@ -98,15 +117,15 @@ public sealed class SlotMacroService
         {
             switch (c.Kind)
             {
-                case SlotMacroKind.Crossbow: RunSwapAndClick(c, CrossbowCooldownMs, ct); break;
-                case SlotMacroKind.Whim: RunSwapAndClick(c, WhimCooldownMs, ct); break;
+                case SlotMacroKind.Crossbow: RunSwapAndSwing(c, CrossbowCooldownMs, ct); break;
+                case SlotMacroKind.Whim: RunSwapAndSwing(c, WhimCooldownMs, ct); break;
                 case SlotMacroKind.Lasso: RunLasso(c, ct); break;
                 case SlotMacroKind.BuildUp: RunBuildUp(c, ct); break;
                 case SlotMacroKind.Melody: RunMelody(c, ct); break;
                 case SlotMacroKind.GingerBread: RunGingerBread(c, ct); break;
             }
         }
-        catch (Exception ex) { Log.Error("Quick macro " + c.Kind + " failed", ex); }
+        catch (Exception ex) { Log.Error("Hotbar macro " + c.Kind + " failed", ex); }
         finally
         {
             NativeMethods.timeEndPeriod(1);
@@ -116,67 +135,112 @@ public sealed class SlotMacroService
         }
     }
 
-    /// <summary>Weapon out, fire, sword back, then click through the cooldown; repeats until stopped.</summary>
-    private static void RunSwapAndClick(SlotMacroConfig c, double cooldownMs, CancellationToken ct)
+    /// <summary>
+    /// Weapon slot, fire, then press the sword key and swing while it is still held (the sword selects on key down, so
+    /// there is no swap delay), and keep swinging through the cooldown. Repeats until stopped; Press mode does one cycle.
+    /// </summary>
+    private static void RunSwapAndSwing(SlotMacroConfig c, double cooldownMs, CancellationToken ct)
     {
-        while (!ct.IsCancellationRequested)
+        double gap = GapMs();
+        int swordVk = SlotVk(c.SlotB);
+        do
         {
-            long start = Wait.Now;
-            Tap(c.SlotA, ct); Wait.Ms(14, ct);
-            Click(ClickButton.Left, ct, 16); Wait.Ms(30, ct);
-            Tap(c.SlotB, ct);
-            SpamClicks(ct, start + Wait.FromMs(cooldownMs));
-        }
+            // Holding blocks: leave them alone (this also ends the run if you pick the block slot mid-fight).
+            if (c.BlockSlot > 0 && Svc.Bow.CurrentSlot == (int)c.BlockSlot) return;
+
+            Tap(c.SlotA, ct);
+            Wait.Ms(5, ct);
+            Click(ct);
+            long fired = Wait.Now;
+
+            InputSender.KeyScan(swordVk, true);
+            try { Click(ct); }
+            finally { InputSender.KeyScan(swordVk, false); }
+            if (c.Style == SlotMacroStyle.Press) return;
+
+            long swapAt = fired + Wait.FromMs(cooldownMs);
+            long next = Wait.Now + Wait.FromMs(gap);
+            while (!ct.IsCancellationRequested && Wait.Now < swapAt)
+            {
+                if (Wait.Now >= next)
+                {
+                    next += Wait.FromMs(gap);
+                    if (next <= Wait.Now) next = Wait.Now + Wait.FromMs(gap);
+                    Click(ct);
+                }
+                Wait.Ms(2, ct);
+            }
+        } while (!ct.IsCancellationRequested);
     }
 
-    /// <summary>Hold the lasso, look down, swap to blocks and place one under you.</summary>
+    /// <summary>Hold the lasso, release, look down, swap to blocks and place five blocks.</summary>
     private static void RunLasso(SlotMacroConfig c, CancellationToken ct)
     {
-        Tap(c.SlotA, ct); Wait.Ms(40, ct);
+        double gap = GapMs();
+        Tap(c.SlotA, ct);
+        Wait.Ms(30, ct);
         InputSender.MouseButton(ClickButton.Left, true);
-        try { Wait.Ms(c.DelayMs, ct); }
+        try { Wait.Ms(Math.Max(0, c.DelayMs), ct); }
         finally { InputSender.MouseButton(ClickButton.Left, false); }
         if (ct.IsCancellationRequested) return;
-        Look(c.LookDown, ct);
-        Tap(c.SlotB, ct); Wait.Ms(40, ct);
-        if (!ct.IsCancellationRequested) Click(ClickButton.Left, ct);
+        Flick(c.LookDown, ct);
+        Wait.Ms(20, ct);
+        Tap(c.SlotB, ct);
+        Wait.Ms(30, ct);
+        for (int i = 0; i < 5 && !ct.IsCancellationRequested; i++) { Click(ct); Wait.Ms(gap, ct); }
     }
 
-    /// <summary>Blocks out, look down and spam clicks while held; on release restore the view and go back to the sword.</summary>
+    /// <summary>Blocks out, look down and spam clicks while active; on stop restore the exact view and go back to the sword.</summary>
     private static void RunBuildUp(SlotMacroConfig c, CancellationToken ct)
     {
-        Tap(c.SlotA, ct); Wait.Ms(30, ct);
-        Look(c.LookDown, ct);
-        try { SpamClicks(ct); }
+        double gap = GapMs();
+        Tap(c.SlotA, ct);
+        Wait.Ms(20, ct);
+        Flick(c.LookDown, CancellationToken.None);   // always completed so it can be undone exactly
+        try
+        {
+            long next = Wait.Now + Wait.FromMs(gap);
+            while (!ct.IsCancellationRequested)
+            {
+                if (Wait.Now >= next)
+                {
+                    next += Wait.FromMs(gap);
+                    if (next <= Wait.Now) next = Wait.Now + Wait.FromMs(gap);
+                    Click(ct);
+                }
+                Wait.Ms(2, ct);
+            }
+        }
         finally
         {
-            Look(-c.LookDown, ct);
-            Wait.Ms(10, CancellationToken.None);
+            Flick(-c.LookDown, CancellationToken.None);
+            Wait.Ms(20, CancellationToken.None);
             Tap(c.SlotB, CancellationToken.None);
         }
     }
 
-    /// <summary>Sword hit, guitar out and click, sword back, then wait; repeats while held.</summary>
+    /// <summary>Sword hit, guitar click, sword back, then wait; repeats while active.</summary>
     private static void RunMelody(SlotMacroConfig c, CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
         {
-            Click(ClickButton.Left, ct); Wait.Ms(20, ct);
-            Tap(c.SlotA, ct); Wait.Ms(25, ct);
-            Click(ClickButton.Left, ct); Wait.Ms(25, ct);
+            Tap(c.SlotB, ct); Click(ct); Wait.Ms(60, ct);
+            Tap(c.SlotA, ct); Click(ct); Wait.Ms(60, ct);
             Tap(c.SlotB, ct);
-            Wait.Ms(c.DelayMs, ct);
+            Wait.Ms(Math.Max(0, c.DelayMs), ct);
         }
     }
 
-    /// <summary>Gumdrop out and click, wait, then pickaxe out and click.</summary>
+    /// <summary>Gumdrop click, wait, then pickaxe click.</summary>
     private static void RunGingerBread(SlotMacroConfig c, CancellationToken ct)
     {
-        Tap(c.SlotA, ct); Wait.Ms(25, ct);
-        Click(ClickButton.Left, ct);
-        Wait.Ms(c.DelayMs, ct);
+        Tap(c.SlotA, ct);
+        Wait.Ms(30, ct);
+        Click(ct);
+        Wait.Ms(Math.Max(0, c.DelayMs), ct);
         if (ct.IsCancellationRequested) return;
-        Tap(c.SlotB, ct); Wait.Ms(25, ct);
-        Click(ClickButton.Left, ct);
+        Tap(c.SlotB, ct);
+        Wait.Ms(30, ct);
+        Click(ct);
     }
 }

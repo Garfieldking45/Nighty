@@ -94,7 +94,10 @@
                     <StackPanel>
                         <TextBlock Text="Clicks per hit" Style="{StaticResource CardTitle}"/>
                         <TextBlock Text="How many clicks are sent each time the clicker fires. Leave at 1 unless you need bursts." Style="{StaticResource Muted}" Margin="0,3,0,12" TextWrapping="Wrap"/>
-                        <c:ValueStepper Value="{Binding ClicksPerHit, Mode=TwoWay}" Minimum="1" Maximum="10" Step="1"/>
+                        <c:ValueStepper Value="{Binding ClicksPerHit, Mode=TwoWay}" Minimum="1" Maximum="5" Step="1"/>
+                        <c:SettingRow Title="Randomize" Description="Varies the gap between hits (60-140% of the base) so the rhythm is never exactly even." Margin="0,12,0,0">
+                            <CheckBox IsChecked="{Binding Settings.Jitter}"/>
+                        </c:SettingRow>
                     </StackPanel>
                 </Border>
 

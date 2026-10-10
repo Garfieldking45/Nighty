@@ -11,6 +11,13 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("1.6.2", "2026-10-10", new[]
+        {
+            "Hotbar macros now follow Nexus's sequences and timings: keys are sent as hardware scancodes, the sword is swung the instant its key goes down, and Lasso places five blocks",
+            "Auto Crossbow: block slot (does nothing while your blocks are selected), plus Toggle / Hold / Press modes on every hotbar macro",
+            "Hold macros stop the moment you let go of the key",
+            "Auto clicker timing reworked like Nexus: clicks per hit share the period, holds are at least 4 ms, a Randomize option varies the gaps, and a stall resyncs instead of bursting",
+        }),
         new("1.6.1", "2026-10-10", new[]
         {
             "Auto Crossbow replaces Bow Switch: a hold-key hotbar macro that fires the crossbow, swaps to the sword, clicks through the cooldown and repeats",

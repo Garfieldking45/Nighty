@@ -12,6 +12,7 @@ public sealed class ExtrasViewModel : ObservableObject
     public BowSwitchSettings Bow => Svc.S.Bow;
     public FishingSettings Fishing => Svc.S.Fishing;
     public System.Collections.ObjectModel.ObservableCollection<SlotMacroConfig> QuickMacros => Svc.S.SlotMacros;
+    public IReadOnlyList<SlotMacroStyle> StyleChoices { get; } = Enum.GetValues<SlotMacroStyle>();
     public string FishStatus => Svc.Fishing.IsRunning ? "Fishing: " + Svc.Fishing.Status : "Auto fish is off.";
     public string FishButton => Svc.Fishing.IsRunning ? "Stop fishing" : "Start fishing";
     public string FishCounts => Svc.Fishing.TrackerText.Replace("\n", " — ");

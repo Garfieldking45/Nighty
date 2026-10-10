@@ -43,12 +43,29 @@ public sealed class SlotMacroConfig : ObservableObject
     public double SlotA { get => _a; set => Set(ref _a, Math.Clamp(Math.Round(value), 1, 9)); }
     /// <summary>Second hotbar slot used (sword, blocks or pickaxe).</summary>
     public double SlotB { get => _b; set => Set(ref _b, Math.Clamp(Math.Round(value), 1, 9)); }
+    private double _block;
+    /// <summary>Hotbar slot holding your blocks (0 = off). Auto Crossbow does nothing while it is selected, so you keep placing blocks.</summary>
+    public double BlockSlot { get => _block; set => Set(ref _block, Math.Clamp(Math.Round(value), 0, 9)); }
     public int DelayMs { get => _delay; set => Set(ref _delay, Math.Clamp(value, 0, 10000)); }
     /// <summary>Mouse movement down, in pixels (restored afterwards by Build Up).</summary>
     public int LookDown { get => _look; set => Set(ref _look, Math.Clamp(value, 0, 4000)); }
 
     [JsonIgnore] public string KeyText => HotkeyVk <= 0 ? "no key set" : Hotkeys.Format(HotkeyVk, HotkeyMods);
-    [JsonIgnore] public SlotMacroStyle Style => Kind switch
+    private SlotMacroStyle? _mode;
+    /// <summary>How the key works. Null uses the default for this macro.</summary>
+    public SlotMacroStyle? Mode
+    {
+        get => _mode;
+        set { if (Set(ref _mode, value)) { OnPropertyChanged(nameof(Style)); OnPropertyChanged(nameof(StyleText)); OnPropertyChanged(nameof(KeyHint)); } }
+    }
+    [JsonIgnore] public SlotMacroStyle Style
+    {
+        get => Kind is SlotMacroKind.Lasso or SlotMacroKind.GingerBread ? SlotMacroStyle.Press : _mode ?? DefaultStyle(Kind);
+        set => Mode = value;
+    }
+    /// <summary>One-shot macros only have Press; the others can be Toggle, Hold or (crossbow, whim) a single Press.</summary>
+    [JsonIgnore] public bool HasModes => Kind is not (SlotMacroKind.Lasso or SlotMacroKind.GingerBread);
+    private static SlotMacroStyle DefaultStyle(SlotMacroKind k) => k switch
     {
         SlotMacroKind.Whim => SlotMacroStyle.Toggle,
         SlotMacroKind.Crossbow or SlotMacroKind.BuildUp or SlotMacroKind.Melody => SlotMacroStyle.Hold,
@@ -61,12 +78,12 @@ public sealed class SlotMacroConfig : ObservableObject
     };
     [JsonIgnore] public string Description => Kind switch
     {
-        SlotMacroKind.Crossbow => "Hold. Fires the crossbow, swaps to the sword, clicks through the cooldown, then repeats while the key is held.",
-        SlotMacroKind.Whim => "Toggle. Swaps to the book, fires, swaps to the sword and clicks through the 1.1 s cooldown, then repeats.",
-        SlotMacroKind.Lasso => "Press. Holds the lasso, looks down, swaps to blocks, then places one under you.",
-        SlotMacroKind.BuildUp => "Hold. Swaps to blocks, looks down and spam clicks at the Auto Clicker speed; on release restores your view and swaps back to the sword.",
-        SlotMacroKind.Melody => "Hold. Hits with the sword, swaps to the guitar and clicks, swaps back to the sword, then waits.",
-        _ => "Press. Swaps to the gumdrop and clicks, waits, then swaps to the pickaxe and clicks.",
+        SlotMacroKind.Crossbow => "Fires the crossbow, swings the sword the instant it is selected, clicks through the 1.3 s cooldown, then repeats.",
+        SlotMacroKind.Whim => "Swaps to the book, fires, swings the sword, and clicks through the 1.1 s cooldown, then repeats.",
+        SlotMacroKind.Lasso => "Holds the lasso, looks down, swaps to blocks, then places five blocks under you.",
+        SlotMacroKind.BuildUp => "Swaps to blocks, looks down and spam clicks at the Auto Clicker speed; when it stops it restores your view and swaps back to the sword.",
+        SlotMacroKind.Melody => "Hits with the sword, swaps to the guitar and clicks, swaps back to the sword, then waits.",
+        _ => "Swaps to the gumdrop and clicks, waits, then swaps to the pickaxe and clicks.",
     };
     [JsonIgnore] public string StyleText => Style switch { SlotMacroStyle.Toggle => "Toggle", SlotMacroStyle.Hold => "Hold", _ => "Press" };
     [JsonIgnore] public string KeyHint => $"{StyleText}: click, then press a key or side button.";
@@ -75,6 +92,7 @@ public sealed class SlotMacroConfig : ObservableObject
         SlotMacroKind.Crossbow => "CROSSBOW SLOT", SlotMacroKind.Whim => "BOOK SLOT", SlotMacroKind.Lasso => "LASSO SLOT", SlotMacroKind.BuildUp => "BLOCK SLOT",
         SlotMacroKind.Melody => "GUITAR SLOT", _ => "GUMDROP SLOT",
     };
+    [JsonIgnore] public string LabelBlock => Kind == SlotMacroKind.Crossbow ? "BLOCK SLOT (0 = OFF)" : "";
     [JsonIgnore] public string LabelB => Kind switch
     {
         SlotMacroKind.Lasso => "BLOCK SLOT", SlotMacroKind.GingerBread => "PICKAXE SLOT", _ => "SWORD SLOT",
@@ -89,7 +107,7 @@ public sealed class SlotMacroConfig : ObservableObject
 
     public static SlotMacroConfig Create(SlotMacroKind k) => k switch
     {
-        SlotMacroKind.Crossbow => new() { Kind = k, HotkeyVk = 0x05, SlotA = 3, SlotB = 1 },
+        SlotMacroKind.Crossbow => new() { Kind = k, HotkeyVk = 0x05, SlotA = 3, SlotB = 1, BlockSlot = 2 },
         SlotMacroKind.Whim => new() { Kind = k, HotkeyVk = 0x05, SlotA = 3, SlotB = 1 },
         SlotMacroKind.Lasso => new() { Kind = k, HotkeyVk = 0x06, SlotA = 1, SlotB = 2, DelayMs = 1000, LookDown = 1200 },
         SlotMacroKind.BuildUp => new() { Kind = k, HotkeyVk = 0x06, SlotA = 2, SlotB = 1, LookDown = 1200 },
@@ -110,9 +128,12 @@ public sealed class ClickerSettings : ObservableObject
     private ActivationMode _mode = ActivationMode.Toggle;
 
     public bool Enabled { get => _enabled; set => Set(ref _enabled, value); }
+    private bool _jitter;
+    /// <summary>Randomize each gap between clicks to 60-140% of the base period.</summary>
+    public bool Jitter { get => _jitter; set => Set(ref _jitter, value); }
     private int _perHit = 1;
     /// <summary>How many clicks are sent each time the clicker fires (1 = normal).</summary>
-    public int ClicksPerHit { get => _perHit; set => Set(ref _perHit, Math.Clamp(value, 1, 10)); }
+    public int ClicksPerHit { get => _perHit; set => Set(ref _perHit, Math.Clamp(value, 1, 5)); }
     public double Cps { get => _cps; set => Set(ref _cps, Math.Clamp(Math.Round(value, 1), 1, 50)); }
     public bool UseRange { get => _useRange; set => Set(ref _useRange, value); }
     public double MinCps
@@ -136,7 +157,7 @@ public sealed class ClickerSettings : ObservableObject
     {
         Cps = o.Cps; UseRange = o.UseRange; MinCps = o.MinCps; MaxCps = o.MaxCps; Button = o.Button;
         DutyCycle = o.DutyCycle; Mode = o.Mode; HotkeyVk = o.HotkeyVk; HotkeyMods = o.HotkeyMods;
-        OnlyWhenRobloxFocused = o.OnlyWhenRobloxFocused; ClicksPerHit = o.ClicksPerHit;
+        OnlyWhenRobloxFocused = o.OnlyWhenRobloxFocused; ClicksPerHit = o.ClicksPerHit; Jitter = o.Jitter;
     }
 
     public ClickerSettings Clone() { var c = new ClickerSettings(); c.CopyFrom(this); return c; }

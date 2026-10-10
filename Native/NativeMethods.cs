@@ -213,6 +213,18 @@ internal static class InputSender
         }
     }
 
+    /// <summary>Key press as a hardware scancode (no virtual key), which games that ignore plain VK input still see.</summary>
+    public static void KeyScan(int vk, bool down)
+    {
+        if (vk <= 0) return;
+        var input = new NativeMethods.INPUT { type = NativeMethods.INPUT_KEYBOARD };
+        input.u.ki.wScan = (ushort)NativeMethods.MapVirtualKey((uint)vk, 0);
+        uint flags = 0x0008 | (down ? 0u : NativeMethods.KEYEVENTF_KEYUP);   // KEYEVENTF_SCANCODE
+        if (IsExtended(vk)) flags |= NativeMethods.KEYEVENTF_EXTENDEDKEY;
+        input.u.ki.dwFlags = flags;
+        NativeMethods.SendInput(1, new[] { input }, Size);
+    }
+
     public static void Key(int vk, bool down)
     {
         var input = new NativeMethods.INPUT { type = NativeMethods.INPUT_KEYBOARD };

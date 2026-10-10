@@ -153,36 +153,33 @@ public sealed class ClickerService
 
             double cps = _s.UseRange ? _s.MinCps + _rng.NextDouble() * Math.Max(0, _s.MaxCps - _s.MinCps) : _s.Cps;
             double periodMs = 1000.0 / Math.Max(1, cps);
-            double holdMs = Math.Clamp(periodMs * _s.DutyCycle / 100.0, 0.5, periodMs - 0.3);
+            if (_s.Jitter) periodMs *= 0.6 + _rng.NextDouble() * 0.8;
+            int perHit = Math.Clamp(_s.ClicksPerHit, 1, 5);
+            // The clicks of one hit share the period; each is held for the duty fraction of its own slice. A press the
+            // game never samples is a press that did not happen, so holds are at least 4 ms when the slice allows it.
+            double sliceMs = periodMs / perHit;
+            double holdMs = Math.Clamp(sliceMs * _s.DutyCycle / 100.0, Math.Min(4, sliceMs - 0.3), Math.Max(0.5, sliceMs - 1));
             var button = _s.Button;
 
             Wait.Until(next, ct);
             if (ct.IsCancellationRequested) break;
             if (Svc.Bow.IsRunning) { next = Wait.Now + Wait.FromMs(1); continue; }   // don't interleave sword clicks with the crossbow shot
             long clickStart = Wait.Now;
-            InputSender.MouseButton(button, true);
-            try { Wait.Until(clickStart + Wait.FromMs(holdMs), ct); }
-            finally { InputSender.MouseButton(button, false); }   // never leave the button stuck down
-            for (int extra = 1; extra < _s.ClicksPerHit && !ct.IsCancellationRequested; extra++)
+            for (int k = 0; k < perHit && !ct.IsCancellationRequested; k++)
             {
-                Wait.Ms(Math.Min(8, periodMs / (2.0 * _s.ClicksPerHit)), ct);
                 InputSender.MouseButton(button, true);
-                try { Wait.Ms(Math.Min(6, holdMs), ct); }
-                finally { InputSender.MouseButton(button, false); }
+                try { Wait.Ms(holdMs, ct); }
+                finally { InputSender.MouseButton(button, false); }   // never leave the button stuck down
+                if (k < perHit - 1) Wait.Ms(sliceMs - holdMs, ct);
             }
 
             lock (_gate) _stamps.Enqueue(Environment.TickCount64);
             Svc.Bow.TryAuto();   // react right after a click instead of waiting for the UI timer
 
+            // Accumulate so an overshoot never compounds into a slow CPS, and resync after a stall instead of bursting.
             next += Wait.FromMs(periodMs);
-
-            // After a stall (system or game lag spike) we are behind schedule. Make up the missed clicks, but only
-            // by running up to 25% faster than the target so we never spam past what the game accepts, and give up
-            // (resync) if the stall was long enough that catching up would mean a visible burst.
             long now = Wait.Now;
-            long behind = now - next;
-            if (behind > Wait.FromMs(periodMs * 4)) next = now;
-            else { long floor = clickStart + Wait.FromMs(periodMs * 0.8); if (next < floor) next = floor; }
+            if (next < now) next = now + Wait.FromMs(periodMs);
         }
     }
 }
