@@ -13,7 +13,10 @@ public sealed class SlotMacroService
 {
     // Hold long enough to span a frame at 60 fps, or the game never sees the press.
     private const int KeyHoldMs = 20, ClickHoldMs = 10;
-    private const double CrossbowCooldownMs = 1300, WhimCooldownMs = 1100;
+    private const double CrossbowCooldownMs = 1400, WhimCooldownMs = 1100;
+
+    /// <summary>True from the weapon key going down until the sword is selected after a shot. The Auto Clicker holds still meanwhile, so none of its clicks land inside the shot.</summary>
+    public static volatile bool ShotInProgress;
 
     private readonly ConcurrentDictionary<SlotMacroKind, CancellationTokenSource> _running = new();
     public event Action? Changed;
@@ -123,8 +126,8 @@ public sealed class SlotMacroService
         {
             switch (c.Kind)
             {
-                case SlotMacroKind.Crossbow: RunSwapAndSwing(c, CrossbowCooldownMs, ct); break;
-                case SlotMacroKind.Whim: RunSwapAndSwing(c, WhimCooldownMs, ct); break;
+                case SlotMacroKind.Crossbow: RunSwapAndSwing(c, c.CooldownMs > 0 ? c.CooldownMs : CrossbowCooldownMs, ct); break;
+                case SlotMacroKind.Whim: RunSwapAndSwing(c, c.CooldownMs > 0 ? c.CooldownMs : WhimCooldownMs, ct); break;
                 case SlotMacroKind.Lasso: RunLasso(c, ct); break;
                 case SlotMacroKind.BuildUp: RunBuildUp(c, ct); break;
                 case SlotMacroKind.Melody: RunMelody(c, ct); break;
@@ -167,6 +170,9 @@ public sealed class SlotMacroService
             // Holding blocks: leave them alone (this also ends the run if you pick the block slot mid-fight).
             if (c.BlockSlot > 0 && Svc.Bow.CurrentSlot == (int)c.BlockSlot) return;
 
+            long fired;
+            ShotInProgress = true;
+            try {
             // One schedule from a single start time, so waits can't pile up and shift the shot.
             var plan = PlanShot(c);
             long t0 = Wait.Now;
@@ -176,7 +182,7 @@ public sealed class SlotMacroService
             finally { InputSender.KeyScan(weaponVk, false); }
             Wait.Until(t0 + Wait.FromMs(plan.ShotDown), ct);
             if (ct.IsCancellationRequested) return;
-            long fired = Wait.Now;
+            fired = Wait.Now;
             InputSender.MouseButton(ClickButton.Left, true);
             try { Wait.Until(t0 + Wait.FromMs(plan.ShotUp), ct); }
             finally { InputSender.MouseButton(ClickButton.Left, false); }   // never leave the shot held
@@ -185,13 +191,14 @@ public sealed class SlotMacroService
             InputSender.KeyScan(swordVk, true);
             try { Click(ct); }
             finally { InputSender.KeyScan(swordVk, false); }
+            } finally { ShotInProgress = false; }
             if (c.Style == SlotMacroStyle.Press) return;
 
             long swapAt = fired + Wait.FromMs(cooldownMs);
             long next = Wait.Now + Wait.FromMs(gap);
             while (!ct.IsCancellationRequested && Wait.Now < swapAt)
             {
-                if (Wait.Now >= next)
+                if (Wait.Now >= next && !Svc.Clicker.IsClicking)   // the Auto Clicker is already swinging
                 {
                     next += Wait.FromMs(gap);
                     if (next <= Wait.Now) next = Wait.Now + Wait.FromMs(gap);

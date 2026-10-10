@@ -51,6 +51,9 @@ public sealed class SlotMacroConfig : ObservableObject
     public double ShotHoldMs { get => _shotHoldMs; set => Set(ref _shotHoldMs, Math.Clamp(Math.Round(value), 10, 150)); }
     /// <summary>Pause between the shot and swapping to the sword, so the swap can't cancel a shot that is still leaving.</summary>
     public double SwapDelayMs { get => _swapMs; set => Set(ref _swapMs, Math.Clamp(Math.Round(value), 0, 150)); }
+    private double _cooldownMs;
+    /// <summary>Time between shots. 0 = automatic (1400 ms crossbow, 1100 ms whim). Raise it if every few shots does not fire: the weapon was still reloading.</summary>
+    public double CooldownMs { get => _cooldownMs; set => Set(ref _cooldownMs, value <= 0 ? 0 : Math.Clamp(Math.Round(value), 800, 3000)); }
     [JsonIgnore] public bool IsSwapAndSwing => Kind is SlotMacroKind.Crossbow or SlotMacroKind.Whim;
     private bool _onlySlotOne = true;
     /// <summary>Auto Crossbow only: start only while hotbar slot 1 is the slot you are holding (pick it with the 1 key). Other macros ignore this.</summary>

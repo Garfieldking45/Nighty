@@ -136,7 +136,7 @@ internal sealed class ClickerHost
     /// <summary>False pauses clicking (Nighty itself in front, or Roblox not in front when that option is on).</summary>
     public Func<ClickerSettings, bool> Allowed { get; init; } = s => !RobloxService.IsOwnWindowForeground() && (!s.OnlyWhenRobloxFocused || Svc.Roblox.IsForeground);
     /// <summary>True while another macro owns the mouse (the crossbow shot).</summary>
-    public Func<bool> Busy { get; init; } = () => Svc.Bow.IsRunning;
+    public Func<bool> Busy { get; init; } = () => Svc.Bow.IsRunning || SlotMacroService.ShotInProgress;
     public Action AfterClick { get; init; } = () => Svc.Bow.TryAuto();
     /// <summary>Process priority class and GC latency mode. Off in tests so they don't change the test runner.</summary>
     public bool ProcessTuning { get; init; } = true;

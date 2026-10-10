@@ -66,10 +66,11 @@
                                 <StackPanel Visibility="{Binding IsSwapAndSwing, Converter={StaticResource BoolVisible}}" Margin="0,8,0,0">
                                     <TextBlock Text="SHOT TIMING" Style="{StaticResource Label}" Margin="0,0,0,4"/>
                                     <TextBlock Text="If the shot sometimes doesn't fire, raise Equip delay first, then Shot hold. Lower them if it feels slow; the next shot still comes at the cooldown." Style="{StaticResource Muted}" Margin="0,0,0,8"/>
-                                    <UniformGrid Columns="3">
+                                    <UniformGrid Columns="4">
                                         <StackPanel Margin="0,0,10,8"><TextBlock Text="EQUIP DELAY (MS)" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding EquipDelayMs, Mode=TwoWay}" Minimum="22" Maximum="200" Step="5"/></StackPanel>
                                         <StackPanel Margin="5,0,5,8"><TextBlock Text="SHOT HOLD (MS)" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding ShotHoldMs, Mode=TwoWay}" Minimum="10" Maximum="150" Step="5"/></StackPanel>
                                         <StackPanel Margin="10,0,0,8"><TextBlock Text="SWAP DELAY (MS)" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding SwapDelayMs, Mode=TwoWay}" Minimum="0" Maximum="150" Step="5"/></StackPanel>
+                                        <StackPanel Margin="10,0,0,8"><TextBlock Text="COOLDOWN (0 = AUTO)" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding CooldownMs, Mode=TwoWay}" Minimum="0" Maximum="3000" Step="50"/></StackPanel>
                                     </UniformGrid>
                                 </StackPanel>
                                 <c:SettingRow Title="Only works in slot 1" Description="Does nothing unless hotbar slot 1 is selected (pick it with the 1 key). Scrolling the hotbar counts as not slot 1, so press 1 again."

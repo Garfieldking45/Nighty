@@ -11,6 +11,12 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.0.2", "2026-10-10", new[]
+        {
+            "Fixed Auto Crossbow shots randomly not firing when the Auto Clicker shares its button: the clicker now holds still during the shot instead of clicking into it",
+            "Auto Crossbow no longer adds its own swings while the Auto Clicker is already swinging",
+            "Crossbow default cooldown raised to 1400 ms, and a new Cooldown setting (Extras page, 0 = automatic) for shots that are swallowed while the weapon is still reloading",
+        }),
         new("2.0.1", "2026-10-10", new[]
         {
             "Auto clicker reliability: Stop now waits until the clicker has really stopped, so no click can arrive after you turn it off and a button can never be left held down",
