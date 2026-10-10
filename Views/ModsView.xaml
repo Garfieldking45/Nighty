@@ -4,8 +4,7 @@
              xmlns:c="clr-namespace:Nighty.Controls">
     <StackPanel>
         <StackPanel Margin="0,0,0,18">
-            <TextBlock Text="Mods" Style="{StaticResource PageTitle}"/>
-            <TextBlock Text="Swap cosmetic Roblox assets (cursors, sounds, fonts, textures) with your own files — fully reversible." Style="{StaticResource PageSubtitle}"/>
+            <c:PageHeading Title="Mods" Subtitle="Swap cosmetic Roblox assets (cursors, sounds, fonts, textures) with your own files — fully reversible." Margin="0"/>
         </StackPanel>
 
         <c:InfoBanner Kind="Warning" Text="Mods only copy whitelisted asset files (png, jpg, ogg, mp3, ttf, otf, ktx, tga) into Roblox's content folder. Nothing is injected into Roblox. Originals are backed up first, Roblox updates may reset your changes, and you use mods at your own risk."/>
@@ -33,8 +32,7 @@
                 <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Text="Your mods" Style="{StaticResource CardTitle}"/>
-                        <TextBlock Text="Each mod is a folder whose files mirror Roblox's content folder (for example content\textures\ArrowCursor.png)." Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                        <c:CardHeader Icon="&#xE7B8;" Title="Your mods" Subtitle="Each mod is a folder whose files mirror Roblox's content folder (for example content\textures\ArrowCursor.png)."/>
                     </StackPanel>
                     <Button Grid.Column="1" Content="Add mod folder" Command="{Binding AddCommand}" VerticalAlignment="Top"/>
                 </Grid>

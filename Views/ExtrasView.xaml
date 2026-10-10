@@ -6,15 +6,13 @@
         <Grid Margin="0,0,0,20">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="Extras" Style="{StaticResource PageTitle}"/>
-                <TextBlock Text="Hotbar macros (crossbow, whim, lasso and more) and Auto fish." Style="{StaticResource PageSubtitle}"/>
+                <c:PageHeading Title="Extras" Subtitle="Hotbar macros (crossbow, whim, lasso and more) and Auto fish." Margin="0"/>
             </StackPanel>
         </Grid>
 
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="Auto fish" Style="{StaticResource CardTitle}"/>
-                        <TextBlock Text="Casts the rod by holding the mouse, then holds and releases to keep your green box over the moving line (any colour) until the fish is caught. After a catch it waits a second and casts again." Style="{StaticResource Muted}" Margin="0,3,0,12" TextWrapping="Wrap"/>
+                        <c:CardHeader Icon="&#xE7B3;" Title="Auto fish" Subtitle="Casts the rod by holding the mouse, then holds and releases to keep your green box over the moving line (any colour) until the fish is caught. After a catch it waits a second and casts again."/>
                         <c:SettingRow Title="Start / stop key" Description="Works from anywhere (default F7). The emergency stop also stops it.">
                             <c:HotkeyBox Vk="{Binding Fishing.HotkeyVk, Mode=TwoWay}" Mods="{Binding Fishing.HotkeyMods, Mode=TwoWay}"/>
                         </c:SettingRow>
@@ -39,8 +37,7 @@
                         <TextBlock Text="{Binding FishStatus}" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
                     </StackPanel>
                 </Border>
-        <TextBlock Text="Hotbar macros" Style="{StaticResource CardTitle}" Margin="0,6,0,4"/>
-        <TextBlock Text="One-key macros that swap between your hotbar slots (number keys 1-9). Turn on the ones you want and set their key; the emergency stop cancels them." Style="{StaticResource Muted}" Margin="0,0,0,12" TextWrapping="Wrap"/>
+        <c:CardHeader Icon="&#xE8FD;" Title="Hotbar macros" Subtitle="One-key macros that swap between your hotbar slots (number keys 1-9). Turn on the ones you want and set their key; the emergency stop cancels them."/>
         <ItemsControl ItemsSource="{Binding QuickMacros}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
@@ -50,7 +47,7 @@
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock Text="{Binding Title}" Style="{StaticResource CardTitle}"/>
-                                    <TextBlock Text="{Binding Description}" Style="{StaticResource Muted}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+<TextBlock Text="{Binding Description}" Style="{StaticResource Muted}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <CheckBox Grid.Column="1" IsChecked="{Binding Enabled}" VerticalAlignment="Top" Margin="12,2,0,0" AutomationProperties.Name="Enable macro"/>
                             </Grid>

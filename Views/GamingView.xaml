@@ -12,20 +12,20 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Ellipse Margin="-8" Fill="{StaticResource AccentSoftBrush}" x:Name="Glow" Opacity="0"/>
+                            <Ellipse Margin="-8" Fill="{DynamicResource AccentSoftBrush}" x:Name="Glow" Opacity="0"/>
                             <Ellipse x:Name="Ring" Fill="{StaticResource Panel2Brush}" Stroke="{StaticResource BorderStrongBrush}" StrokeThickness="3"/>
                             <TextBlock x:Name="Glyph" Text="&#xE7E8;" FontFamily="{StaticResource IconFont}" FontSize="52" Foreground="{StaticResource MutedBrush}"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                <Setter TargetName="Ring" Property="Stroke" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource AccentBrush}"/>
                                 <Setter TargetName="Ring" Property="Fill" Value="#12213F"/>
-                                <Setter TargetName="Glyph" Property="Foreground" Value="{StaticResource AccentHoverBrush}"/>
+                                <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource AccentHoverBrush}"/>
                                 <Setter TargetName="Glow" Property="Opacity" Value="1"/>
                             </DataTrigger>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Ring" Property="Stroke" Value="{StaticResource AccentHoverBrush}"/></Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Stroke" Value="{StaticResource AccentHoverBrush}"/></Trigger>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource AccentHoverBrush}"/></Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource AccentHoverBrush}"/></Trigger>
                             <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55"/></Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -41,8 +41,7 @@
 
     <StackPanel>
         <StackPanel Margin="0,0,0,18">
-            <TextBlock Text="Gaming" Style="{StaticResource PageTitle}"/>
-            <TextBlock Text="Free up system resources while you play, and clean out junk files safely." Style="{StaticResource PageSubtitle}"/>
+            <c:PageHeading Title="Gaming" Subtitle="Free up system resources while you play, and clean out junk files safely." Margin="0"/>
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
@@ -76,7 +75,7 @@
 
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="System usage" Style="{StaticResource CardTitle}" Margin="0,0,0,14"/>
+                        <c:CardHeader Icon="&#xE9D9;" Title="System usage" Margin="0,0,0,12"/>
                         <Grid>
                             <TextBlock Text="CPU" Style="{StaticResource Muted}"/>
                             <TextBlock Text="{Binding CpuText}" HorizontalAlignment="Right" FontWeight="SemiBold"/>
@@ -96,7 +95,7 @@
                 <c:InfoBanner Kind="Info" Text="Game Mode only changes the options you enable below. Everything it changes is remembered and put back when you turn it off or close Nighty."/>
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="Optimizations" Style="{StaticResource CardTitle}" Margin="0,0,0,6"/>
+                        <c:CardHeader Icon="&#xE7E8;" Title="Optimizations" Margin="0,0,0,12"/>
                         <ItemsControl ItemsSource="{Binding Options}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -128,7 +127,7 @@
             <c:InfoBanner Kind="Info" Text="The Cleaner only looks in the fixed locations listed below. Scan first to preview every file, then clean. Files that are in use are skipped, and nothing outside these locations is touched."/>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="What to clean" Style="{StaticResource CardTitle}" Margin="0,0,0,2"/>
+                    <c:CardHeader Icon="&#xE74D;" Title="What to clean" Margin="0,0,0,12"/>
                     <ItemsControl ItemsSource="{Binding Items}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -202,8 +201,7 @@
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="PC tweaks" Style="{StaticResource CardTitle}"/>
-                            <TextBlock Text="Small changes that free up GPU, CPU and focus for your game." Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                            <c:CardHeader Icon="&#xE713;" Title="PC tweaks" Subtitle="Small changes that free up GPU, CPU and focus for your game."/>
                         </StackPanel>
                         <Button Grid.Column="1" Content="Turn all off" Command="{Binding RestoreTweaksCommand}" VerticalAlignment="Top"/>
                     </Grid>

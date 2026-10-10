@@ -6,8 +6,7 @@
         <Grid Margin="0,0,0,18">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="Overlays" Style="{StaticResource PageTitle}"/>
-                <TextBlock Text="On-screen readouts that stay on top of your game and never intercept clicks." Style="{StaticResource PageSubtitle}"/>
+                <c:PageHeading Title="Overlays" Subtitle="On-screen readouts that stay on top of your game and never intercept clicks." Margin="0"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <Button Content="+ Add crosshair" Command="{Binding AddCrosshairCommand}"/>
@@ -30,8 +29,7 @@
                 <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Text="Preview and position" Style="{StaticResource CardTitle}"/>
-                        <TextBlock Text="Drag the tiles on the miniature screen, or use the exact position controls on each card below." Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                        <c:CardHeader Icon="&#xE946;" Title="Preview and position" Subtitle="Drag the tiles on the miniature screen, or use the exact position controls on each card below."/>
                     </StackPanel>
                     <Button Grid.Column="1" Content="Reset positions" Command="{Binding ResetPositionsCommand}" VerticalAlignment="Top"/>
                 </Grid>
@@ -51,11 +49,11 @@
                                     <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Width="36" Height="36" CornerRadius="9" Background="{StaticResource Panel2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,14,0">
-                                    <TextBlock Text="{Binding Glyph}" Style="{StaticResource Icon}" Foreground="{StaticResource AccentHoverBrush}"/>
+                                    <TextBlock Text="{Binding Glyph}" Style="{StaticResource Icon}" Foreground="{DynamicResource AccentHoverBrush}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
                                     <TextBlock Text="{Binding Title}" Style="{StaticResource CardTitle}"/>
-                                    <TextBlock Text="{Binding Blurb}" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+<TextBlock Text="{Binding Blurb}" Style="{StaticResource Muted}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE74D;" Margin="0,0,12,0" ToolTip="Remove this key overlay" AutomationProperties.Name="Remove overlay"
                                         Visibility="{Binding IsCustom, Converter={StaticResource BoolVisible}}"
@@ -127,8 +125,7 @@
 
         <Border Style="{StaticResource Card}">
             <StackPanel>
-                <TextBlock Text="Share overlays" Style="{StaticResource CardTitle}"/>
-                <TextBlock Text="A .nightyoverlay file holds only overlay positions and styles: no settings, keys or anything else from your PC. Loading one replaces your overlays, and Undo brings yours back." Style="{StaticResource Muted}" Margin="0,3,0,12" TextWrapping="Wrap"/>
+                <c:CardHeader Icon="&#xE7F4;" Title="Share overlays" Subtitle="A .nightyoverlay file holds only overlay positions and styles: no settings, keys or anything else from your PC. Loading one replaces your overlays, and Undo brings yours back."/>
                 <StackPanel Orientation="Horizontal">
                     <Button Content="Save overlays" Command="{Binding SaveLayoutCommand}"/>
                     <Button Content="Load overlays" Command="{Binding LoadLayoutCommand}" Margin="8,0,0,0"/>

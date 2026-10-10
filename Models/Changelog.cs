@@ -11,6 +11,13 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("1.7.0", "2026-10-10", new[]
+        {
+            "New look matching Lyre: darker palette, rounded cards with icon tiles, accent-bar page titles, a sidebar with version badge, GitHub button and live clicker status",
+            "Combat page redone: status card with Start clicking button and live TARGET / MEASURED / DUTY / BUTTON / MODE / CLICKS numbers, big CPS and duty readouts with sliders, Exact / Range switch, and Left / Right / Middle option cards",
+            "Settings page now has tabs (Appearance, Startup, Safety, Configuration, Changelog) and accent color swatches that recolour the whole app live",
+            "Fixed dropdowns showing raw text such as CrosshairStyleChoice { ... } instead of the option name",
+        }),
         new("1.6.2", "2026-10-10", new[]
         {
             "Hotbar macros now follow Nexus's sequences and timings: keys are sent as hardware scancodes, the sword is swung the instant its key goes down, and Lasso places five blocks",

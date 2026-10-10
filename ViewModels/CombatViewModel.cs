@@ -20,6 +20,39 @@ public sealed class CombatViewModel : ObservableObject
     public ObservableCollection<ClickerPreset> Presets => Svc.S.Presets;
 
     public double ClicksPerHit { get => Settings.ClicksPerHit; set { Settings.ClicksPerHit = (int)value; OnPropertyChanged(); } }
+    // ---- hero card
+    private bool _manualRun;
+    public string ChipText => Svc.Clicker.IsClicking ? "CLICKING" : Settings.Enabled ? "ARMED" : "IDLE";
+    public string HeroTitle => Svc.Clicker.IsClicking ? "Clicking" : "Ready";
+    private string CpsLabel => Settings.UseRange ? $"{Settings.MinCps:0.##}-{Settings.MaxCps:0.##}" : $"{Settings.Cps:0.00}";
+    private string KeyLabel => Settings.HotkeyVk > 0 ? Hotkeys.Format(Settings.HotkeyVk, Settings.HotkeyMods) : "no key set";
+    public string HeroSummary => $"{Settings.Button} button · {CpsLabel} CPS · {(Settings.Mode == ActivationMode.Hold ? "Hold" : "Toggle")} {KeyLabel}";
+    public string TargetValue => CpsLabel;
+    public string MeasuredValue => Svc.Clicker.IsClicking ? $"{Svc.Clicker.MeasuredCps:0}" : "-";
+    public string DutyValue => $"{Settings.DutyCycle:0.0}";
+    public string ButtonValue => Settings.Button.ToString();
+    public string ModeValue => Settings.Mode.ToString();
+    public string ClicksValue => Svc.Clicker.TotalClicks.ToString("N0");
+    public string StartLabel => Svc.Clicker.IsClicking ? "Stop clicking" : "Start clicking";
+    public string StartGlyph => Svc.Clicker.IsClicking ? "" : "";
+    public string StartHint => Settings.Mode == ActivationMode.Hold ? $"or hold {KeyLabel}" : $"or press {KeyLabel}";
+    public string CpsText => $"{Settings.Cps:0.00}";
+    public string PeriodText => $"{1000.0 / Math.Max(1, Settings.Cps):0.00} ms between clicks";
+    public string DutyText => $"{Settings.DutyCycle:0.0}";
+    public RelayCommand StartCommand { get; }
+    public RelayCommand CpsUp { get; }
+    public RelayCommand CpsDown { get; }
+    public RelayCommand DutyUp { get; }
+    public RelayCommand DutyDown { get; }
+
+    private void RefreshHero()
+    {
+        foreach (var n in new[] { nameof(ChipText), nameof(HeroTitle), nameof(HeroSummary), nameof(TargetValue), nameof(MeasuredValue), nameof(DutyValue),
+                                  nameof(ButtonValue), nameof(ModeValue), nameof(ClicksValue), nameof(StartLabel), nameof(StartGlyph), nameof(StartHint),
+                                  nameof(CpsText), nameof(PeriodText), nameof(DutyText) })
+            OnPropertyChanged(n);
+    }
+
     public string PresetName { get => _presetName; set => Set(ref _presetName, value); }
     public string PresetMessage { get => _presetMessage; private set => Set(ref _presetMessage, value); }
     public string MeasuredCps { get => _measured; private set => Set(ref _measured, value); }
@@ -58,6 +91,17 @@ public sealed class CombatViewModel : ObservableObject
     public CombatViewModel()
     {
         Calibrate = new RelayCommand(DoCalibrate, () => !IsCalibrating);
+        StartCommand = new RelayCommand(() =>
+        {
+            if (Svc.Clicker.IsClicking) { Svc.Clicker.Stop(); return; }
+            _manualRun = true;   // started from the button, so hold mode does not need the key held
+            Svc.Clicker.Start();
+            Svc.Toast.Toggled("Auto Clicker", true);
+        });
+        CpsUp = new RelayCommand(() => Settings.Cps += 0.5);
+        CpsDown = new RelayCommand(() => Settings.Cps -= 0.5);
+        DutyUp = new RelayCommand(() => Settings.DutyCycle = Math.Min(95, Settings.DutyCycle + 5));
+        DutyDown = new RelayCommand(() => Settings.DutyCycle = Math.Max(5, Settings.DutyCycle - 5));
         SavePreset = new RelayCommand(DoSave, () => !string.IsNullOrWhiteSpace(PresetName));
         LoadPreset = new RelayCommand(p =>
         {
@@ -72,7 +116,7 @@ public sealed class CombatViewModel : ObservableObject
             PresetMessage = $"Deleted “{pr.Name}”.";
         });
 
-        Svc.Clicker.KeepClicking = () => Settings.Mode != ActivationMode.Hold
+        Svc.Clicker.KeepClicking = () => _manualRun || Settings.Mode != ActivationMode.Hold
             || HotkeyService.IsDown((Settings.HotkeyVk, Settings.HotkeyMods));
         Svc.Hotkeys.Register("clicker", () => (Settings.HotkeyVk, Settings.HotkeyMods), OnHotkey);
         Settings.PropertyChanged += (_, e) =>
@@ -81,6 +125,7 @@ public sealed class CombatViewModel : ObservableObject
             if (e.PropertyName == nameof(ClickerSettings.Mode)) Svc.Clicker.Stop();
             if (e.PropertyName is nameof(ClickerSettings.Mode) or nameof(ClickerSettings.HotkeyVk) or nameof(ClickerSettings.HotkeyMods))
                 OnPropertyChanged(nameof(HotkeyHint));
+            RefreshHero();
         };
         Svc.Clicker.StateChanged += () => System.Windows.Application.Current.Dispatcher.BeginInvoke(UpdateState);
 
@@ -125,6 +170,8 @@ public sealed class CombatViewModel : ObservableObject
 
     private void UpdateState()
     {
+        if (!Svc.Clicker.IsClicking) _manualRun = false;
+        RefreshHero();
         if (Svc.Clicker.IsClicking)
         {
             StateText = RobloxService.IsOwnWindowForeground() ? "Paused while Nighty is focused" : "Clicking";

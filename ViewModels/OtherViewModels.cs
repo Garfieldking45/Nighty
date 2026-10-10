@@ -381,8 +381,18 @@ public sealed class SettingsViewModel : ObservableObject
     public string SelectedTheme
     {
         get => ThemeService.Find(General.Theme).Id;
-        set { General.Theme = value; ThemeService.Apply(value); OnPropertyChanged(); }
+        set { General.Theme = value; ThemeService.Apply(value); OnPropertyChanged(); foreach (var w in Swatches) w.IsSelected = w.Choice.Id == value; }
     }
+    private int _tab;
+    public int Tab { get => _tab; set => Set(ref _tab, value); }
+    public sealed class ThemeSwatch : ObservableObject
+    {
+        private bool _sel;
+        public required ThemeChoice Choice { get; init; }
+        public bool IsSelected { get => _sel; set => Set(ref _sel, value); }
+    }
+    public List<ThemeSwatch> Swatches { get; }
+    public RelayCommand SelectThemeCommand { get; }
     public bool StartMinimized
     {
         get => General.StartMinimized;
@@ -415,6 +425,8 @@ public sealed class SettingsViewModel : ObservableObject
 
     public SettingsViewModel()
     {
+        Swatches = ThemeService.Themes.Select(t => new ThemeSwatch { Choice = t, IsSelected = t.Id == ThemeService.Find(Svc.S.General.Theme).Id }).ToList();
+        SelectThemeCommand = new RelayCommand(o => { if (o is string id) SelectedTheme = id; });
         OpenDataFolder = new RelayCommand(() => Open(AppPaths.Root));
         OpenLogsFolder = new RelayCommand(() => Open(AppPaths.Logs));
         RelaunchAdmin = new RelayCommand(() =>

@@ -8,16 +8,14 @@ public sealed record ThemeChoice(string Id, string Name, string Accent);
 /// <summary>UI presets: recolours the accent used for buttons, highlights and selections across the app.</summary>
 public static class ThemeService
 {
-    // Every accent is dark enough for the white text drawn on accent buttons.
+    // Bright accents: the text drawn on accent buttons is dark, like the rest of the Lyre-style look.
     public static readonly IReadOnlyList<ThemeChoice> Themes = new ThemeChoice[]
     {
-        new("blue", "Nighty Blue", "#3B82F6"),
-        new("sky", "Sky", "#4F7FE0"),
-        new("violet", "Violet", "#7C5CFF"),
-        new("crimson", "Crimson", "#E5484D"),
-        new("gold", "Gold", "#B7791F"),
-        new("emerald", "Emerald", "#15803D"),
-        new("graphite", "Graphite", "#6B7280"),
+        new("blue", "Blue", "#4F8EF7"),
+        new("violet", "Violet", "#8B7CF6"),
+        new("green", "Green", "#2FBF8A"),
+        new("amber", "Amber", "#F5A524"),
+        new("rose", "Rose", "#F0527A"),
     };
 
     public static ThemeChoice Find(string? id) => Themes.FirstOrDefault(t => t.Id == id) ?? Themes[0];
@@ -32,6 +30,9 @@ public static class ThemeService
             Set("AccentHoverBrush", Shift(accent, 0.12));
             Set("AccentPressedBrush", Shift(accent, -0.12));
             Set("AccentSoftBrush", Color.FromArgb(0x1A, accent.R, accent.G, accent.B));
+            Set("TileBrush", Blend(accent, 0.12));
+            Set("OptionActiveBrush", Blend(accent, 0.12));
+            Set("NavActiveBrush", Blend(accent, 0.10));
         }
         catch (Exception ex) { Log.Error("Applying theme failed", ex); }
     }
@@ -39,9 +40,15 @@ public static class ThemeService
     private static void Set(string key, Color c)
     {
         var res = Application.Current.Resources;
-        if (key.EndsWith("Color")) { res[key] = c; return; }
-        if (res[key] is SolidColorBrush b && !b.IsFrozen) b.Color = c;   // change in place so existing users of the brush update live
-        else res[key] = new SolidColorBrush(c);
+        if (key.EndsWith("Color")) res[key] = c;
+        else res[key] = new SolidColorBrush(c);   // every user looks the brush up dynamically, so the whole UI follows
+    }
+
+    /// <summary>The accent mixed into near-black by <paramref name="amount"/>: the tinted navy of tiles and active items.</summary>
+    private static Color Blend(Color accent, double amount)
+    {
+        byte M(byte a, byte b) => (byte)(b + (a - b) * amount);
+        return Color.FromRgb(M(accent.R, 0x0A), M(accent.G, 0x0C), M(accent.B, 0x12));
     }
 
     private static Color Shift(Color c, double amount)

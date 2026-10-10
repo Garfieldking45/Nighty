@@ -138,3 +138,23 @@ public sealed class StatusBrushConverter : IValueConverter
     }
     public object ConvertBack(object value, Type t, object p, CultureInfo c) => throw new NotSupportedException();
 }
+
+/// <summary>Shows the selected ComboBox item through its DisplayMemberPath (the custom ComboBox template cannot use WPF's internal selector).</summary>
+public sealed class DisplayMemberConverter : System.Windows.Data.IMultiValueConverter
+{
+    public object Convert(object[] values, Type t, object p, CultureInfo c)
+    {
+        var item = values.Length > 0 ? values[0] : null;
+        var path = values.Length > 1 ? values[1] as string : null;
+        if (item == null || item == System.Windows.DependencyProperty.UnsetValue) return "";
+        if (string.IsNullOrEmpty(path)) return item.ToString() ?? "";
+        object? cur = item;
+        foreach (var part in path.Split('.'))
+        {
+            if (cur == null) break;
+            cur = cur.GetType().GetProperty(part)?.GetValue(cur);
+        }
+        return cur?.ToString() ?? "";
+    }
+    public object[] ConvertBack(object value, Type[] t, object p, CultureInfo c) => throw new NotSupportedException();
+}

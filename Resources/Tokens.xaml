@@ -2,19 +2,19 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Design tokens: every colour, radius and font used by the app is defined here. -->
-    <Color x:Key="BgColor">#0A0A0C</Color>
-    <Color x:Key="SidebarColor">#0D0D10</Color>
-    <Color x:Key="PanelColor">#131317</Color>
-    <Color x:Key="Panel2Color">#1A1A20</Color>
-    <Color x:Key="Panel3Color">#23232B</Color>
-    <Color x:Key="BorderColor">#26262E</Color>
-    <Color x:Key="BorderStrongColor">#34343E</Color>
-    <Color x:Key="TextColor">#F4F4F7</Color>
-    <Color x:Key="MutedColor">#8B8B97</Color>
-    <Color x:Key="DimColor">#5E5E69</Color>
-    <Color x:Key="AccentColor">#3B82F6</Color>
-    <Color x:Key="AccentHoverColor">#5B97F8</Color>
-    <Color x:Key="AccentPressedColor">#2A6FDB</Color>
+    <Color x:Key="BgColor">#07080B</Color>
+    <Color x:Key="SidebarColor">#040405</Color>
+    <Color x:Key="PanelColor">#0C0D11</Color>
+    <Color x:Key="Panel2Color">#101117</Color>
+    <Color x:Key="Panel3Color">#181A22</Color>
+    <Color x:Key="BorderColor">#1C1E26</Color>
+    <Color x:Key="BorderStrongColor">#2A2D38</Color>
+    <Color x:Key="TextColor">#F5F6F8</Color>
+    <Color x:Key="MutedColor">#8D909C</Color>
+    <Color x:Key="DimColor">#5C5F6B</Color>
+    <Color x:Key="AccentColor">#4F8EF7</Color>
+    <Color x:Key="AccentHoverColor">#6AA0F9</Color>
+    <Color x:Key="AccentPressedColor">#3C7BE6</Color>
     <Color x:Key="PurpleColor">#7C5CFF</Color>
     <Color x:Key="SuccessColor">#22C55E</Color>
     <Color x:Key="WarningColor">#F59E0B</Color>
@@ -37,7 +37,20 @@
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}"/>
-    <SolidColorBrush x:Key="AccentSoftBrush" Color="#1A3B82F6"/>
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#1A4F8EF7"/>
+    <SolidColorBrush x:Key="OnAccentBrush" Color="#06101F"/>
+    <SolidColorBrush x:Key="NavActiveBrush" Color="#0E1526"/>
+    <SolidColorBrush x:Key="NavHoverBrush" Color="#0A0B10"/>
+    <SolidColorBrush x:Key="TileBrush" Color="#0F1A30"/>
+    <SolidColorBrush x:Key="OptionActiveBrush" Color="#0F1A30"/>
+    <LinearGradientBrush x:Key="HeadingBarBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#5B8CFF" Offset="0"/>
+        <GradientStop Color="#9A7CFF" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="ContentBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#07080B" Offset="0"/>
+        <GradientStop Color="#0B0D12" Offset="1"/>
+    </LinearGradientBrush>
 
     <!-- Restrained blue→violet premium gradient -->
     <LinearGradientBrush x:Key="PremiumBrush" StartPoint="0,0" EndPoint="1,1">
@@ -52,6 +65,6 @@
     <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
     <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
-    <CornerRadius x:Key="RadiusCard">10</CornerRadius>
-    <CornerRadius x:Key="RadiusControl">6</CornerRadius>
+    <CornerRadius x:Key="RadiusCard">14</CornerRadius>
+    <CornerRadius x:Key="RadiusControl">10</CornerRadius>
 </ResourceDictionary>

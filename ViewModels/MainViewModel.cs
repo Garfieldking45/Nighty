@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -53,6 +53,15 @@ public sealed class MainViewModel : ObservableObject
     public StatusKind ClickerKind { get => _clickerKind; private set => Set(ref _clickerKind, value); }
     public string GameText { get => _gameText; private set => Set(ref _gameText, value); }
     public StatusKind GameKind { get => _gameKind; private set => Set(ref _gameKind, value); }
+    public string VersionBadge => "V" + (typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0");
+    public string VersionText => "Version " + (typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0");
+    private string _statusTitle = "Idle", _statusDetail = "";
+    public string StatusTitle { get => _statusTitle; private set => Set(ref _statusTitle, value); }
+    public string StatusDetail { get => _statusDetail; private set => Set(ref _statusDetail, value); }
+    public ICommand OpenGitHubCommand { get; } = new RelayCommand(() =>
+    {
+        try { Process.Start(new ProcessStartInfo("https://github.com/Garfieldking45/Nighty") { UseShellExecute = true }); } catch { }
+    });
     public string SearchText
     {
         get => _searchText;
@@ -173,6 +182,9 @@ public sealed class MainViewModel : ObservableObject
         if (Svc.Clicker.IsClicking) { ClickerText = $"Clicking · {Svc.Clicker.MeasuredCps:0} CPS"; ClickerKind = StatusKind.Success; }
         else if (s.Enabled) { ClickerText = "Armed"; ClickerKind = StatusKind.Info; }
         else { ClickerText = "Off"; ClickerKind = StatusKind.Neutral; }
+
+        StatusTitle = Svc.Clicker.IsClicking ? "Clicking" : s.Enabled ? "Armed" : "Idle";
+        StatusDetail = $"{(s.UseRange ? $"{s.MinCps:0.##}-{s.MaxCps:0.##}" : $"{s.Cps:0.00}")} CPS · {(s.HotkeyVk > 0 ? Hotkeys.Format(s.HotkeyVk, s.HotkeyMods) : "no key")}";
 
         GameText = Svc.GameMode.IsActive ? "Active" : "Off";
         GameKind = Svc.GameMode.IsActive ? StatusKind.Success : StatusKind.Neutral;

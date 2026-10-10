@@ -4,8 +4,7 @@
              xmlns:c="clr-namespace:Nighty.Controls">
     <StackPanel>
         <StackPanel Margin="0,0,0,18">
-            <TextBlock Text="Utility" Style="{StaticResource PageTitle}"/>
-            <TextBlock Text="Display, input, and network helpers. Every change is saved first so it can be undone." Style="{StaticResource PageSubtitle}"/>
+            <c:PageHeading Title="Utility" Subtitle="Display, input, and network helpers. Every change is saved first so it can be undone." Margin="0"/>
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
@@ -54,12 +53,11 @@
             <Border Style="{StaticResource Card}">
                 <StackPanel DataContext="{Binding Socd}">
                     <StackPanel Orientation="Horizontal">
-                        <Border Width="32" Height="32" CornerRadius="8" Background="{StaticResource AccentSoftBrush}">
-                            <TextBlock Text="&#xE7C9;" Style="{StaticResource Icon}" Foreground="{StaticResource AccentBrush}" FontSize="15"/>
+                        <Border Width="32" Height="32" CornerRadius="8" Background="{DynamicResource AccentSoftBrush}">
+                            <TextBlock Text="&#xE7C9;" Style="{StaticResource Icon}" Foreground="{DynamicResource AccentBrush}" FontSize="15"/>
                         </Border>
                         <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="Movement Helper" Style="{StaticResource CardTitle}"/>
-                            <TextBlock Text="What happens when you hold left and right (or forward and back) together" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+                            <c:CardHeader Icon="&#xE765;" Title="Movement Helper" Subtitle="What happens when you hold left and right (or forward and back) together"/>
                         </StackPanel>
                     </StackPanel>
                     <Border Style="{StaticResource Divider}" Margin="0,14"/>
@@ -117,8 +115,7 @@
             </Border>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="Current Windows state" Style="{StaticResource CardTitle}"/>
-                    <TextBlock Text="{Binding CurrentText}" Style="{StaticResource Muted}" Margin="0,6,0,14" TextWrapping="Wrap"/>
+                    <c:CardHeader Icon="&#xE946;" Title="Current Windows state" Subtitle="{Binding CurrentText}"/>
                     <Button Content="Restore original" Command="{Binding RestoreCommand}" HorizontalAlignment="Left"/>
                     <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="0,12,0,0" Foreground="{Binding Kind, Converter={StaticResource StatusBrush}}"
                                Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
@@ -141,20 +138,17 @@
                     <TextBlock Text="SLOW SPEED" Style="{StaticResource Label}" Margin="0,10,0,6"/>
                     <c:ValueStepper Value="{Binding SlowSpeed, Mode=TwoWay}" Minimum="1" Maximum="20" Step="1"/>
                     <Border Style="{StaticResource Divider}" Margin="0,18"/>
-                    <TextBlock Text="Pointer speed" Style="{StaticResource CardTitle}"/>
-                    <TextBlock Text="Windows pointer speed, 1–20 (10 is the Windows default)." Style="{StaticResource Muted}" Margin="0,3,0,14"/>
+                    <c:CardHeader Icon="&#xE945;" Title="Pointer speed" Subtitle="Windows pointer speed, 1–20 (10 is the Windows default)."/>
                     <c:ValueStepper Value="{Binding Speed, Mode=TwoWay}" Minimum="1" Maximum="20" Step="1"/>
                     <Border Style="{StaticResource Divider}" Margin="0,18"/>
                     <c:SettingRow Title="Enhance pointer precision" Description="Mouse acceleration. Turn off for 1:1 movement that matches your hand speed.">
                         <CheckBox IsChecked="{Binding Settings.EnhancePointerPrecision}"/>
                     </c:SettingRow>
                     <Border Style="{StaticResource Divider}" Margin="0,18"/>
-                    <TextBlock Text="Scroll speed" Style="{StaticResource CardTitle}"/>
-                    <TextBlock Text="Lines per wheel notch (0 leaves your Windows setting alone)." Style="{StaticResource Muted}" Margin="0,3,0,14"/>
+                    <c:CardHeader Icon="&#xE945;" Title="Scroll speed" Subtitle="Lines per wheel notch (0 leaves your Windows setting alone)."/>
                     <c:ValueStepper Value="{Binding ScrollLines, Mode=TwoWay}" Minimum="0" Maximum="100" Step="1"/>
                     <Border Style="{StaticResource Divider}" Margin="0,18"/>
-                    <TextBlock Text="Double-click speed" Style="{StaticResource CardTitle}"/>
-                    <TextBlock Text="How quickly two clicks must follow to count as a double click, in ms (0 leaves Windows alone)." Style="{StaticResource Muted}" Margin="0,3,0,14"/>
+                    <c:CardHeader Icon="&#xE945;" Title="Double-click speed" Subtitle="How quickly two clicks must follow to count as a double click, in ms (0 leaves Windows alone)."/>
                     <c:ValueStepper Value="{Binding DoubleClickMs, Mode=TwoWay}" Minimum="0" Maximum="900" Step="50"/>
                     <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
                         <TextBlock Text="PRESETS" Style="{StaticResource Label}" VerticalAlignment="Center" Margin="0,0,12,0"/>
@@ -173,8 +167,7 @@
             </Border>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="Sensitivity calculator" Style="{StaticResource CardTitle}"/>
-                    <TextBlock Text="Compare setups: eDPI is your mouse DPI times your in-game sensitivity." Style="{StaticResource Muted}" Margin="0,3,0,14"/>
+                    <c:CardHeader Icon="&#xE946;" Title="Sensitivity calculator" Subtitle="Compare setups: eDPI is your mouse DPI times your in-game sensitivity."/>
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                         <StackPanel>
@@ -191,8 +184,7 @@
             </Border>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="Current Windows state" Style="{StaticResource CardTitle}"/>
-                    <TextBlock Text="{Binding CurrentText}" Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+                    <c:CardHeader Icon="&#xE946;" Title="Current Windows state" Subtitle="{Binding CurrentText}"/>
                 </StackPanel>
             </Border>
         </StackPanel>
@@ -205,8 +197,7 @@
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="Network adapter" Style="{StaticResource CardTitle}"/>
-                            <TextBlock Text="{Binding CurrentDns, StringFormat=Current DNS: {0}}" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                            <c:CardHeader Icon="&#xE774;" Title="Network adapter" Subtitle="{Binding CurrentDns, StringFormat=Current DNS: {0}}"/>
                         </StackPanel>
                         <Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshAdaptersCommand}"/>
                     </Grid>
@@ -300,8 +291,7 @@
             <c:InfoBanner Kind="Warning" Text="What this does: Windows marks outgoing Roblox packets with a DSCP value. What it doesn't do: guarantee lower ping. Home routers and ISPs usually ignore or clear DSCP tags, and on PCs that aren't joined to a domain Windows may not apply the marking at all. Treat it as optional and verify with your own testing."/>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="Roblox traffic policy" Style="{StaticResource CardTitle}"/>
-                    <TextBlock Text="{Binding AppName, StringFormat=Applies to {0} on all network profiles.}" Style="{StaticResource Muted}" Margin="0,3,0,14"/>
+                    <c:CardHeader Icon="&#xE946;" Title="Roblox traffic policy" Subtitle="{Binding AppName, StringFormat=Applies to {0} on all network profiles.}"/>
                     <TextBlock Text="DSCP VALUE" Style="{StaticResource Label}" Margin="0,0,0,6"/>
                     <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding Choice}" AutomationProperties.Name="DSCP value"/>
                     <StackPanel Orientation="Horizontal" Margin="0,18,0,0">

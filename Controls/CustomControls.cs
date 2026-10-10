@@ -8,6 +8,28 @@ using Nighty.Services;
 
 namespace Nighty.Controls;
 
+/// <summary>Page title with an accent bar and a subtitle; optional content (status, a switch) sits on the right.</summary>
+public class PageHeading : ContentControl
+{
+    public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(PageHeading));
+    public static readonly DependencyProperty SubtitleProperty = DependencyProperty.Register(nameof(Subtitle), typeof(string), typeof(PageHeading));
+    public string? Title { get => (string?)GetValue(TitleProperty); set => SetValue(TitleProperty, value); }
+    public string? Subtitle { get => (string?)GetValue(SubtitleProperty); set => SetValue(SubtitleProperty, value); }
+    static PageHeading() => DefaultStyleKeyProperty.OverrideMetadata(typeof(PageHeading), new FrameworkPropertyMetadata(typeof(PageHeading)));
+}
+
+/// <summary>Card header with an icon tile, a title and a subtitle; optional content on the right.</summary>
+public class CardHeader : ContentControl
+{
+    public static readonly DependencyProperty IconProperty = DependencyProperty.Register(nameof(Icon), typeof(string), typeof(CardHeader), new PropertyMetadata("\uE946"));
+    public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(nameof(Title), typeof(string), typeof(CardHeader));
+    public static readonly DependencyProperty SubtitleProperty = DependencyProperty.Register(nameof(Subtitle), typeof(string), typeof(CardHeader));
+    public string? Icon { get => (string?)GetValue(IconProperty); set => SetValue(IconProperty, value); }
+    public string? Title { get => (string?)GetValue(TitleProperty); set => SetValue(TitleProperty, value); }
+    public string? Subtitle { get => (string?)GetValue(SubtitleProperty); set => SetValue(SubtitleProperty, value); }
+    static CardHeader() => DefaultStyleKeyProperty.OverrideMetadata(typeof(CardHeader), new FrameworkPropertyMetadata(typeof(CardHeader)));
+}
+
 /// <summary>Row with title/description on the left and arbitrary content (usually a switch) on the right.</summary>
 public class SettingRow : ContentControl
 {

@@ -76,6 +76,10 @@ public sealed class ClickerService
     public bool IsClicking => _cts != null;
     public event Action? StateChanged;
 
+    private long _total;
+    /// <summary>Hits sent since the clicker was last started.</summary>
+    public long TotalClicks => Interlocked.Read(ref _total);
+
     /// <summary>Clicks actually sent during the last second.</summary>
     public double MeasuredCps
     {
@@ -95,6 +99,7 @@ public sealed class ClickerService
         if (_cts != null) return;
         var cts = new CancellationTokenSource();
         _cts = cts;
+        Interlocked.Exchange(ref _total, 0);
         NativeMethods.timeBeginPeriod(1);
         _gcMode = System.Runtime.GCSettings.LatencyMode;
         try { System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency; } catch { }   // avoid long GC pauses mid-fight
@@ -174,6 +179,7 @@ public sealed class ClickerService
             }
 
             lock (_gate) _stamps.Enqueue(Environment.TickCount64);
+            Interlocked.Increment(ref _total);
             Svc.Bow.TryAuto();   // react right after a click instead of waiting for the UI timer
 
             // Accumulate so an overshoot never compounds into a slow CPS, and resync after a stall instead of bursting.

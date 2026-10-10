@@ -6,5 +6,6 @@
     <m:NullToVisibilityConverter x:Key="NullVisible"/>
     <m:SocdDescriptionConverter x:Key="SocdDesc"/>
     <m:EqualsConverter x:Key="Eq"/>
+    <m:DisplayMemberConverter x:Key="DisplayMember"/>
     <m:StatusBrushConverter x:Key="StatusBrush"/>
 </ResourceDictionary>
