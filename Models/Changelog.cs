@@ -11,6 +11,12 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.0.8", "2026-10-11", new[]
+        {
+            "Discord status now works out of the box: Nighty uses its own Discord application, so there is no application id to enter (you can still enter your own under Settings > Discord)",
+            "Updates no longer start a hidden PowerShell window: Nighty swaps its own file and restarts itself, which also avoids false antivirus warnings",
+            "Added proper version details to Nighty.exe",
+        }),
         new("2.0.7", "2026-10-11", new[]
         {
             "Gaming > Cleaner: nine new things to clean: Chrome, Edge, Brave and Firefox caches, Discord cache, NVIDIA / AMD shader caches, Steam web cache, Windows error reports and Windows Update downloads (needs administrator). Only caches are touched, never passwords, history, cookies or messages. Each one shows what it will remove before anything is deleted",
