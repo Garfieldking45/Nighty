@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Win32;
 using Nighty.Models;
 using Nighty.Mvvm;
@@ -15,8 +16,9 @@ public sealed class TweaksService
 {
     private const uint SPI_GETCLIENTAREAANIMATION = 0x1042, SPI_SETCLIENTAREAANIMATION = 0x1043;
     private const string AnimSubKey = "<spi>", AnimName = "ClientAreaAnimation";
+    private const string FlagSubKey = "<flag>", FpsFlag = "DFIntTaskSchedulerTargetFps";
 
-    private enum EditKind { Registry, Animations }
+    private enum EditKind { Registry, Animations, RobloxFlag }
     private sealed record Edit(EditKind Kind, string SubKey, string Name, object Value);
 
     private SystemBackups B => Svc.S.Backups;
@@ -27,6 +29,8 @@ public sealed class TweaksService
             "Stops Windows from recording gameplay in the background, which costs GPU and disk time. Also disables the Game Bar capture hooks."),
         new("gpu", "Run Roblox on the high-performance graphics card",
             "On PCs with two graphics chips (most gaming laptops), tells Windows to always use the fast one for Roblox. Re-applied automatically after Roblox updates."),
+        new("fpscap", "Remove Roblox's 60 FPS cap",
+            "Roblox renders at 60 FPS unless told otherwise. This raises its frame-rate target (a setting on Roblox's published allowed list) so a fast monitor can be used fully. Re-applied after Roblox updates."),
         new("transparency", "Turn off window transparency effects",
             "Removes the blur and see-through effects from Windows, freeing a little GPU power for the game."),
         new("animations", "Turn off window animations",
@@ -72,6 +76,7 @@ public sealed class TweaksService
         foreach (var id in B.TweaksToReapply.ToList()) if (!IsApplied(id)) Set(id, true);
         B.TweaksToReapply.Clear();
         if (IsApplied("gpu")) Set("gpu", true);
+        if (IsApplied("fpscap")) Set("fpscap", true);
     }
 
     /// <summary>Reverts every tweak but remembers which were on, so the next start puts them back.</summary>
@@ -89,7 +94,12 @@ public sealed class TweaksService
             var parts = key.Split('|', 3);
             string subKey = parts[1], name = parts[2];
             string orig = B.Tweaks[key];
-            if (subKey == AnimSubKey)
+            if (subKey == FlagSubKey)
+            {
+                var path = FlagFile();
+                if (path != null && File.Exists(path)) WriteFlag(path, name, orig == "N" ? null : orig[2..]);
+            }
+            else if (subKey == AnimSubKey)
             {
                 if (orig.StartsWith("I:")) NativeMethods.SystemParametersInfo(SPI_SETCLIENTAREAANIMATION, 0, (IntPtr)int.Parse(orig[2..]), NativeMethods.SPIF_UPDATEINIFILE | NativeMethods.SPIF_SENDCHANGE);
             }
@@ -114,6 +124,17 @@ public sealed class TweaksService
     private void ApplyEdit(string id, Edit e)
     {
         string key = $"{id}|{e.SubKey}|{e.Name}";
+        if (e.Kind == EditKind.RobloxFlag)
+        {
+            var path = FlagFile() ?? throw new InvalidOperationException("Roblox isn't installed for this user");
+            if (!B.Tweaks.ContainsKey(key))
+            {
+                B.Tweaks[key] = ReadFlags(path).TryGetValue(e.Name, out var old) ? "S:" + old : "N";
+                Svc.Settings.Save();
+            }
+            WriteFlag(path, e.Name, (string)e.Value);
+            return;
+        }
         if (e.Kind == EditKind.Animations)
         {
             if (!B.Tweaks.ContainsKey(key))
@@ -137,6 +158,29 @@ public sealed class TweaksService
         else k.SetValue(e.Name, (string)e.Value, RegistryValueKind.String);
     }
 
+    /// <summary>The ClientAppSettings.json of the newest Roblox client (the file Roblox reads allowed FastFlags from).</summary>
+    private static string? FlagFile()
+    {
+        var folder = Svc.Roblox.FindVersionFolder();
+        return folder == null ? null : Path.Combine(folder, "ClientSettings", "ClientAppSettings.json");
+    }
+
+    private static Dictionary<string, string> ReadFlags(string path)
+    {
+        try { return File.Exists(path) ? JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path)) ?? new() : new(); }
+        catch { return new(); }
+    }
+
+    /// <summary>Merges one flag into the file, keeping every other flag; a null value removes it (and the file when empty).</summary>
+    private static void WriteFlag(string path, string name, string? value)
+    {
+        var flags = ReadFlags(path);
+        if (value == null) flags.Remove(name); else flags[name] = value;
+        if (flags.Count == 0) { File.Delete(path); return; }
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, JsonSerializer.Serialize(flags, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
     private List<Edit>? EditsFor(string id, out string? problem)
     {
         problem = null;
@@ -149,6 +193,9 @@ public sealed class TweaksService
                     new(EditKind.Registry, @"System\GameConfigStore", "GameDVR_Enabled", 0),
                     new(EditKind.Registry, cv + "GameDVR", "AppCaptureEnabled", 0),
                 };
+            case "fpscap":
+                if (FlagFile() == null) { problem = "Roblox isn't installed for this user, so there is nothing to set"; return null; }
+                return new() { new(EditKind.RobloxFlag, FlagSubKey, FpsFlag, "9999") };
             case "transparency":
                 return new() { new(EditKind.Registry, cv + @"Themes\Personalize", "EnableTransparency", 0) };
             case "animations":

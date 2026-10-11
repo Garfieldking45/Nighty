@@ -51,8 +51,11 @@ public sealed class SlotMacroConfig : ObservableObject
     public double ShotHoldMs { get => _shotHoldMs; set => Set(ref _shotHoldMs, Math.Clamp(Math.Round(value), 10, 150)); }
     /// <summary>Pause between the shot and swapping to the sword, so the swap can't cancel a shot that is still leaving.</summary>
     public double SwapDelayMs { get => _swapMs; set => Set(ref _swapMs, Math.Clamp(Math.Round(value), 0, 150)); }
+    private bool _clickerShots;
+    /// <summary>Crossbow and Whim: let the running Auto Clicker's own clicks fire the shot instead of pausing it and clicking separately. Leaves the weapon as soon as it has fired.</summary>
+    public bool UseClickerShots { get => _clickerShots; set => Set(ref _clickerShots, value); }
     private double _cooldownMs;
-    /// <summary>Time between shots. 0 = automatic (1400 ms crossbow, 1100 ms whim). Raise it if every few shots does not fire: the weapon was still reloading.</summary>
+    /// <summary>Time between shots. 0 = automatic (1300 ms crossbow, 1100 ms whim). Raise it if every few shots does not fire: the weapon was still reloading.</summary>
     public double CooldownMs { get => _cooldownMs; set => Set(ref _cooldownMs, value <= 0 ? 0 : Math.Clamp(Math.Round(value), 800, 3000)); }
     [JsonIgnore] public bool IsSwapAndSwing => Kind is SlotMacroKind.Crossbow or SlotMacroKind.Whim;
     private bool _onlySlotOne = true;
@@ -175,6 +178,10 @@ public sealed class ClickerSettings : ObservableObject
     public int HotkeyMods { get => _mods; set => Set(ref _mods, value); }
     public bool OnlyWhenRobloxFocused { get => _onlyRoblox; set => Set(ref _onlyRoblox, value); }
 
+    private bool _cornerStop = true;
+    /// <summary>Failsafe: throwing the mouse into a corner of the desktop stops the clicker.</summary>
+    public bool StopInCorner { get => _cornerStop; set => Set(ref _cornerStop, value); }
+
     private bool _hitFix = true;
     private int _stopAfter, _timeLimit, _startDelayMs;
     /// <summary>Steadier clicks: the clicker thread gets real-time priority, its own CPU core and an exact final spin before every click.</summary>
@@ -191,7 +198,7 @@ public sealed class ClickerSettings : ObservableObject
         Cps = o.Cps; UseRange = o.UseRange; MinCps = o.MinCps; MaxCps = o.MaxCps; Button = o.Button;
         DutyCycle = o.DutyCycle; Mode = o.Mode; HotkeyVk = o.HotkeyVk; HotkeyMods = o.HotkeyMods;
         OnlyWhenRobloxFocused = o.OnlyWhenRobloxFocused; ClicksPerHit = o.ClicksPerHit; Jitter = o.Jitter;
-        HitFix = o.HitFix; StopAfterClicks = o.StopAfterClicks; TimeLimitSec = o.TimeLimitSec; StartDelayMs = o.StartDelayMs;
+        StopInCorner = o.StopInCorner; HitFix = o.HitFix; StopAfterClicks = o.StopAfterClicks; TimeLimitSec = o.TimeLimitSec; StartDelayMs = o.StartDelayMs;
     }
 
     public ClickerSettings Clone() { var c = new ClickerSettings(); c.CopyFrom(this); return c; }

@@ -73,6 +73,10 @@
                                         <StackPanel Margin="10,0,0,8"><TextBlock Text="COOLDOWN (0 = AUTO)" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding CooldownMs, Mode=TwoWay}" Minimum="0" Maximum="3000" Step="50"/></StackPanel>
                                     </UniformGrid>
                                 </StackPanel>
+                                <c:SettingRow Title="Shoot with the Auto Clicker" Description="While the Auto Clicker is running, its own clicks fire the shot and the sword comes back the moment it has fired, so the clicker never pauses. Falls back to the timings below if no click arrives."
+                                              Visibility="{Binding IsSwapAndSwing, Converter={StaticResource BoolVisible}}">
+                                    <CheckBox IsChecked="{Binding UseClickerShots}"/>
+                                </c:SettingRow>
                                 <c:SettingRow Title="Only works in slot 1" Description="Does nothing unless hotbar slot 1 is selected (pick it with the 1 key). Scrolling the hotbar counts as not slot 1, so press 1 again."
                                               Visibility="{Binding IsCrossbow, Converter={StaticResource BoolVisible}}">
                                     <CheckBox IsChecked="{Binding OnlyInSlotOne}"/>

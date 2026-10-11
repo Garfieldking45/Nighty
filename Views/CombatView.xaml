@@ -210,6 +210,10 @@
                         <c:SettingRow Title="Only while Roblox is focused" Description="Pauses clicking when another window is in front.">
                             <CheckBox IsChecked="{Binding Settings.OnlyWhenRobloxFocused}"/>
                         </c:SettingRow>
+                        <Border Style="{StaticResource Divider}"/>
+                        <c:SettingRow Title="Stop in a screen corner" Description="Failsafe: throw the mouse into any corner of the desktop to stop clicking.">
+                            <CheckBox IsChecked="{Binding Settings.StopInCorner}"/>
+                        </c:SettingRow>
                         <c:InfoBanner Kind="Info" Text="{Binding HotkeyHint}" Margin="0,12,0,0"/>
                     </StackPanel>
                 </Border>

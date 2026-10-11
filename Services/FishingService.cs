@@ -63,6 +63,8 @@ public sealed class FishingService
     private const int Side = 12;          // how far left/right of a pixel we compare, to tell a thin line from flat areas
     private const int LineDiff = 70;      // colour distance from both sides for "this pixel is a line"
     private const int SideDiff = 70;      // ...while both sides look alike (same background on each side)
+    private const double LineLeadSec = 0.09;   // how far ahead of the line to aim, in seconds of its own movement
+    private const double BoxLeadSec = 0.06;    // how far ahead the box is expected to be by the time a click takes effect
 
     private void Run(CancellationToken ct)
     {
@@ -176,6 +178,7 @@ public sealed class FishingService
         using var strip = new ScreenGrabber(sw, stripH);
         int lost = 0;
         var hist = new Queue<(long T, double X)>();
+        var lineHist = new Queue<(long T, double X)>();
         bool wantRight = false;
         long next = Wait.Now;
         var colScore = new int[sw];
@@ -261,7 +264,15 @@ public sealed class FishingService
 
             // Where the box will be shortly versus where the line is. Inside a small dead zone keep doing what we were
             // doing, so it doesn't flutter on and off around the line.
-            double err = bestC - (boxC + boxV * 0.04);
+            // The line moves too, and the box answers a frame or more late (capture, then the game, then the click), so aiming at
+            // where the line is now leaves the box always just behind it. Aim where the line is about to be instead.
+            lineHist.Enqueue((now, bestC));
+            while (lineHist.Count > 1 && (now - lineHist.Peek().T) > Wait.FromMs(90)) lineHist.Dequeue();
+            double lineV = 0;
+            var lineOld = lineHist.Peek();
+            double lineSpan = (now - lineOld.T) / (double)Wait.FromMs(1000);
+            if (lineSpan >= 0.04) lineV = (bestC - lineOld.X) / lineSpan;
+            double err = (bestC + lineV * LineLeadSec) - (boxC + boxV * BoxLeadSec);
             if (Math.Abs(err) > 3) wantRight = err > 0;
             hold(s.HoldMovesRight ? wantRight : !wantRight);
             string kind = rarity == FishRarity.Unknown ? "" : $"{rarity} fish — ";

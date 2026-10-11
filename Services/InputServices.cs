@@ -137,6 +137,8 @@ internal sealed class ClickerHost
     public Func<ClickerSettings, bool> Allowed { get; init; } = s => !RobloxService.IsOwnWindowForeground() && (!s.OnlyWhenRobloxFocused || Svc.Roblox.IsForeground);
     /// <summary>True while another macro owns the mouse (the crossbow shot).</summary>
     public Func<bool> Busy { get; init; } = () => Svc.Bow.IsRunning || SlotMacroService.ShotInProgress;
+    /// <summary>True while the pointer sits in a desktop corner (the stop-zone failsafe). Off in tests.</summary>
+    public Func<bool> InStopZone { get; init; } = StopZones.PointerInCorner;
     public Action AfterClick { get; init; } = () => Svc.Bow.TryAuto();
     /// <summary>Process priority class and GC latency mode. Off in tests so they don't change the test runner.</summary>
     public bool ProcessTuning { get; init; } = true;
@@ -392,6 +394,7 @@ public sealed class ClickerService
         bool allowed = true;
         long nextCheck = 0;
         int refused = 0;
+        bool wasInZone = false, wasRunning = false;
 
         if (_s.StartDelayMs > 0) Wait.Ms(_s.StartDelayMs, ct);
         long next = Wait.Now;
@@ -407,6 +410,13 @@ public sealed class ClickerService
             // Foreground checks involve process lookups, so refresh them every 40 ms instead of every click.
             if (Wait.Now >= nextCheck)
             {
+                if (_s.StopInCorner)
+                {
+                    bool inZone = _host.InStopZone();
+                    bool stop = StopZones.ShouldStop(inZone, wasInZone, true, wasRunning);
+                    wasInZone = inZone; wasRunning = true;
+                    if (stop) { Finish(s, "Stopped: the mouse was thrown into a screen corner."); return; }
+                }
                 allowed = _host.Allowed(_s);
                 nextCheck = Wait.Now + Wait.FromMs(40);
             }

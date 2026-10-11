@@ -59,7 +59,7 @@ public class ClickerTests
 
     private static ClickerHost Host(bool tuning = false) => new()
     {
-        Precision = () => PrecisionMode.Balanced, Allowed = _ => true, Busy = () => false, AfterClick = () => { }, ProcessTuning = tuning,
+        Precision = () => PrecisionMode.Balanced, Allowed = _ => true, Busy = () => false, InStopZone = () => false, AfterClick = () => { }, ProcessTuning = tuning,
     };
 
     private static ClickerSettings Settings(double cps = 50, bool hitFix = true) => new() { Cps = cps, DutyCycle = 35, HitFix = hitFix, Enabled = true };
@@ -313,5 +313,36 @@ public class ClickerTests
         _out.WriteLine($"start -> first click: median {lat[lat.Count / 2]:0.0} ms, p90 {lat[(int)(lat.Count * 0.9)]:0.0} ms, worst {lat[^1]:0.0} ms");
         GC.KeepAlive(ballast);
         Assert.True(lat[(int)(lat.Count * 0.9)] < 40, $"p90 {lat[(int)(lat.Count * 0.9)]:0.0} ms is too slow for a hotkey");
+    }
+
+    [Fact]
+    public void Corner_detection_needs_both_axes()
+    {
+        var d = new ScreenRect(0, 0, 3839, 1079);
+        Assert.True(StopZones.InCorner(d, 0, 0));
+        Assert.True(StopZones.InCorner(d, 3839, 1079));
+        Assert.False(StopZones.InCorner(d, 1920, 0));
+        Assert.False(StopZones.InCorner(d, 0, 540));
+    }
+
+    [Fact]
+    public void Starting_inside_a_zone_counts_as_an_edge()
+    {
+        Assert.True(StopZones.ShouldStop(inZone: true, wasInZone: true, running: true, wasRunning: false));
+        Assert.False(StopZones.ShouldStop(inZone: true, wasInZone: true, running: true, wasRunning: true));
+        Assert.False(StopZones.ShouldStop(inZone: false, wasInZone: false, running: true, wasRunning: true));
+    }
+
+    [Fact]
+    public void Clicker_stops_when_pointer_is_thrown_into_a_corner()
+    {
+        var sink = new RecordingSink();
+        bool corner = false;
+        var host = new ClickerHost { Precision = () => PrecisionMode.Balanced, Allowed = _ => true, Busy = () => false, InStopZone = () => corner, AfterClick = () => { }, ProcessTuning = false };
+        var c = new ClickerService(Settings(), sink, host);
+        c.Start();
+        Assert.True(WaitUntil(() => c.TotalClicks > 3, 2000));
+        corner = true;
+        Assert.True(WaitUntil(() => !c.IsClicking, 1000));
     }
 }

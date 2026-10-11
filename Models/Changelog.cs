@@ -11,6 +11,11 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.0.4", "2026-10-10", new[]
+        {
+            "Stop in a screen corner: a new failsafe on the Combat page. Throw the mouse into any corner of the desktop and the Auto Clicker stops (on by default; also stops if you start it while the mouse is already in a corner)",
+            "New PC tweak \"Remove Roblox's 60 FPS cap\" on the Gaming page: raises Roblox's frame-rate target using its allowed FastFlag, keeps your other flags, is re-applied after Roblox updates and can be reverted",
+        }),
         new("2.0.3", "2026-10-10", new[]
         {
             "Auto Crossbow: the Auto Clicker now pauses only until the shot is released, not through the sword swap, so hit reg stays faster while the crossbow is held",

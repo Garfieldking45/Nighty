@@ -13,7 +13,7 @@ public sealed class SlotMacroService
 {
     // Hold long enough to span a frame at 60 fps, or the game never sees the press.
     private const int KeyHoldMs = 20, ClickHoldMs = 10;
-    private const double CrossbowCooldownMs = 1400, WhimCooldownMs = 1100;
+    private const double CrossbowCooldownMs = 1300, WhimCooldownMs = 1100;
 
     /// <summary>True from the weapon key going down until the shot is released. The Auto Clicker holds still meanwhile, so none of its clicks land inside the shot.</summary>
     public static volatile bool ShotInProgress;
@@ -161,6 +161,48 @@ public sealed class SlotMacroService
         return new ShotPlan(0, KeyHoldMs, equip, equip + hold, equip + hold + swap);
     }
 
+    /// <summary>
+    /// Equips the weapon and lets the Auto Clicker's own clicks fire it, then selects the sword as soon as it has fired.
+    /// The clicker is never paused, so no click is lost and none lands inside a separate press. If no click arrives in time
+    /// (clicker paused or refused), the shot is sent by hand so it still fires. Returns when the shot happened.
+    /// </summary>
+    private static long ShootWithClicker(SlotMacroConfig c, int swordVk, CancellationToken ct)
+    {
+        var plan = PlanShot(c);
+        int weaponVk = SlotVk(c.SlotA);
+        long t0 = Wait.Now;
+        InputSender.KeyScan(weaponVk, true);
+        try { Wait.Until(t0 + Wait.FromMs(plan.KeyUp), ct); }
+        finally { InputSender.KeyScan(weaponVk, false); }
+        Wait.Until(t0 + Wait.FromMs(plan.ShotDown), ct);
+        if (ct.IsCancellationRequested) return Wait.Now;
+
+        var s = Svc.S.Clicker;
+        double periodMs = 1000.0 / Math.Clamp(s.UseRange ? s.MaxCps : s.Cps, 1, 100);
+        long from = Svc.Clicker.TotalClicks, fired = 0;
+        long deadline = Wait.Now + Wait.FromMs(Math.Clamp(periodMs * 3, 60, 250));
+        // Two clicks, because the first can land in the instant the equip finishes and be swallowed.
+        while (!ct.IsCancellationRequested && Wait.Now < deadline)
+        {
+            long n = Svc.Clicker.TotalClicks - from;
+            if (n >= 1 && fired == 0) fired = Wait.Now;
+            if (n >= 2) break;
+            Wait.Ms(1, ct);
+        }
+        if (fired == 0)
+        {
+            ShotInProgress = true;
+            try { fired = Wait.Now; Click(ct, ClickButton.Left, plan.ShotUp - plan.ShotDown); }
+            finally { ShotInProgress = false; }
+            Wait.Ms(Math.Max(0, c.SwapDelayMs), ct);
+        }
+
+        InputSender.KeyScan(swordVk, true);
+        try { Wait.Ms(ClickHoldMs, ct); }
+        finally { InputSender.KeyScan(swordVk, false); }
+        return fired;
+    }
+
     private static void RunSwapAndSwing(SlotMacroConfig c, double cooldownMs, CancellationToken ct)
     {
         double gap = GapMs();
@@ -171,6 +213,12 @@ public sealed class SlotMacroService
             if (c.BlockSlot > 0 && Svc.Bow.CurrentSlot == (int)c.BlockSlot) return;
 
             long fired;
+            if (c.UseClickerShots && Svc.Clicker.IsClicking && Svc.S.Clicker.Button == ClickButton.Left)
+            {
+                fired = ShootWithClicker(c, swordVk, ct);
+                if (ct.IsCancellationRequested) return;
+            }
+            else {
             ShotInProgress = true;
             try {
             // One schedule from a single start time, so waits can't pile up and shift the shot.
@@ -190,9 +238,11 @@ public sealed class SlotMacroService
             Wait.Until(t0 + Wait.FromMs(plan.SwordKey), ct);
 
             InputSender.KeyScan(swordVk, true);
-            try { Click(ct); }
+            // The Auto Clicker is already swinging again, so a click of our own would only collide with its press and cost a hit.
+            try { if (!Svc.Clicker.IsClicking) Click(ct); else Wait.Ms(ClickHoldMs, ct); }
             finally { InputSender.KeyScan(swordVk, false); }
             } finally { ShotInProgress = false; }
+            }
             if (c.Style == SlotMacroStyle.Press) return;
 
             long swapAt = fired + Wait.FromMs(cooldownMs);
