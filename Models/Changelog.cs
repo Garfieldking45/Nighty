@@ -11,6 +11,11 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.0.7", "2026-10-11", new[]
+        {
+            "Gaming > Cleaner: nine new things to clean: Chrome, Edge, Brave and Firefox caches, Discord cache, NVIDIA / AMD shader caches, Steam web cache, Windows error reports and Windows Update downloads (needs administrator). Only caches are touched, never passwords, history, cookies or messages. Each one shows what it will remove before anything is deleted",
+            "Gaming > PC tweaks: five new tweaks, each revertible: instant menus, skip the startup app delay, no Windows suggestions and tips, Start search on this PC only, and the best-performance visual-effects preset",
+        }),
         new("2.0.6", "2026-10-11", new[]
         {
             "Tracking Helper: new \"Slow down only while swinging\" option. The pointer drops to the slow speed only while the Auto Clicker is swinging in Roblox, and returns to your normal speed the moment it stops",

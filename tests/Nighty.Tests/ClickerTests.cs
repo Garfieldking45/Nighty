@@ -387,4 +387,20 @@ public class ClickerTests
     [InlineData("Request timed out.", null)]
     [InlineData("Destination host unreachable.", null)]
     public void Ping_exe_output_is_read_in_any_language(string output, int? ms) => Assert.Equal(ms, PingService.ParsePingMs(output));
+
+    [Fact]
+    public async Task Every_cleaner_category_scans_without_errors_and_only_inside_its_roots()
+    {
+        var cleaner = new CleanerService();
+        var ids = cleaner.Categories.Select(c => c.Id).ToList();
+        Assert.Equal(ids.Count, ids.Distinct().Count());
+        var scans = await cleaner.ScanAsync(ids, null, CancellationToken.None);   // scan only: nothing is deleted
+        foreach (var c in cleaner.Categories.Where(c => !c.IsRecycleBin))
+        {
+            var roots = c.Roots().Select(r => Path.GetFullPath(r)).ToList();
+            foreach (var f in scans[c.Id].Files)
+                Assert.Contains(roots, r => Path.GetFullPath(f.Path).StartsWith(r, StringComparison.OrdinalIgnoreCase));
+            _out.WriteLine($"{c.Id}: {scans[c.Id].Count} files, {scans[c.Id].Bytes / 1048576.0:0.0} MB");
+        }
+    }
 }

@@ -31,6 +31,16 @@ public sealed class TweaksService
             "On PCs with two graphics chips (most gaming laptops), tells Windows to always use the fast one for Roblox. Re-applied automatically after Roblox updates."),
         new("fpscap", "Remove Roblox's 60 FPS cap",
             "Roblox renders at 60 FPS unless told otherwise. This raises its frame-rate target (a setting on Roblox's published allowed list) so a fast monitor can be used fully. Re-applied after Roblox updates."),
+        new("menudelay", "Make menus open instantly",
+            "Removes the short delay before Windows menus open (default 400 ms). Sign out and back in for it to take full effect."),
+        new("startdelay", "Skip the startup app delay",
+            "Windows waits a few seconds after sign-in before starting your startup apps. This removes the wait, so the desktop is usable sooner."),
+        new("suggestions", "Turn off Windows suggestions and tips",
+            "Stops Windows from pushing suggested apps, tips and promotions in Start, Settings and the lock screen, which saves a little background work."),
+        new("websearch", "Keep Start search on this PC only",
+            "Stops Start-menu search from also searching the web, so results appear faster and nothing is sent out."),
+        new("visualfx", "Windows visual effects: best performance",
+            "Switches the Windows visual-effects preset to best performance (fewer shadows, fades and smoothing). Sign out and back in to see all of it."),
         new("transparency", "Turn off window transparency effects",
             "Removes the blur and see-through effects from Windows, freeing a little GPU power for the game."),
         new("animations", "Turn off window animations",
@@ -55,7 +65,7 @@ public sealed class TweaksService
             B.TweaksApplied.Add(id);
             Svc.Settings.Save();
             Log.Info("Tweak applied: " + id);
-            return new(StatusKind.Success, id == "transparency" || id == "animations" ? "Applied (some windows may need to be reopened)" : "Applied");
+            return new(StatusKind.Success, id is "transparency" or "animations" or "menudelay" or "visualfx" ? "Applied (some windows may need to be reopened)" : "Applied");
         }
         catch (Exception ex)
         {
@@ -196,6 +206,22 @@ public sealed class TweaksService
             case "fpscap":
                 if (FlagFile() == null) { problem = "Roblox isn't installed for this user, so there is nothing to set"; return null; }
                 return new() { new(EditKind.RobloxFlag, FlagSubKey, FpsFlag, "9999") };
+            case "menudelay":
+                return new() { new(EditKind.Registry, @"Control Panel\Desktop", "MenuShowDelay", "0") };
+            case "startdelay":
+                return new() { new(EditKind.Registry, cv + @"Explorer\Serialize", "StartupDelayInMSec", 0) };
+            case "suggestions":
+                return new()
+                {
+                    new(EditKind.Registry, cv + "ContentDeliveryManager", "SystemPaneSuggestionsEnabled", 0),
+                    new(EditKind.Registry, cv + "ContentDeliveryManager", "SubscribedContent-338388Enabled", 0),
+                    new(EditKind.Registry, cv + "ContentDeliveryManager", "SubscribedContent-338389Enabled", 0),
+                    new(EditKind.Registry, cv + "ContentDeliveryManager", "SoftLandingEnabled", 0),
+                };
+            case "websearch":
+                return new() { new(EditKind.Registry, cv + "Search", "BingSearchEnabled", 0) };
+            case "visualfx":
+                return new() { new(EditKind.Registry, cv + @"Explorer\VisualEffects", "VisualFXSetting", 2) };
             case "transparency":
                 return new() { new(EditKind.Registry, cv + @"Themes\Personalize", "EnableTransparency", 0) };
             case "animations":

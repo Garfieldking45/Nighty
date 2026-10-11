@@ -344,8 +344,53 @@ public sealed class CleanerService
                 Roots = () => new[] { Path.Combine(Local, "CrashDumps") } },
         new() { Id = "roblox_logs", Name = "Roblox logs", Description = "Roblox client log files (older than 1 hour).",
                 Roots = () => new[] { Path.Combine(Local, "Roblox", "logs") }, MinAge = TimeSpan.FromHours(1) },
+        new() { Id = "chrome", Name = "Chrome cache", Description = "Chrome's page, code and GPU caches for every profile. Not passwords, history or cookies. Close Chrome first for the best result.",
+                Roots = () => BrowserCaches(Path.Combine(Local, "Google", "Chrome", "User Data")) },
+        new() { Id = "edge", Name = "Edge cache", Description = "Edge's page, code and GPU caches for every profile. Not passwords, history or cookies. Close Edge first for the best result.",
+                Roots = () => BrowserCaches(Path.Combine(Local, "Microsoft", "Edge", "User Data")) },
+        new() { Id = "brave", Name = "Brave cache", Description = "Brave's page, code and GPU caches for every profile. Not passwords, history or cookies.",
+                Roots = () => BrowserCaches(Path.Combine(Local, "BraveSoftware", "Brave-Browser", "User Data")) },
+        new() { Id = "firefox", Name = "Firefox cache", Description = "Firefox's page cache for every profile. Not passwords, history or cookies. Close Firefox first for the best result.",
+                Roots = () => ChildDirs(Path.Combine(Local, "Mozilla", "Firefox", "Profiles"), "cache2") },
+        new() { Id = "discord", Name = "Discord cache", Description = "Discord's image, code and GPU caches; rebuilt as you use it. Not your messages or login.",
+                Roots = () => new[] { "Cache", "Code Cache", "GPUCache" }.Select(n => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "discord", n)).ToArray() },
+        new() { Id = "gpu_cache", Name = "NVIDIA / AMD shader caches", Description = "Graphics-driver shader caches (DXCache, GLCache); games and drivers rebuild them.",
+                Roots = () => new[] { Path.Combine(Local, "NVIDIA", "DXCache"), Path.Combine(Local, "NVIDIA", "GLCache"), Path.Combine(Local, "AMD", "DxCache"), Path.Combine(Local, "AMD", "GLCache") } },
+        new() { Id = "steam_cache", Name = "Steam web cache", Description = "Steam's built-in browser cache; rebuilt when you open the store or community.",
+                Roots = () => new[] { Path.Combine(Local, "Steam", "htmlcache") } },
+        new() { Id = "wer", Name = "Windows error reports", Description = "Queued and archived error reports Windows keeps after crashes.",
+                Roots = () => new[] { Path.Combine(Local, "Microsoft", "Windows", "WER") } },
+        new() { Id = "winupdate", Name = "Windows Update downloads", Description = "Already-installed update downloads in the Windows SoftwareDistribution Download folder (older than 1 day). Needs administrator rights.",
+                NeedsAdmin = true, Roots = () => new[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "SoftwareDistribution", "Download") }, MinAge = TimeSpan.FromDays(1) },
         new() { Id = "recycle", Name = "Recycle Bin", Description = "Permanently empties the Recycle Bin on all drives.", IsRecycleBin = true },
     };
+
+    private static readonly string[] BrowserCacheFolders = { "Cache", "Code Cache", "GPUCache" };
+
+    /// <summary>The cache folders of every Chromium profile (Default, Profile 1, ...), never the profile itself.</summary>
+    private static string[] BrowserCaches(string userData)
+    {
+        var list = new List<string>();
+        try
+        {
+            if (!Directory.Exists(userData)) return Array.Empty<string>();
+            foreach (var profile in Directory.EnumerateDirectories(userData))
+            {
+                string name = Path.GetFileName(profile);
+                if (name != "Default" && !name.StartsWith("Profile ", StringComparison.Ordinal)) continue;
+                foreach (var f in BrowserCacheFolders) list.Add(Path.Combine(profile, f));
+            }
+        }
+        catch { }
+        return list.ToArray();
+    }
+
+    /// <summary>One named sub-folder inside each child of a folder (Firefox: Profiles\*\cache2).</summary>
+    private static string[] ChildDirs(string parent, string child)
+    {
+        try { return Directory.Exists(parent) ? Directory.EnumerateDirectories(parent).Select(d => Path.Combine(d, child)).ToArray() : Array.Empty<string>(); }
+        catch { return Array.Empty<string>(); }
+    }
 
     public async Task<Dictionary<string, CategoryScan>> ScanAsync(IEnumerable<string> ids, IProgress<string>? progress, CancellationToken ct)
     {
