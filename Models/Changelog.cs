@@ -11,6 +11,13 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.1.1", "2026-10-11", new[]
+        {
+            "Seasonal themes: Halloween (now), Thanksgiving (from 1 November) and Christmas (from 1 December) each become the default theme while their season runs, with their own background picture, loading screen and, for Halloween and Christmas, their own sounds (turn on Settings > Sound effects). When a season ends, everyone goes back to the theme they had before. Times are US Eastern",
+            "Cursors: a crosshair now shows right away in Roblox, with no restart. Nighty draws it over Roblox until Roblox restarts and loads the picture itself",
+            "Game Mode: if Nighty is closed unexpectedly, the next start puts slowed background apps and Roblox back to normal",
+            "Settings: new Owner tab for the person who runs Nighty (sign-in; unlocks the seasonal themes at any time and an Owner page with live details, logs and tools)",
+        }),
         new("2.1.0", "2026-10-11", new[]
         {
             "Game Mode: new \"Stop Windows throttling Roblox\" option keeps Roblox off efficiency cores and stops Windows coarsening its timers; background apps that wait while you play now also go into efficiency mode, and the list of apps that wait is longer",

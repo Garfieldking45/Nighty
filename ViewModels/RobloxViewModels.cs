@@ -156,11 +156,15 @@ public sealed class CursorsViewModel : ObservableObject
             // Draw on the UI thread, write the files on a worker.
             var png = CursorRenderer.ToPng(CursorRenderer.Render(spec, RobloxAssetsService.SizeToPx(Settings.CursorSize), Settings.CursorBrightness));
             var r = await Task.Run(() => Svc.RobloxAssets.ApplyCursorPng(png, fp));
-            if (r.Changed > 0)
+            if (r.Changed > 0 || Svc.Roblox.IsRunning)
             {
                 Settings.CursorId = spec.Id;
                 foreach (var i in Items) i.IsApplied = i.Spec.Id == spec.Id;
-                Message = $"“{spec.Name}” added to Roblox. " + (r.Note ?? "") + (r.Error != null ? " But one place failed: " + r.Error : "");
+                // Roblox that is already open shows the old picture until it restarts, so Nighty draws the new one over it right now.
+                Svc.LiveCursor.Applied(r.Changed > 0);
+                bool live = spec.CenterHotspot && Svc.Roblox.IsRunning;
+                Message = $"“{spec.Name}” added to Roblox. " + (live ? "It shows right away while Roblox is in front; Roblox itself picks it up the next time it starts." : r.Note ?? "")
+                          + (r.Error != null ? " But one place failed: " + r.Error : "");
             }
             else Message = r.Error ?? "Nothing was changed.";
         }
@@ -174,7 +178,7 @@ public sealed class CursorsViewModel : ObservableObject
         {
             var r = await Task.Run(Svc.RobloxAssets.RestoreCursor);
             if (r.Error != null) Message = r.Error;
-            else { Settings.CursorId = ""; foreach (var i in Items) i.IsApplied = false; Message = "Roblox's own cursor is back."; }
+            else { Settings.CursorId = ""; Svc.LiveCursor.Cleared(); foreach (var i in Items) i.IsApplied = false; Message = "Roblox's own cursor is back."; }
         }
         finally { IsBusy = false; }
     }

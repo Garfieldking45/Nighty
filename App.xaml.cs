@@ -67,8 +67,11 @@ public partial class App : Application
         Svc.Init();
 
         if (splash != null) await splash.StepAsync("Applying your theme", 0.34);
+        OwnerService.RestoreRemembered();
         ThemeService.ApplyFromSettings();
         ThemeService.ApplyFont(Svc.S.General.FontName);
+        Seasons.StartWatching();
+        Svc.LiveCursor.Start();
 
         if (splash != null) await splash.StepAsync("Preparing the interface", 0.55);
         page ??= Svc.S.General.RememberWindow && Svc.S.General.LastPage.Length > 0 ? Svc.S.General.LastPage : null;
@@ -176,6 +179,7 @@ public partial class App : Application
                 if (Svc.S.General.RestoreOnClose) Svc.RestoreSystemOnExit();
                 Svc.GameMode.RestoreOnExit();     // always give the user their original system settings back
                 Svc.Overlays.Shutdown();
+                Svc.LiveCursor.Shutdown();
                 Svc.Toast.Shutdown();
                 Svc.Hotkeys.Stop();
                 Svc.Settings.Save();

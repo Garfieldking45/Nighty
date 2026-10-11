@@ -161,55 +161,6 @@ public static class Fx
     }
 }
 
-/// <summary>Little synthesized UI sounds (no audio files shipped). Only play when Settings → Sound effects is on.</summary>
-public static class Sfx
-{
-    private static System.Media.SoundPlayer? _click, _on, _off, _start, _stop;
-
-    private static bool Enabled { get { try { return Svc.Settings != null && Svc.S.General.SoundEffects; } catch { return false; } } }
-
-    public static void Click() { if (Enabled) Play(ref _click, 880, 28, 0.18); }
-    public static void Toggle(bool on) { if (!Enabled) return; if (on) Play(ref _on, 1175, 45, 0.2); else Play(ref _off, 740, 45, 0.2); }
-    public static void Start() { if (Enabled) Play(ref _start, 1320, 80, 0.22); }
-    private static System.Media.SoundPlayer? _clip;
-    /// <summary>The clip-saved chime. Controlled by its own setting on the Record page, not the general sound switch.</summary>
-    public static void Clip() => Play(ref _clip, 1568, 150, 0.28);
-    public static void Stop() { if (Enabled) Play(ref _stop, 660, 90, 0.22); }
-
-    private static void Play(ref System.Media.SoundPlayer? slot, double hz, int ms, double volume)
-    {
-        try
-        {
-            slot ??= Make(hz, ms, volume);
-            slot.Play();
-        }
-        catch { /* sound is optional */ }
-    }
-
-    /// <summary>16-bit mono PCM sine with a short attack and decay, wrapped in a WAV header.</summary>
-    private static System.Media.SoundPlayer Make(double hz, int ms, double volume)
-    {
-        const int rate = 22050;
-        int n = rate * ms / 1000;
-        var ms2 = new MemoryStream();
-        using (var w = new BinaryWriter(ms2, System.Text.Encoding.ASCII, true))
-        {
-            w.Write("RIFF"u8.ToArray()); w.Write(36 + n * 2); w.Write("WAVEfmt "u8.ToArray());
-            w.Write(16); w.Write((short)1); w.Write((short)1); w.Write(rate); w.Write(rate * 2); w.Write((short)2); w.Write((short)16);
-            w.Write("data"u8.ToArray()); w.Write(n * 2);
-            for (int i = 0; i < n; i++)
-            {
-                double env = Math.Min(1, i / (rate * 0.004)) * Math.Pow(1 - (double)i / n, 1.6);
-                w.Write((short)(Math.Sin(2 * Math.PI * hz * i / rate) * env * volume * short.MaxValue));
-            }
-        }
-        ms2.Position = 0;
-        var p = new System.Media.SoundPlayer(ms2);
-        p.Load();
-        return p;
-    }
-}
-
 /// <summary>
 /// Hosts the current page. When the page changes it fades and slides in, and the cards on it rise in one after another.
 /// </summary>

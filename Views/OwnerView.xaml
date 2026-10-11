@@ -1,0 +1,126 @@
+<UserControl x:Class="Nighty.Views.OwnerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Nighty.Controls">
+    <UserControl.Resources>
+        <DataTemplate x:Key="InfoRow">
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="190"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Label}" Style="{StaticResource Muted}" VerticalAlignment="Top"/>
+                <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" FontWeight="SemiBold"/>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+    <StackPanel>
+        <c:PageHeading Title="Owner" Subtitle="Only visible while you are signed in as the owner. Live details, the seasonal themes, logs and tools."/>
+
+        <WrapPanel Margin="0,0,0,10">
+            <RadioButton Style="{StaticResource TabButton}" Content="Overview" GroupName="otab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Seasons" GroupName="otab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Logs" GroupName="otab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Tools" GroupName="otab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
+        </WrapPanel>
+
+        <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="2,0,0,10" Foreground="{DynamicResource AccentBrush}" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+
+        <!-- ===== Overview ===== -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE946;" Title="Nighty" Subtitle="This running copy">
+                        <Button Content="Refresh" Command="{Binding RefreshCommand}"/>
+                    </c:CardHeader>
+                    <ItemsControl ItemsSource="{Binding App}" ItemTemplate="{StaticResource InfoRow}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE770;" Title="This PC" Subtitle="Windows and hardware"/>
+                    <ItemsControl ItemsSource="{Binding System}" ItemTemplate="{StaticResource InfoRow}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE9D9;" Title="Right now" Subtitle="What Nighty's features are doing"/>
+                    <ItemsControl ItemsSource="{Binding Features}" ItemTemplate="{StaticResource InfoRow}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ===== Seasons ===== -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE790;" Title="Seasonal themes" Subtitle="Each is everyone's default theme while its season runs. Only you can use them at other times."/>
+                    <ItemsControl ItemsSource="{Binding SeasonRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16,12" Margin="0,0,0,10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Window}" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                                            <TextBlock Text="{Binding Status}" Margin="0,3,0,0" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Content="Play sound" Command="{Binding Sound}" Margin="0,0,8,0" Visibility="{Binding HasSound, Converter={StaticResource BoolVisible}}"/>
+                                            <Button Content="Show it now" Command="{Binding Preview}" Style="{StaticResource PrimaryButton}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Content="Follow the season again" Command="{Binding AutomaticThemeCommand}" HorizontalAlignment="Left" Margin="0,4,0,0"/>
+                    <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,12,0,0"
+                               Text="Times are US Eastern. The themed sounds play when Settings > Sound effects is on. Halloween and Christmas have their own sound packs."/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ===== Logs ===== -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE9D5;" Title="Latest log" Subtitle="The last 250 lines of the newest log file">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Refresh" Command="{Binding RefreshLogCommand}" Margin="0,0,8,0"/>
+                            <Button Content="Open folder" Command="{Binding OpenLogsCommand}"/>
+                        </StackPanel>
+                    </c:CardHeader>
+                    <TextBox Text="{Binding LogText, Mode=OneWay}" IsReadOnly="True" TextWrapping="NoWrap" FontFamily="Consolas" FontSize="12" Height="420"
+                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AcceptsReturn="True" AutomationProperties.Name="Latest log"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ===== Tools ===== -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE90F;" Title="Tools" Subtitle="Handy things for running Nighty"/>
+                    <c:SettingRow Title="Open the data folder" Description="Where your settings, logs and backups live.">
+                        <Button Content="Open" Command="{Binding OpenDataCommand}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Copy everything on the Overview page" Description="App, PC and feature details as text, to paste when you are fixing something.">
+                        <Button Content="Copy" Command="{Binding CopyInfoCommand}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Check for updates now" Description="Looks at GitHub Releases right away instead of waiting for the next check.">
+                        <Button Content="Check" Command="{Binding CheckUpdatesCommand}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Forget &quot;Stay signed in&quot;" Description="This PC will ask for your sign-in again the next time Nighty starts.">
+                        <Button Content="Forget" Command="{Binding ForgetCommand}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Sign out" Description="Hides this page and locks the seasonal themes until you sign in again.">
+                        <Button Content="Sign out" Command="{Binding SignOutCommand}"/>
+                    </c:SettingRow>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

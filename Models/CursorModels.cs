@@ -104,6 +104,8 @@ public sealed class RobloxSettings : ObservableObject
     public string CustomFolder { get => _customFolder; set => Set(ref _customFolder, value ?? ""); }
     /// <summary>The cursor currently applied to Roblox (empty = Roblox's own).</summary>
     public string CursorId { get => _cursorId; set => Set(ref _cursorId, value ?? ""); }
+    /// <summary>When the cursor picture was last written into Roblox. A Roblox started before this still shows the old one.</summary>
+    public DateTime? CursorAppliedUtc { get; set; }
     /// <summary>small, medium or large.</summary>
     public string CursorSize { get => _size; set => Set(ref _size, value ?? "medium"); }
     /// <summary>-100 (darker) to +100 (brighter), applied to every cursor.</summary>

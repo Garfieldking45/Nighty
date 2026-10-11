@@ -28,6 +28,7 @@ public partial class MainWindow : Window
         };
         Closed += (_, _) => Svc.S.General.PropertyChanged -= OnGeneralChanged;
         ThemeService.Changed += ApplyFrameStyle;
+        ThemeService.Changed += () => Backdrop.Refresh();
         UpdateMaxState();
     }
 

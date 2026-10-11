@@ -22,6 +22,7 @@
         <DataTemplate DataType="{x:Type vm:OverlaysViewModel}"><v:OverlaysView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:RecordViewModel}"><v:RecordView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><v:SettingsView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:OwnerViewModel}"><v:OwnerView/></DataTemplate>
         <Style x:Key="StatusPill" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>

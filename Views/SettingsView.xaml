@@ -40,6 +40,7 @@
             <RadioButton Style="{StaticResource TabButton}" Content="Safety" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=6}"/>
             <RadioButton Style="{StaticResource TabButton}" Content="Configuration" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=7}"/>
             <RadioButton Style="{StaticResource TabButton}" Content="Changelog" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=8}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Owner" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=9}"/>
         </WrapPanel>
 
         <!-- ===== Appearance ===== -->
@@ -326,6 +327,28 @@
                     <c:SettingRow Title="Reset everything" Description="Restores system changes, deletes presets, macros and layout, and restarts.">
                         <Button Content="Reset all settings" Style="{StaticResource DangerButton}" Command="{Binding ResetCommand}"/>
                     </c:SettingRow>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ===== Owner ===== -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=9}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE72E;" Title="Owner sign-in" Subtitle="For the person who runs Nighty. Unlocks the seasonal themes at any time and the Owner page."/>
+                    <TextBlock Text="{Binding OwnerStatus}" Style="{StaticResource Muted}" Margin="0,0,0,12"/>
+                    <StackPanel Visibility="{Binding IsOwner, Converter={StaticResource BoolVisible}, ConverterParameter=!}">
+                        <TextBlock Text="USER NAME" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <TextBox Text="{Binding OwnerUser, UpdateSourceTrigger=PropertyChanged}" Width="280" HorizontalAlignment="Left" Padding="10,7" AutomationProperties.Name="Owner user name"/>
+                        <TextBlock Text="PASSWORD" Style="{StaticResource Label}" Margin="0,12,0,6"/>
+                        <PasswordBox x:Name="OwnerPassword" Width="280" HorizontalAlignment="Left" Padding="10,7" AutomationProperties.Name="Owner password" KeyDown="OwnerPassword_KeyDown"/>
+                        <CheckBox IsChecked="{Binding OwnerStay}" Content="Stay signed in on this PC" Margin="0,12,0,0"/>
+                        <Button Content="Sign in" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" Margin="0,14,0,0" Padding="22,10" Click="OwnerSignIn_Click"/>
+                    </StackPanel>
+                    <Button Content="Sign out" HorizontalAlignment="Left" Padding="22,10" Click="OwnerSignOut_Click" Visibility="{Binding IsOwner, Converter={StaticResource BoolVisible}}"/>
+                    <TextBlock Text="{Binding OwnerMessage}" Style="{StaticResource Muted}" Margin="0,12,0,0" Foreground="{DynamicResource AccentBrush}" Visibility="{Binding OwnerMessage, Converter={StaticResource NullVisible}}"/>
+                    <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,16,0,0"
+                               Text="The user name and password are not stored in Nighty. Only a slow, salted fingerprint is kept, so they cannot be read from the app or its files. Wrong tries make the next one wait longer."/>
                 </StackPanel>
             </Border>
         </StackPanel>

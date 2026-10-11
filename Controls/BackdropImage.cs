@@ -36,7 +36,17 @@ public sealed class BackdropImage : Grid
         _image.Stretch = g.BackgroundFit ? Stretch.Uniform : Stretch.UniformToFill;
         Opacity = g.BackgroundStrength;
 
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        bool custom = !string.IsNullOrWhiteSpace(path) && File.Exists(path);
+        if (!custom && Seasons.IsSeasonTheme(g.Theme) && Seasons.IsAvailable(g.Theme))
+        {
+            // The Halloween theme brings its own picture unless the user chose one of their own.
+            _timer.Stop(); _frames = new(); _loadedPath = "";
+            _image.Stretch = Stretch.UniformToFill;
+            _image.Source = SeasonScenes.Get(g.Theme);
+            Visibility = Visibility.Visible;
+            return;
+        }
+        if (!custom)
         {
             _timer.Stop(); _frames = new(); _loadedPath = ""; _image.Source = null; Visibility = Visibility.Collapsed;
             return;

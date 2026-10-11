@@ -49,6 +49,24 @@ public sealed class GameModeService
         if (!Backups.GameModeActive) return;
         Log.Warn("Previous session ended with Game Mode active; restoring system settings");
         RestorePersistentSettings();
+        ResetLeftoverProcessSettings();
+    }
+
+    /// <summary>After a crash the slowed background apps keep their lowered priority and efficiency mode; put them back.</summary>
+    private void ResetLeftoverProcessSettings()
+    {
+        foreach (var p in Process.GetProcesses())
+        {
+            try
+            {
+                if (p.ProcessName == RobloxService.ProcessName) { SetThrottling(p.Id, 0, 0); continue; }
+                if (!Background.Contains(p.ProcessName) || p.Id == Environment.ProcessId) continue;
+                SetThrottling(p.Id, 0, 0);
+                if (p.PriorityClass == ProcessPriorityClass.BelowNormal) p.PriorityClass = ProcessPriorityClass.Normal;
+            }
+            catch { }
+            finally { p.Dispose(); }
+        }
     }
 
     public async Task SetActiveAsync(bool active)

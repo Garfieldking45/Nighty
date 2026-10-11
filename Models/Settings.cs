@@ -586,8 +586,15 @@ public sealed class GeneralSettings : ObservableObject
     private int _stopVk = 0x78, _stopMods;
     private bool _startMin;
     private string _theme = "midnight";
-    /// <summary>Theme id (midnight, light, cyberpunk, monochrome, ocean, forest, sunset, sakura). Old accent-only ids are migrated.</summary>
+    /// <summary>Theme id (midnight, light, cyberpunk, monochrome, ocean, forest, sunset, sakura, plus the seasonal halloween, thanksgiving and christmas). Old accent-only ids are migrated.</summary>
     public string Theme { get => _theme; set => Set(ref _theme, value ?? "midnight"); }
+
+    /// <summary>Seasonal theme bookkeeping: the season whose theme was last made the default, and the theme and accent to go back to when it ends.</summary>
+    public string? SeasonApplied { get; set; }
+    public string? PreSeasonTheme { get; set; }
+    public string? PreSeasonAccent { get; set; }
+    /// <summary>"Stay signed in" for the owner: a token protected with Windows' per-user encryption (empty when not signed in).</summary>
+    public string? OwnerToken { get; set; }
 
     private string? _accentOverride;
     /// <summary>Accent colour picked on top of the theme (#RRGGBB), or null to use the theme's own.</summary>

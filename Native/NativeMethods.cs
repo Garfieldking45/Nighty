@@ -103,6 +103,10 @@ internal static class NativeMethods
     [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
     [DllImport("kernel32.dll")] public static extern bool CloseHandle(IntPtr h);
     public const uint PROCESS_SET_INFORMATION = 0x0200;
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
+    public static readonly IntPtr HWND_TOPMOST = new(-1);
+    public const uint SWP_NOACTIVATE = 0x0010, SWP_SHOWWINDOW = 0x0040;
     public const int ProcessPowerThrottling = 4;
     public const uint THROTTLE_EXECUTION_SPEED = 0x1, THROTTLE_IGNORE_TIMER_RESOLUTION = 0x4;
     [DllImport("avrt.dll", CharSet = CharSet.Unicode, SetLastError = true)]

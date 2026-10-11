@@ -33,6 +33,7 @@ public static class Svc
     public static ModsService Mods { get; private set; } = null!;
     public static DiscordService Discord { get; } = new();
     public static RobloxAssetsService RobloxAssets { get; } = new();
+    public static LiveCursorService LiveCursor { get; } = new();
     public static RecorderService Recorder { get; } = new();
 
     /// <summary>Runs an action on the UI thread (fire and forget).</summary>

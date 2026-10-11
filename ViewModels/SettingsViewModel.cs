@@ -68,7 +68,7 @@ public sealed class SettingsViewModel : ObservableObject
     public int Tab { get => _tab; set => Set(ref _tab, value); }
 
     // ---------------- themes & colours ----------------
-    public List<ThemeCardVm> ThemeCards { get; }
+    public ObservableCollection<ThemeCardVm> ThemeCards { get; } = new();
     public ObservableCollection<AccentSwatchVm> AccentSwatches { get; } = new();
     public List<ColorRowVm> ColorRows { get; }
     public RelayCommand SelectThemeCommand { get; }
@@ -156,7 +156,9 @@ public sealed class SettingsViewModel : ObservableObject
 
     public SettingsViewModel()
     {
-        ThemeCards = ThemeService.Palettes.Select(p => new ThemeCardVm { Def = p, IsSelected = p.Id == General.Theme }).ToList();
+        RebuildThemeCards();
+        OwnerService.Changed += () => Svc.Dispatch(() => { RebuildThemeCards(); OnPropertyChanged(nameof(IsOwner)); OnPropertyChanged(nameof(OwnerStatus)); });
+        Seasons.Rolled += () => Svc.Dispatch(() => { RebuildThemeCards(); RefreshThemeState(); });
         ColorRows = new List<ColorRowVm>
         {
             new(this, "Accent", "Primary accent"), new(this, "Accent2", "Secondary accent"), new(this, "Bg", "Background"), new(this, "Sidebar", "Sidebar"),
@@ -268,6 +270,33 @@ public sealed class SettingsViewModel : ObservableObject
     private static void Sfx_() => Nighty.Controls.Sfx.Click();
 
     // ---------------- theme helpers ----------------
+    /// <summary>The theme cards on offer: the normal themes, plus the seasonal one running now (all of them for the owner).</summary>
+    private void RebuildThemeCards()
+    {
+        ThemeCards.Clear();
+        foreach (var p in ThemeService.Palettes.Where(p => Seasons.IsAvailable(p.Id)))
+            ThemeCards.Add(new ThemeCardVm { Def = p, IsSelected = p.Id == General.Theme });
+    }
+
+    // ---------------- owner sign-in ----------------
+    public bool IsOwner => OwnerService.IsOwner;
+    public string OwnerStatus => OwnerService.IsOwner ? "Signed in as the owner. The Owner page is in the sidebar." : "Not signed in.";
+    private string _ownerUser = "", _ownerMessage = "";
+    private bool _ownerStay = true;
+    public string OwnerUser { get => _ownerUser; set => Set(ref _ownerUser, value); }
+    public bool OwnerStay { get => _ownerStay; set => Set(ref _ownerStay, value); }
+    public string OwnerMessage { get => _ownerMessage; private set => Set(ref _ownerMessage, value); }
+
+    /// <summary>Called by the sign-in button with the password straight from the password box; the password is never kept.</summary>
+    public void SignIn(string password)
+    {
+        var err = OwnerService.SignIn(OwnerUser, password, OwnerStay);
+        OwnerMessage = err ?? "Welcome back.";
+        if (err == null) OwnerUser = "";
+    }
+
+    public void SignOut() { OwnerService.SignOut(); OwnerMessage = "Signed out."; }
+
     private void RefreshThemeState()
     {
         var p = ThemeService.Palette(General.Theme);

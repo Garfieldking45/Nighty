@@ -43,6 +43,7 @@ public sealed class MainViewModel : ObservableObject
     public OverlaysViewModel Overlays { get; } = new();
     public RecordViewModel Record { get; } = new();
     public SettingsViewModel Settings { get; } = new();
+    private OwnerViewModel? _owner;
 
     public GeneralSettings General => Svc.S.General;
 
@@ -83,6 +84,23 @@ public sealed class MainViewModel : ObservableObject
     public string AdminText => Elevation.IsAdmin ? "Administrator" : "Standard user";
 
 
+    /// <summary>The Owner page is in the sidebar only while the owner is signed in.</summary>
+    private void SyncOwnerPage()
+    {
+        var existing = Items.FirstOrDefault(i => i.Page is OwnerViewModel);
+        if (OwnerService.IsOwner && existing == null)
+        {
+            _owner ??= new OwnerViewModel();
+            _owner.Refresh();
+            Items.Add(new NavItem { Title = "Owner", Glyph = "\uE72E", Page = _owner });
+        }
+        else if (!OwnerService.IsOwner && existing != null)
+        {
+            if (ReferenceEquals(_selected, existing)) Selected = Items[0];
+            Items.Remove(existing);
+        }
+    }
+
     public MainViewModel(string? startPage = null)
     {
         Items = new ObservableCollection<NavItem>
@@ -99,6 +117,8 @@ public sealed class MainViewModel : ObservableObject
             new() { Title = "Settings", Glyph = "", Page = Settings },
         };
         _selected = Items.FirstOrDefault(i => i.Title.Equals(startPage, StringComparison.OrdinalIgnoreCase)) ?? Items[0];
+        SyncOwnerPage();
+        OwnerService.Changed += () => Svc.Dispatch(SyncOwnerPage);
 
         BuildSearchIndex();
         OpenHitCommand = new RelayCommand(o =>

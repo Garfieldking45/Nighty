@@ -28,6 +28,9 @@ public static class ThemeService
         new("forest", "Forest", false, "#070D09", "#040805", "#0C1610", "#101D15", "#17291D", "#1C3324", "#2A4A36", "#EEF6F0", "#86A08E", "#587061", "#34C77B", "#A3E635"),
         new("sunset", "Sunset", false, "#110906", "#0B0504", "#1A0E0A", "#22130D", "#301C13", "#3A2216", "#53321F", "#FFF1E8", "#C49A82", "#8A6A58", "#FF7A3D", "#FF3D77"),
         new("sakura", "Sakura", true, "#FFF4F7", "#FFFFFF", "#FFFFFF", "#FFF0F4", "#FCE3EB", "#F5D5DF", "#EBBFCD", "#3A1F2B", "#85626F", "#B093A0", "#E8588A", "#B45CE8"),
+        new("halloween", "Halloween", false, "#0C0710", "#07040A", "#140D1A", "#1A1123", "#251833", "#2B1B38", "#43285A", "#FFF1E3", "#B79AC4", "#7D6589", "#FF7A1A", "#9B5CFF"),
+        new("thanksgiving", "Thanksgiving", false, "#100A06", "#0A0604", "#18100A", "#1F150D", "#2C1D12", "#2E1E12", "#4A3119", "#FFF3E2", "#C4A27F", "#8A6D52", "#E2A12D", "#C4492B"),
+        new("christmas", "Christmas", false, "#07100C", "#040A07", "#0C1913", "#10201A", "#172C23", "#1B3329", "#2A4C3C", "#F4FBF6", "#8FB09C", "#5E7E6C", "#E5383B", "#2FBF71"),
     };
 
     /// <summary>Accent swatches offered on top of any theme. The theme's own accent is added in front.</summary>
@@ -41,7 +44,7 @@ public static class ThemeService
     public static IReadOnlyList<ThemeChoice> Themes => Accents;
 
     public static ThemeChoice Find(string? id) => Accents.FirstOrDefault(t => t.Id == id) ?? Accents[0];
-    public static ThemeDef Palette(string? id) => Palettes.FirstOrDefault(p => p.Id == id) ?? Palettes[0];
+    public static ThemeDef Palette(string? id) => Palettes.FirstOrDefault(p => p.Id == id && Seasons.IsAvailable(p.Id)) ?? Palettes[0];
 
     private static readonly string[] BrushKeys =
     {
@@ -70,6 +73,7 @@ public static class ThemeService
     {
         var g = Svc.S.General;
         MigrateOldId(g);
+        if (Seasons.Sync(g)) Svc.Settings.Save();
         Apply(g.Theme, g.AccentOverride, g.CustomColors, animate && g.Animations);
     }
 

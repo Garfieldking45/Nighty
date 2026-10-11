@@ -33,6 +33,7 @@
             <Border.Effect><DropShadowEffect BlurRadius="40" ShadowDepth="0" Opacity="0.55" Color="Black"/></Border.Effect>
             <Grid ClipToBounds="True">
                 <Grid.Clip><RectangleGeometry Rect="0,0,480,300" RadiusX="22" RadiusY="22"/></Grid.Clip>
+                <Image x:Name="Scene" Stretch="UniformToFill" Opacity="0.7" IsHitTestVisible="False" Visibility="Collapsed"/>
                 <!-- soft accent glow behind the logo -->
                 <Ellipse Width="360" Height="360" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,-210,0,0" IsHitTestVisible="False">
                     <Ellipse.Fill>
@@ -52,10 +53,14 @@
                         <Border Width="68" Height="68" CornerRadius="20" Background="{DynamicResource PremiumBrush}">
                             <Border.RenderTransform><TranslateTransform x:Name="LogoFloat"/></Border.RenderTransform>
                             <Border.Effect><DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="28" ShadowDepth="0" Opacity="0.6"/></Border.Effect>
-                            <TextBlock Text="&#xE708;" FontFamily="{StaticResource IconFont}" FontSize="32" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Grid>
+                                <TextBlock x:Name="LogoIcon" Text="&#xE708;" FontFamily="{StaticResource IconFont}" FontSize="32" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="LogoPumpkin" Text="&#x1F383;" FontFamily="Segoe UI Emoji" FontSize="36" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                            </Grid>
                         </Border>
                     </Grid>
                     <TextBlock Text="Nighty" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,18,0,0" Foreground="{DynamicResource TextBrush}"/>
+                    <TextBlock x:Name="Greeting" Text="Happy Halloween" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed"/>
                     <TextBlock x:Name="StepText" Text="Starting" FontSize="13.5" HorizontalAlignment="Center" Margin="0,6,0,0" Foreground="{DynamicResource MutedBrush}"/>
 
                     <Grid Width="280" Height="6" Margin="0,22,0,0">
