@@ -107,17 +107,14 @@ public static class UpdateService
                 if (!got.Equals(digest[7..], StringComparison.OrdinalIgnoreCase)) throw new IOException("The download did not match its checksum.");
             }
 
-            // Wait for this process to exit, replace the exe (retrying while antivirus or Windows still holds it), relaunch.
-            // The relaunch always happens, so a failed swap leaves the old Nighty running instead of nothing.
-            int pid = Environment.ProcessId;
-            string n = newExe.Replace("'", "''"), e = exe.Replace("'", "''");
-            string script =
-                $"try {{ Wait-Process -Id {pid} -Timeout 30 }} catch {{}}; " +
-                $"$ok = $false; for ($i = 0; $i -lt 120 -and -not $ok; $i++) {{ try {{ Move-Item -LiteralPath '{n}' -Destination '{e}' -Force -ErrorAction Stop; $ok = $true }} catch {{ Start-Sleep -Seconds 1 }} }}; " +
-                $"Start-Process -FilePath '{e}'";
-            Process.Start(new ProcessStartInfo("powershell.exe",
-                $"-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command \"{script}\"")
-            { UseShellExecute = false, CreateNoWindow = true });
+            // Windows lets a running exe be renamed, so swap the files here and start the new copy;
+            // it waits for this instance to release the single-instance lock (--after-update).
+            string oldExe = exe + ".old";
+            try { File.Delete(oldExe); } catch { }
+            File.Move(exe, oldExe);
+            try { File.Move(newExe, exe); }
+            catch { File.Move(oldExe, exe); throw; }
+            Process.Start(new ProcessStartInfo(exe, "--after-update") { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(exe)! });
 
             Application.Current.Dispatcher.Invoke(() => Application.Current.Shutdown());
         }

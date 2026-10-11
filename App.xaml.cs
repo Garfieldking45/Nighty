@@ -19,6 +19,12 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         _single = new Mutex(true, Environment.GetEnvironmentVariable("NIGHTY_DATA") is { Length: > 0 } ? "Nighty.SingleInstance.Dev" : "Nighty.SingleInstance", out bool created);
+        if (!created && e.Args.Contains("--after-update"))
+        {
+            // Relaunched by the updater: the previous instance is still closing.
+            try { created = _single.WaitOne(TimeSpan.FromSeconds(20)); }
+            catch (AbandonedMutexException) { created = true; }
+        }
         _ownsMutex = created;
         if (!created)
         {
@@ -43,6 +49,7 @@ public partial class App : Application
     private async Task StartAsync(StartupEventArgs e)
     {
         AppPaths.EnsureCreated();
+        try { if (Environment.ProcessPath is { } self) File.Delete(self + ".old"); } catch { }   // left behind by the last update
         bool minimized = e.Args.Contains("--minimized");
         bool wantSplash = !minimized && !e.Args.Contains("--nosplash") && SplashEnabledInFile();
         string? page = e.Args.FirstOrDefault(a => a.StartsWith("--page="))?[7..];

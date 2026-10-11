@@ -9,6 +9,14 @@
     <RootNamespace>Nighty</RootNamespace>
     <AssemblyName>Nighty</AssemblyName>
     <Version>2.0.7</Version>
+    <Product>Nighty</Product>
+    <Company>Nighty</Company>
+    <Authors>Nighty</Authors>
+    <Description>Nighty - gaming and PC utility toolkit</Description>
+    <Copyright>Copyright (c) 2026 Nighty</Copyright>
+    <AssemblyTitle>Nighty</AssemblyTitle>
+    <FileVersion>$(Version).0</FileVersion>
+    <DebugType>none</DebugType>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
