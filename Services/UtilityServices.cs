@@ -300,7 +300,7 @@ public sealed class PointerService
             var t = Svc.S.Utility.Tracking;
             // While Roblox is in front the slot decides the speed: slot 1 is slow, every other slot (or an unknown one) uses its own speed.
             bool want = t.SlowWhileSwinging
-                ? Svc.Roblox.IsForeground && Svc.Clicker.IsClicking
+                ? Svc.Roblox.IsForeground && Svc.Clicker.IsClicking && (!t.SlowInSlotOne || Svc.Bow.CurrentSlot == 1)   // with both options on: only while swinging in slot 1
                 : t.SlowInSlotOne && Svc.Roblox.IsForeground;
             if (want && !_slowApplied)
             {
@@ -332,7 +332,14 @@ public sealed class PointerService
         if (want && !_autoApplied)
         {
             _autoApplied = true;
-            Apply(t.PointerSpeed, t.EnhancePointerPrecision);
+            if (t.SlowWhileSwinging)
+            {
+                // Swing slowdown mode: outside the swing the pointer must be exactly what Windows had, not the tracking speed.
+                var cur = ReadCurrent();
+                bool hadBackup = B.HasPointerBackup;
+                Apply(hadBackup ? B.PointerSpeed : cur.Speed, hadBackup && B.MouseParams.Length == 3 ? B.MouseParams[2] != 0 : cur.Precision);
+            }
+            else Apply(t.PointerSpeed, t.EnhancePointerPrecision);
         }
         else if (!want && _autoApplied)
         {

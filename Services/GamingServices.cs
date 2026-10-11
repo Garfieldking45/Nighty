@@ -20,13 +20,16 @@ public sealed class GameModeService
     private bool _timerActive, _awakeActive;
     private readonly Dictionary<int, ProcessPriorityClass> _origCalm = new();
     private readonly HashSet<int> _freedFor = new();
+    private readonly HashSet<int> _unthrottled = new();
 
     /// <summary>Background apps that wait while Roblox runs. Discord and music players are deliberately not here.</summary>
     private static readonly HashSet<string> Background = new(StringComparer.OrdinalIgnoreCase)
     {
         "chrome", "msedge", "firefox", "opera", "opera_gx", "brave", "vivaldi", "msedgewebview2", "steam", "steamwebhelper", "epicgameslauncher",
         "epicwebhelper", "battle.net", "eadesktop", "ubisoftconnect", "galaxyclient", "onedrive", "dropbox", "googledrivefs", "teams", "ms-teams",
-        "microsoftedgeupdate", "googleupdate", "phoneexperiencehost", "widgets", "searchhost",
+        "microsoftedgeupdate", "googleupdate", "phoneexperiencehost", "widgets", "searchhost", "searchindexer", "slack", "skype", "wallpaper32", "wallpaper64",
+        "adobeupdateservice", "adobecollabsync", "creativecloud", "ccxprocess", "acrotray", "gamingservices", "yourphone", "crossdeviceservice",
+        "razercentral", "icue", "lghub_agent", "nvcontainer", "nvidia share", "nvidia web helper", "evernote", "notion", "figma_agent", "overwolf", "overwolfbrowser",
     };
     /// <summary>Apps currently slowed, and memory given back since Game Mode was switched on.</summary>
     public int AppsSlowed => _origCalm.Count;
@@ -65,9 +68,10 @@ public sealed class GameModeService
         if (Opt.HighPerformancePower) Results["power"] = await Task.Run(ApplyPower);
         MemoryFreedMb = 0; _freedFor.Clear();
         if (Opt.RobloxHighPriority) Results["priority"] = ApplyPriority();
+        if (Opt.RobloxNoThrottle) Results["throttle"] = ApplyNoThrottle();
         if (Opt.CalmBackgroundApps) Results["calm"] = ApplyCalm();
         if (Opt.FreeMemory) Results["memory"] = FreeBackgroundMemory();
-        if (Opt.RobloxHighPriority || Opt.CalmBackgroundApps || Opt.FreeMemory) StartWatcher();
+        if (Opt.RobloxHighPriority || Opt.RobloxNoThrottle || Opt.CalmBackgroundApps || Opt.FreeMemory) StartWatcher();
         if (Opt.TimerResolution)
         {
             _timerActive = NativeMethods.timeBeginPeriod(1) == 0;
@@ -151,12 +155,53 @@ public sealed class GameModeService
                            : new(StatusKind.Warning, $"{ok} set, {failed} could not be changed (access denied)");
     }
 
+    // ---- stop Windows throttling Roblox ----
+    /// <summary>Per-process power throttling: mask picks what to control, state picks what is switched on (0 with a mask = forced off, 0 and 0 = back to Windows' choice).</summary>
+    private static bool SetThrottling(int pid, uint mask, uint state)
+    {
+        IntPtr h = NativeMethods.OpenProcess(NativeMethods.PROCESS_SET_INFORMATION, false, pid);
+        if (h == IntPtr.Zero) return false;
+        try
+        {
+            var info = new NativeMethods.PROCESS_POWER_THROTTLING_STATE { Version = 1, ControlMask = mask, StateMask = state };
+            return NativeMethods.SetProcessInformation(h, NativeMethods.ProcessPowerThrottling, ref info, System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.PROCESS_POWER_THROTTLING_STATE>());
+        }
+        finally { NativeMethods.CloseHandle(h); }
+    }
+
+    private OptionResult ApplyNoThrottle()
+    {
+        var procs = Process.GetProcessesByName(RobloxService.ProcessName);
+        if (procs.Length == 0) return new(StatusKind.Info, "Waiting for Roblox to start");
+        _unthrottled.IntersectWith(procs.Select(p => p.Id));   // forget Roblox processes that closed
+        int ok = 0, failed = 0;
+        foreach (var p in procs)
+        {
+            try
+            {
+                if (_unthrottled.Contains(p.Id)) { ok++; continue; }
+                if (SetThrottling(p.Id, NativeMethods.THROTTLE_EXECUTION_SPEED | NativeMethods.THROTTLE_IGNORE_TIMER_RESOLUTION, 0)) { _unthrottled.Add(p.Id); ok++; }
+                else failed++;
+            }
+            finally { p.Dispose(); }
+        }
+        return failed == 0 ? new(StatusKind.Success, "Windows throttling is off for Roblox")
+                           : new(StatusKind.Warning, $"{ok} set, {failed} could not be changed (access denied)");
+    }
+
+    private void RestoreThrottle()
+    {
+        foreach (var pid in _unthrottled) SetThrottling(pid, 0, 0);
+        _unthrottled.Clear();
+    }
+
     private void StartWatcher()
     {
         _watch = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _watch.Tick += (_, _) =>
         {
             if (Opt.RobloxHighPriority) Results["priority"] = ApplyPriority();
+            if (Opt.RobloxNoThrottle) Results["throttle"] = ApplyNoThrottle();
             if (Opt.CalmBackgroundApps) Results["calm"] = ApplyCalm();
             if (Opt.FreeMemory) Results["memory"] = FreeBackgroundMemory();
             Changed?.Invoke();
@@ -181,6 +226,7 @@ public sealed class GameModeService
                 var cur = p.PriorityClass;
                 if (cur is ProcessPriorityClass.Idle or ProcessPriorityClass.BelowNormal) continue;
                 p.PriorityClass = ProcessPriorityClass.BelowNormal;
+                SetThrottling(p.Id, NativeMethods.THROTTLE_EXECUTION_SPEED, NativeMethods.THROTTLE_EXECUTION_SPEED);   // efficiency mode: off the fast cores
                 _origCalm[p.Id] = cur;
             }
             catch { failed++; }
@@ -195,7 +241,7 @@ public sealed class GameModeService
     {
         foreach (var (pid, prio) in _origCalm)
         {
-            try { using var p = Process.GetProcessById(pid); p.PriorityClass = prio; } catch { /* gone */ }
+            try { using var p = Process.GetProcessById(pid); p.PriorityClass = prio; SetThrottling(pid, 0, 0); } catch { /* gone */ }
         }
         _origCalm.Clear();
     }
@@ -230,6 +276,7 @@ public sealed class GameModeService
     private void RestorePriority()
     {
         RestoreCalm();
+        RestoreThrottle();
         foreach (var (pid, prio) in _origPriority)
         {
             try { using var p = Process.GetProcessById(pid); p.PriorityClass = prio; } catch { /* process already gone */ }

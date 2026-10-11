@@ -223,7 +223,9 @@ public sealed class GameSettings : ObservableObject
     public bool TimerResolution { get => _timer; set => Set(ref _timer, value); }
     public bool WindowsGameMode { get => _gameMode; set => Set(ref _gameMode, value); }
     public bool KeepDisplayAwake { get => _awake; set => Set(ref _awake, value); }
-    private bool _calm = true, _freeMem = true;
+    private bool _calm = true, _freeMem = true, _noThrottle = true;
+    /// <summary>Stops Windows from putting Roblox on efficiency cores or coarsening its timers (Windows 11 does this to windows it thinks are in the background).</summary>
+    public bool RobloxNoThrottle { get => _noThrottle; set => Set(ref _noThrottle, value); }
     /// <summary>While Roblox runs, browsers, launchers and updaters wait: they drop to Below normal priority until Game Mode ends.</summary>
     public bool CalmBackgroundApps { get => _calm; set => Set(ref _calm, value); }
     /// <summary>When Roblox starts, those same background apps give back memory they are not using.</summary>

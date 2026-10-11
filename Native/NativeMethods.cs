@@ -100,6 +100,9 @@ internal static class NativeMethods
     [DllImport("kernel32.dll")] public static extern IntPtr GetCurrentProcess();
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern bool SetProcessInformation(IntPtr process, int infoClass, ref PROCESS_POWER_THROTTLING_STATE info, int size);
+    [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
+    [DllImport("kernel32.dll")] public static extern bool CloseHandle(IntPtr h);
+    public const uint PROCESS_SET_INFORMATION = 0x0200;
     public const int ProcessPowerThrottling = 4;
     public const uint THROTTLE_EXECUTION_SPEED = 0x1, THROTTLE_IGNORE_TIMER_RESOLUTION = 0x4;
     [DllImport("avrt.dll", CharSet = CharSet.Unicode, SetLastError = true)]

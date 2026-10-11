@@ -92,6 +92,9 @@ public sealed class GamingViewModel : ObservableObject
         Add("priority", "Roblox High CPU priority",
             "Raises the priority of the running Roblox client so it is scheduled ahead of background work. Reset when Game Mode ends.",
             () => g.RobloxHighPriority, v => g.RobloxHighPriority = v);
+        Add("throttle", "Stop Windows throttling Roblox",
+            "Turns off Windows' efficiency mode and timer throttling for Roblox, so it stays on the fast cores with steady frame pacing. Windows decides this itself otherwise. Reset when Game Mode ends.",
+            () => g.RobloxNoThrottle, v => g.RobloxNoThrottle = v);
         Add("calm", "Calm background apps",
             "Browsers, launchers and updaters wait while you play (Below normal priority). Discord and music are left alone. Everything goes back when Game Mode ends.",
             () => g.CalmBackgroundApps, v => g.CalmBackgroundApps = v);
