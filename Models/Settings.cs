@@ -349,7 +349,7 @@ public sealed class OverlayConfig : ObservableObject
 
     // ---- look (every overlay except the crosshair)
     private string _bg = "#101014", _text = "#FFFFFF", _hi = "#3B82F6", _border = "#2E2E38";
-    private double _bgOpacity = 0.85, _corner = 8;
+    private double _bgOpacity = 0.85, _corner = 16;
     private bool _showBorder = true, _shadow, _labels = true;
     public string BgColor { get => _bg; set => Set(ref _bg, value); }
     public string TextColor { get => _text; set => Set(ref _text, value); }
@@ -358,7 +358,7 @@ public sealed class OverlayConfig : ObservableObject
     public string BorderColor { get => _border; set => Set(ref _border, value); }
     /// <summary>How solid the box behind the overlay is (0 = none, 1 = solid).</summary>
     public double BgOpacity { get => _bgOpacity; set => Set(ref _bgOpacity, Math.Clamp(Math.Round(value, 2), 0, 1)); }
-    public double CornerRadius { get => _corner; set => Set(ref _corner, Math.Clamp(Math.Round(value), 0, 24)); }
+    public double CornerRadius { get => _corner; set => Set(ref _corner, Math.Clamp(Math.Round(value), 0, 32)); }
     public bool ShowBorder { get => _showBorder; set => Set(ref _showBorder, value); }
     public bool Shadow { get => _shadow; set => Set(ref _shadow, value); }
     /// <summary>Show the name in front of the number ("CPS", "FPS", "PING").</summary>
@@ -391,7 +391,7 @@ public sealed class OverlayConfig : ObservableObject
     public void ResetStyle()
     {
         BgColor = "#101014"; TextColor = "#FFFFFF"; HighlightColor = "#3B82F6"; BorderColor = "#2E2E38";
-        BgOpacity = 0.85; CornerRadius = 8; ShowBorder = true; Shadow = false; Labels = true;
+        BgOpacity = 0.85; CornerRadius = 16; ShowBorder = true; Shadow = false; Labels = true;
     }
     public void CopyStyleFrom(OverlayConfig o)
     {

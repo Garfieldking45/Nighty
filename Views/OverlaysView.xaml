@@ -185,7 +185,7 @@
                                     <Grid Margin="0,12,0,0">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                         <StackPanel><TextBlock Text="BOX OPACITY" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding BgOpacity, Mode=TwoWay}" Minimum="0" Maximum="1" Step="0.05" Decimals="2"/></StackPanel>
-                                        <StackPanel Grid.Column="2"><TextBlock Text="CORNERS" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding CornerRadius, Mode=TwoWay}" Minimum="0" Maximum="24" Step="1" Suffix=" px"/></StackPanel>
+                                        <StackPanel Grid.Column="2"><TextBlock Text="CORNERS" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding CornerRadius, Mode=TwoWay}" Minimum="0" Maximum="32" Step="1" Suffix=" px"/></StackPanel>
                                     </Grid>
                                     <c:SettingRow Title="Border" Margin="0,12,0,0"><CheckBox IsChecked="{Binding ShowBorder}"/></c:SettingRow>
                                     <c:SettingRow Title="Shadow"><CheckBox IsChecked="{Binding Shadow}"/></c:SettingRow>

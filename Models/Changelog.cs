@@ -11,6 +11,10 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.0.9", "2026-10-11", new[]
+        {
+            "Overlays are rounder: the default corner radius is now 16 px (the Corners setting goes up to 32 px), boxes have a little more padding, and keycaps have softer corners. Existing overlays keep their saved corner setting until you change it or press Reset style",
+        }),
         new("2.0.8", "2026-10-11", new[]
         {
             "Discord status now works out of the box: Nighty uses its own Discord application, so there is no application id to enter (you can still enter your own under Settings > Discord)",

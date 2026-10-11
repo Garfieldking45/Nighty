@@ -42,7 +42,7 @@ public sealed class OverlayWindow : Window
         SizeToContent = SizeToContent.WidthAndHeight;
         Focusable = false;
 
-        _chrome = new Border { BorderThickness = new Thickness(1), Padding = new Thickness(10, 6, 10, 6), LayoutTransform = _scale };
+        _chrome = new Border { BorderThickness = new Thickness(1), Padding = new Thickness(14, 8, 14, 8), LayoutTransform = _scale };
         if (_cfg.Kind == OverlayKind.Crosshair) { _chrome.Background = Brushes.Transparent; _chrome.BorderThickness = new Thickness(0); _chrome.Padding = new Thickness(0); }
         _chrome.Child = BuildContent();
         _signature = Signature();
@@ -148,7 +148,7 @@ public sealed class OverlayWindow : Window
         }
         var b = new Border
         {
-            Width = size, Height = withSecond ? 46 : size > 40 ? 38 : 34, Margin = new Thickness(2), CornerRadius = new CornerRadius(6),
+            Width = size, Height = withSecond ? 46 : size > 40 ? 38 : 34, Margin = new Thickness(2), CornerRadius = new CornerRadius(10),
             Background = B("#1C1C24"), BorderBrush = B("#3A3A46"), BorderThickness = new Thickness(1), Child = content,
         };
         _caps[vk] = b;
