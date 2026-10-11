@@ -74,7 +74,7 @@ public static class UpdateService
 
             bool yes = await Application.Current.Dispatcher.InvokeAsync(() =>
                 Dialogs.Confirm("Update available",
-                    $"Nighty {tag.TrimStart('v', 'V')} is available (you have {current.ToString(3)}).\n\nClick Update to download it and restart Nighty.",
+                    $"Nighty {tag.TrimStart('v', 'V')} is available (you have {AppVersion.Text(current)}).\n\nClick Update to download it and restart Nighty.",
                     "Update")).Task.ConfigureAwait(false) ;
             if (!yes) { _declinedTag = tag; return; }
 

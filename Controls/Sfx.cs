@@ -43,10 +43,17 @@ public static class Sfx
 
     private static void Play(string kind) => PlayPack(Pack, kind);
 
+    private static long _lastPlayTick;
+
     private static void PlayPack(string pack, string kind)
     {
         try
         {
+            // Never stack or restart sounds in a burst (a page full of controls changing at once): one sound per short gap.
+            long now = Environment.TickCount64;
+            bool special = kind == "launch";
+            if (!special && now - _lastPlayTick < 120) return;
+            _lastPlayTick = now;
             string key = pack + "/" + kind;
             lock (Cache)
             {

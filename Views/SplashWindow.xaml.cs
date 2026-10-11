@@ -19,7 +19,7 @@ public partial class SplashWindow : Window
     public SplashWindow()
     {
         InitializeComponent();
-        VersionLabel.Text = "Version " + (typeof(SplashWindow).Assembly.GetName().Version?.ToString(3) ?? "");
+        VersionLabel.Text = "Version " + AppVersion.Text(typeof(SplashWindow).Assembly.GetName().Version);
         if (Seasons.Active is { } season) UseSeasonLook(season);
     }
 

@@ -11,6 +11,10 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.1.1.1", "2026-10-11", new[]
+        {
+            "Fixed a burst of repeated sound when a page loaded: switches now only make a sound when you use them, and sounds can no longer stack on top of each other",
+        }),
         new("2.1.1", "2026-10-11", new[]
         {
             "Seasonal themes: Halloween (now), Thanksgiving (from 1 November) and Christmas (from 1 December) each become the default theme while their season runs, with their own background picture, loading screen and, for Halloween and Christmas, their own sounds (turn on Settings > Sound effects). When a season ends, everyone goes back to the theme they had before. Times are US Eastern",

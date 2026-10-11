@@ -109,7 +109,7 @@ public sealed class OwnerViewModel : ObservableObject
         var asm = typeof(OwnerViewModel).Assembly;
         var p = Process.GetCurrentProcess();
         var exe = Environment.ProcessPath;
-        App.Add(new("Version", asm.GetName().Version?.ToString(3) ?? "?"));
+        App.Add(new("Version", AppVersion.Text(asm.GetName().Version)));
         App.Add(new("Built", exe != null && File.Exists(exe) ? File.GetLastWriteTime(exe).ToString("yyyy-MM-dd HH:mm") : "?"));
         App.Add(new("Running for", Span(DateTime.Now - p.StartTime)));
         App.Add(new("Memory in use", $"{p.WorkingSet64 / 1048576.0:0} MB"));

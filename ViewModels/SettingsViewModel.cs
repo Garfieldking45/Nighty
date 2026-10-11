@@ -139,7 +139,7 @@ public sealed class SettingsViewModel : ObservableObject
 
     public string Message { get => _message; private set => Set(ref _message, value); }
     public IReadOnlyList<ChangelogEntry> Changelog => Nighty.Models.Changelog.Entries;
-    public string Version => typeof(SettingsViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+    public string Version => AppVersion.Text(typeof(SettingsViewModel).Assembly.GetName().Version);
     public string AdminText => Elevation.IsAdmin ? "Running as administrator" : "Running as a standard user";
     public bool IsAdmin => Elevation.IsAdmin;
     public string SettingsPath => AppPaths.SettingsFile;

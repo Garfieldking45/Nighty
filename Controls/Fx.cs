@@ -91,8 +91,10 @@ public static class Fx
     {
         if (fe is not ToggleButton t) return;
         t.Loaded += (_, _) => ApplySwitch(t, false);
-        t.Checked += (_, _) => { ApplySwitch(t, true); Sfx.Toggle(true); };
-        t.Unchecked += (_, _) => { ApplySwitch(t, true); Sfx.Toggle(false); };
+        // Only a switch the user is actually using makes a sound, not one that changes because a page loaded or settings were applied.
+        static bool UserDriven(ToggleButton b) => b.IsLoaded && (b.IsMouseOver || b.IsKeyboardFocused);
+        t.Checked += (_, _) => { ApplySwitch(t, true); if (UserDriven(t)) Sfx.Toggle(true); };
+        t.Unchecked += (_, _) => { ApplySwitch(t, true); if (UserDriven(t)) Sfx.Toggle(false); };
         t.MouseEnter += (_, _) => { if (Part<UIElement>(t, "HoverLayer") is { } h) To(h, UIElement.OpacityProperty, 1, 120); };
         t.MouseLeave += (_, _) => { if (Part<UIElement>(t, "HoverLayer") is { } h) To(h, UIElement.OpacityProperty, 0, 200); };
     }

@@ -56,8 +56,8 @@ public sealed class MainViewModel : ObservableObject
     public StatusKind ClickerKind { get => _clickerKind; private set => Set(ref _clickerKind, value); }
     public string GameText { get => _gameText; private set => Set(ref _gameText, value); }
     public StatusKind GameKind { get => _gameKind; private set => Set(ref _gameKind, value); }
-    public string VersionBadge => "V" + (typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0");
-    public string VersionText => "Version " + (typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0");
+    public string VersionBadge => "V" + (AppVersion.Text(typeof(MainViewModel).Assembly.GetName().Version) is { Length: > 0 } v ? v : "1.0.0");
+    public string VersionText => "Version " + (AppVersion.Text(typeof(MainViewModel).Assembly.GetName().Version) is { Length: > 0 } v ? v : "1.0.0");
     private string _statusTitle = "Idle", _statusDetail = "";
     public string StatusTitle { get => _statusTitle; private set => Set(ref _statusTitle, value); }
     public string StatusDetail { get => _statusDetail; private set => Set(ref _statusDetail, value); }
