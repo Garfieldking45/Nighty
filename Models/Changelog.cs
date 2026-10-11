@@ -11,6 +11,12 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.0.5", "2026-10-10", new[]
+        {
+            "Calibrate now aims for 34-35 CPS (it only goes lower if your PC cannot deliver that evenly) and also picks the click duty cycle your PC releases most accurately",
+            "New Ms's tab: every millisecond timing in one place - the clicker's time between clicks, button held and released (live from CPS and duty cycle), the crossbow / whim shot timings and the fishing cast hold",
+            "JinxyClicker's 12 presets (Measured, Ish, Snoopy and more) are on the Ms's tab: one click sets CPS, duty cycle and mode. Speeds above 100 CPS are limited to 100",
+        }),
         new("2.0.4", "2026-10-10", new[]
         {
             "Stop in a screen corner: a new failsafe on the Combat page. Throw the mouse into any corner of the desktop and the Auto Clicker stops (on by default; also stops if you start it while the mouse is already in a corner)",

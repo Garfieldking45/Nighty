@@ -13,6 +13,7 @@
     </WindowChrome.WindowChrome>
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:CombatViewModel}"><v:CombatView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:MsViewModel}"><v:MsView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:GamingViewModel}"><v:GamingView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:UtilityViewModel}"><v:UtilityView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:ModsViewModel}"><v:ModsView/></DataTemplate>

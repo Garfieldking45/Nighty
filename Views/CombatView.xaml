@@ -106,7 +106,7 @@
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <StackPanel Margin="0,0,16,0" VerticalAlignment="Center">
                                 <TextBlock Text="Calibrate" FontSize="13.5" FontWeight="Medium"/>
-                                <TextBlock Style="{StaticResource Muted}" Margin="0,2,0,0" Text="Tests how evenly this PC can deliver clicks (about 12 s, nothing is clicked) and sets the highest steady CPS."/>
+                                <TextBlock Style="{StaticResource Muted}" Margin="0,2,0,0" Text="Tests this PC (about 15 s, nothing is clicked), aims for 34-35 CPS and picks the click duty cycle it releases most accurately."/>
                             </StackPanel>
                             <Button Grid.Column="1" Content="Calibrate" Command="{Binding Calibrate}" MinWidth="110"/>
                         </Grid>

@@ -345,4 +345,13 @@ public class ClickerTests
         corner = true;
         Assert.True(WaitUntil(() => !c.IsClicking, 1000));
     }
+
+    [Fact]
+    public void Calibration_aims_for_34_to_35_cps_and_picks_a_duty_cycle()
+    {
+        var r = CalibrationService.Run(null, CancellationToken.None);
+        _out.WriteLine($"{r.BestCps} CPS, {r.Duty}% - {r.Summary}");
+        Assert.InRange(r.BestCps, 28, 35);
+        Assert.InRange(r.Duty, 30, 70);
+    }
 }

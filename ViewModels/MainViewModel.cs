@@ -34,6 +34,7 @@ public sealed class MainViewModel : ObservableObject
 
     public ObservableCollection<NavItem> Items { get; }
     public CombatViewModel Combat { get; } = new();
+    public MsViewModel Ms { get; } = new();
     public GamingViewModel Gaming { get; } = new();
     public UtilityViewModel Utility { get; } = new();
     public ModsViewModel Mods { get; } = new();
@@ -91,6 +92,7 @@ public sealed class MainViewModel : ObservableObject
             new() { Title = "Utility", Glyph = "", Page = Utility },
             new() { Title = "Mods", Glyph = "", Page = Mods },
             new() { Title = "Extras", Glyph = "\uE734", Page = Extras },
+            new() { Title = "Ms's", Glyph = "", Page = Ms },
             new() { Title = "Macros", Glyph = "", Page = Macros },
             new() { Title = "Overlays", Glyph = "", Page = Overlays },
             new() { Title = "Record", Glyph = "", Page = Record },
@@ -146,6 +148,7 @@ public sealed class MainViewModel : ObservableObject
             "Disable Filter Keys shortcut", "Disable Toggle Keys shortcut", "Enhance pointer precision", "Fast key repeat", "Pointer speed", "Sensitivity calculator", "Network adapter", "Roblox traffic policy");
         Add("Mods", "Cursors", "Roblox cursor", "Cursor Builder", "Picture to cursor", "Fonts", "Roblox font", "Your mods", "Remove background");
         Add("Extras", "Auto Crossbow", "Hotbar macros", "Auto Whim", "Auto Lasso", "Auto Build Up", "Auto Melody", "Auto fish");
+        Add("Ms's", "Milliseconds", "Click timing", "Hold time", "Shot hold", "Equip delay", "Swap delay", "Cooldown");
         Add("Macros", "Your macros", "Steps", "Repeat", "Hotkey enabled");
         Add("Overlays", "Ping host", "Preview and position", "Crosshair", "Add crosshair");
         Add("Record", "Instant Replay", "Save clip", "Start recording", "Screen recording", "Clips and recordings", "Record hotkeys", "Clip length", "Video quality");

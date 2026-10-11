@@ -1,0 +1,97 @@
+<UserControl x:Class="Nighty.Views.MsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Nighty.Controls">
+    <StackPanel>
+        <c:PageHeading Title="Ms's" Subtitle="Every millisecond timing in one place: the clicker's click, hold and gap times, and the crossbow shot timings."/>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <c:CardHeader Icon="&#xE916;" Title="Auto Clicker" Subtitle="Worked out from your CPS and duty cycle (run Calibrate on the Combat page to set both for you)"/>
+                <UniformGrid Rows="1" Columns="5">
+                    <StackPanel>
+                        <TextBlock Text="SPEED" Style="{StaticResource Label}"/>
+                        <TextBlock Text="{Binding RateText}" FontSize="20" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="BETWEEN CLICKS" Style="{StaticResource Label}"/>
+                        <TextBlock Text="{Binding PeriodText}" FontSize="20" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="BUTTON HELD" Style="{StaticResource Label}"/>
+                        <TextBlock Text="{Binding HoldText}" FontSize="20" FontWeight="SemiBold" Margin="0,4,0,0" Foreground="{DynamicResource AccentBrush}"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="RELEASED" Style="{StaticResource Label}"/>
+                        <TextBlock Text="{Binding GapText}" FontSize="20" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="MEASURED" Style="{StaticResource Label}"/>
+                        <TextBlock Text="{Binding MeasuredText}" FontSize="20" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </UniformGrid>
+                <Border Style="{StaticResource Divider}" Margin="0,18"/>
+                <UniformGrid Columns="2">
+                    <StackPanel Margin="0,0,10,0">
+                        <TextBlock Text="CPS" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <c:ValueStepper Value="{Binding CpsValue, Mode=TwoWay}" Minimum="1" Maximum="100" Step="0.5" Decimals="1"/>
+                    </StackPanel>
+                    <StackPanel Margin="10,0,0,0">
+                        <TextBlock Text="DUTY CYCLE (%)" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <c:ValueStepper Value="{Binding Duty, Mode=TwoWay}" Minimum="5" Maximum="95" Step="1"/>
+                    </StackPanel>
+                </UniformGrid>
+                <TextBlock Style="{StaticResource Muted}" Margin="0,12,0,0" Text="{Binding DelayText, StringFormat=Start delay: {0}}"/>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <c:CardHeader Icon="&#xE74E;" Title="Presets" Subtitle="JinxyClicker's presets. Click one to set the clicker's CPS, duty cycle and mode. Speeds above 100 CPS are limited to 100."/>
+                <ItemsControl ItemsSource="{Binding JinxyPresets}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Command="{Binding DataContext.ApplyPreset, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                    HorizontalContentAlignment="Stretch" Margin="0,0,8,8" Padding="14,10">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Line}" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                                    <TextBlock Text="{Binding Ms}" Style="{StaticResource Muted}" Margin="0,1,0,0"/>
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding PresetMessage}" Style="{StaticResource Muted}" Margin="0,4,0,0" Foreground="{DynamicResource SuccessBrush}"
+                           Visibility="{Binding PresetMessage, Converter={StaticResource NullVisible}}"/>
+            </StackPanel>
+        </Border>
+
+        <ItemsControl ItemsSource="{Binding ShotMacros}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <c:CardHeader Icon="&#xE734;" Title="{Binding Title}" Subtitle="Shot timing in milliseconds. Raise Equip delay first if a shot sometimes doesn't fire."/>
+                            <UniformGrid Columns="4">
+                                <StackPanel Margin="0,0,10,0"><TextBlock Text="EQUIP DELAY" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding EquipDelayMs, Mode=TwoWay}" Minimum="22" Maximum="200" Step="5" Suffix=" ms"/></StackPanel>
+                                <StackPanel Margin="5,0,5,0"><TextBlock Text="SHOT HOLD" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding ShotHoldMs, Mode=TwoWay}" Minimum="10" Maximum="150" Step="5" Suffix=" ms"/></StackPanel>
+                                <StackPanel Margin="5,0,5,0"><TextBlock Text="SWAP DELAY" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding SwapDelayMs, Mode=TwoWay}" Minimum="0" Maximum="150" Step="5" Suffix=" ms"/></StackPanel>
+                                <StackPanel Margin="10,0,0,0"><TextBlock Text="COOLDOWN (0 = AUTO)" Style="{StaticResource Label}" Margin="0,0,0,6"/><c:ValueStepper Value="{Binding CooldownMs, Mode=TwoWay}" Minimum="0" Maximum="3000" Step="50" Suffix=" ms"/></StackPanel>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <c:CardHeader Icon="&#xE7B3;" Title="Auto fish" Subtitle="How long the rod is held to cast"/>
+                <TextBlock Text="CAST HOLD" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                <c:ValueStepper Value="{Binding Fishing.CastHoldMs, Mode=TwoWay}" Minimum="10" Maximum="3000" Step="10" Suffix=" ms"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

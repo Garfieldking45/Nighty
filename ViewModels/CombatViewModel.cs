@@ -92,8 +92,10 @@ public sealed class CombatViewModel : ObservableObject
         {
             var progress = new Progress<string>(m => CalibrationMessage = m);
             var r = await Task.Run(() => CalibrationService.Run(progress, CancellationToken.None));
-            if (Settings.UseRange) { Settings.MaxCps = r.BestCps; Settings.MinCps = Math.Max(1, r.BestCps - 3); }
+            if (Settings.UseRange) { Settings.MaxCps = r.BestCps; Settings.MinCps = Math.Max(1, r.BestCps - 1); }
             else Settings.Cps = r.BestCps;
+            Settings.DutyCycle = r.Duty;
+            OnPropertyChanged(nameof(DutyText)); OnPropertyChanged(nameof(DutyValue));
             CalibrationMessage = r.Summary;
         }
         catch (Exception ex) { Log.Error("Calibration failed", ex); CalibrationMessage = "Calibration failed."; }
