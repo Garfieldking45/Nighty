@@ -118,8 +118,8 @@ public sealed class CombatViewModel : ObservableObject
         });
         CpsUp = new RelayCommand(() => Settings.Cps += 0.5);
         CpsDown = new RelayCommand(() => Settings.Cps -= 0.5);
-        DutyUp = new RelayCommand(() => Settings.DutyCycle = Math.Min(95, Settings.DutyCycle + 5));
-        DutyDown = new RelayCommand(() => Settings.DutyCycle = Math.Max(5, Settings.DutyCycle - 5));
+        DutyUp = new RelayCommand(() => Settings.DutyCycle = Math.Min(95, Settings.DutyCycle + 1));
+        DutyDown = new RelayCommand(() => Settings.DutyCycle = Math.Max(5, Settings.DutyCycle - 1));
         SavePreset = new RelayCommand(DoSave, () => !string.IsNullOrWhiteSpace(PresetName));
         LoadPreset = new RelayCommand(p =>
         {

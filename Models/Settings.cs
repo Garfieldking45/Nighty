@@ -55,7 +55,7 @@ public sealed class SlotMacroConfig : ObservableObject
     /// <summary>Crossbow and Whim: let the running Auto Clicker's own clicks fire the shot instead of pausing it and clicking separately. Leaves the weapon as soon as it has fired.</summary>
     public bool UseClickerShots { get => _clickerShots; set => Set(ref _clickerShots, value); }
     private double _cooldownMs;
-    /// <summary>Time between shots. 0 = automatic (1300 ms crossbow, 1100 ms whim). Raise it if every few shots does not fire: the weapon was still reloading.</summary>
+    /// <summary>Time between shots. 0 = automatic (1350 ms crossbow, 1100 ms whim). Raise it if every few shots does not fire: the weapon was still reloading.</summary>
     public double CooldownMs { get => _cooldownMs; set => Set(ref _cooldownMs, value <= 0 ? 0 : Math.Clamp(Math.Round(value), 800, 3000)); }
     [JsonIgnore] public bool IsSwapAndSwing => Kind is SlotMacroKind.Crossbow or SlotMacroKind.Whim;
     private bool _onlySlotOne = true;
@@ -263,6 +263,9 @@ public sealed class TrackingSettings : ObservableObject
     /// <summary>While hotbar slot 1 is selected (and Roblox is in front), use the slower pointer speed below.</summary>
     public bool SlowInSlotOne { get => _slowOne; set => Set(ref _slowOne, value); }
     public int SlowSpeed { get => _slowSpeed; set => Set(ref _slowSpeed, Math.Clamp(value, 1, 20)); }
+    private bool _slowSwing;
+    /// <summary>Use the slow speed only while the Auto Clicker is swinging (and Roblox is in front); the normal speed the rest of the time.</summary>
+    public bool SlowWhileSwinging { get => _slowSwing; set => Set(ref _slowSwing, value); }
     private int _otherSlotSpeed = 10;
     /// <summary>While Roblox is in front with the slot-1 slowdown on, the pointer speed in every slot other than 1.</summary>
     public int OtherSlotSpeed { get => _otherSlotSpeed; set => Set(ref _otherSlotSpeed, Math.Clamp(value, 1, 20)); }
@@ -428,6 +431,9 @@ public sealed class OverlaySettings : ObservableObject
     /// <summary>Position overlays inside the Roblox window instead of the whole screen (useful when it is not full screen).</summary>
     public bool FollowRobloxWindow { get => _followRoblox; set => Set(ref _followRoblox, value); }
     public string PingHost { get => _pingHost; set => Set(ref _pingHost, value); }
+    private string _pingAdapter = "";
+    /// <summary>Network adapter the Ping overlay sends through (its Windows id). Empty = let Windows choose.</summary>
+    public string PingAdapterId { get => _pingAdapter; set => Set(ref _pingAdapter, value ?? ""); }
     public ObservableCollection<OverlayConfig> Items { get; set; } = new();
 }
 

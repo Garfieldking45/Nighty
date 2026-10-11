@@ -13,10 +13,14 @@ public sealed class SlotMacroService
 {
     // Hold long enough to span a frame at 60 fps, or the game never sees the press.
     private const int KeyHoldMs = 20, ClickHoldMs = 10;
-    private const double CrossbowCooldownMs = 1300, WhimCooldownMs = 1100;
+    private const double CrossbowCooldownMs = 1350, WhimCooldownMs = 1100;
 
     /// <summary>True from the weapon key going down until the shot is released. The Auto Clicker holds still meanwhile, so none of its clicks land inside the shot.</summary>
-    public static volatile bool ShotInProgress;
+    public static bool ShotInProgress => Volatile.Read(ref _shots) > 0;
+    // A count, not a flag: Auto Crossbow and Auto Whim can run at the same time, and one finishing must not clear the other's shot.
+    private static int _shots;
+    internal static void BeginShot() => Interlocked.Increment(ref _shots);
+    internal static void EndShot() { if (Interlocked.Decrement(ref _shots) < 0) Interlocked.Exchange(ref _shots, 0); }
 
     private readonly ConcurrentDictionary<SlotMacroKind, CancellationTokenSource> _running = new();
     public event Action? Changed;
@@ -191,9 +195,9 @@ public sealed class SlotMacroService
         }
         if (fired == 0)
         {
-            ShotInProgress = true;
+            BeginShot();
             try { fired = Wait.Now; Click(ct, ClickButton.Left, plan.ShotUp - plan.ShotDown); }
-            finally { ShotInProgress = false; }
+            finally { EndShot(); }
             Wait.Ms(Math.Max(0, c.SwapDelayMs), ct);
         }
 
@@ -219,7 +223,8 @@ public sealed class SlotMacroService
                 if (ct.IsCancellationRequested) return;
             }
             else {
-            ShotInProgress = true;
+            BeginShot();
+            bool shotOpen = true;
             try {
             // One schedule from a single start time, so waits can't pile up and shift the shot.
             var plan = PlanShot(c);
@@ -234,14 +239,14 @@ public sealed class SlotMacroService
             InputSender.MouseButton(ClickButton.Left, true);
             try { Wait.Until(t0 + Wait.FromMs(plan.ShotUp), ct); }
             finally { InputSender.MouseButton(ClickButton.Left, false); }   // never leave the shot held
-            ShotInProgress = false;   // the shot is out; the Auto Clicker may swing again while the sword is selected
+            shotOpen = false; EndShot();   // the shot is out; the Auto Clicker may swing again while the sword is selected
             Wait.Until(t0 + Wait.FromMs(plan.SwordKey), ct);
 
             InputSender.KeyScan(swordVk, true);
             // The Auto Clicker is already swinging again, so a click of our own would only collide with its press and cost a hit.
             try { if (!Svc.Clicker.IsClicking) Click(ct); else Wait.Ms(ClickHoldMs, ct); }
             finally { InputSender.KeyScan(swordVk, false); }
-            } finally { ShotInProgress = false; }
+            } finally { if (shotOpen) EndShot(); }
             }
             if (c.Style == SlotMacroStyle.Press) return;
 

@@ -287,6 +287,7 @@ public sealed class PointerService
     private static int SlotSpeed()
     {
         var t = Svc.S.Utility.Tracking;
+        if (t.SlowWhileSwinging) return Math.Clamp(t.SlowSpeed, 1, 20);
         return Math.Clamp(Svc.Bow.CurrentSlot == 1 ? t.SlowSpeed : t.OtherSlotSpeed, 1, 20);
     }
 
@@ -298,7 +299,9 @@ public sealed class PointerService
         {
             var t = Svc.S.Utility.Tracking;
             // While Roblox is in front the slot decides the speed: slot 1 is slow, every other slot (or an unknown one) uses its own speed.
-            bool want = t.SlowInSlotOne && Svc.Roblox.IsForeground;
+            bool want = t.SlowWhileSwinging
+                ? Svc.Roblox.IsForeground && Svc.Clicker.IsClicking
+                : t.SlowInSlotOne && Svc.Roblox.IsForeground;
             if (want && !_slowApplied)
             {
                 if (!B.HasPointerBackup) Apply(ReadCurrent().Speed, ReadCurrent().Precision);   // record originals so Restore works

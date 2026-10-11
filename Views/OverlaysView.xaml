@@ -249,10 +249,17 @@
             </StackPanel>
         </Border>
 
-        <Border Style="{StaticResource Card}">
+        <Border Style="{StaticResource Card}"><StackPanel>
             <c:SettingRow Title="Ping host" Description="The Ping overlay measures round-trip time (ICMP) to this host. Some hosts block ping.">
                 <TextBox Text="{Binding Settings.PingHost, UpdateSourceTrigger=LostFocus}" Width="190" AutomationProperties.Name="Ping host"/>
             </c:SettingRow>
-        </Border>
+            <Border Style="{StaticResource Divider}"/>
+            <c:SettingRow Title="Ping adapter" Description="Send the ping out through a specific network adapter (for example Ethernet instead of Wi-Fi) to see that connection's ping. Automatic lets Windows choose.">
+                <StackPanel Orientation="Horizontal">
+                    <ComboBox ItemsSource="{Binding PingAdapters}" DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding Settings.PingAdapterId, Mode=TwoWay}" Width="230" AutomationProperties.Name="Ping adapter"/>
+                    <Button Content="Refresh" Command="{Binding RefreshPingAdaptersCommand}" Margin="8,0,0,0"/>
+                </StackPanel>
+            </c:SettingRow>
+        </StackPanel></Border>
     </StackPanel>
 </UserControl>

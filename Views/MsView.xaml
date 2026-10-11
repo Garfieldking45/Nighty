@@ -47,7 +47,7 @@
 
         <Border Style="{StaticResource Card}">
             <StackPanel>
-                <c:CardHeader Icon="&#xE74E;" Title="Presets" Subtitle="JinxyClicker's presets. Click one to set the clicker's CPS, duty cycle and mode. Speeds above 100 CPS are limited to 100."/>
+                <c:CardHeader Icon="&#xE74E;" Title="Presets" Subtitle="The 40 / 16 button is a short-hold setting you tried; the rest are JinxyClicker's. Click one to set the clicker's CPS, duty cycle and mode. Speeds above 100 CPS are limited to 100."/>
                 <ItemsControl ItemsSource="{Binding JinxyPresets}">
                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>

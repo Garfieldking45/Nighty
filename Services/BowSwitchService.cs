@@ -34,11 +34,17 @@ public sealed class BowSwitchService
     }
     public event Action? Changed;
 
+    /// <summary>True when a switch must not start: Nighty itself is in front, or Roblox is required and is not. A start delay (the Test button) skips the check so you can click into Roblox first.</summary>
+    internal static bool FocusBlocks(int startDelayMs, bool ownWindowForeground, bool onlyWhenRoblox, bool robloxForeground) =>
+        startDelayMs == 0 && (ownWindowForeground || (onlyWhenRoblox && !robloxForeground));
+
     public void Trigger(int startDelayMs = 0, bool fromClicker = false)
     {
         var s = Svc.S.Bow;
         if (_cts != null) return;
-        if (startDelayMs == 0 && !fromClicker && (RobloxService.IsOwnWindowForeground() || (s.OnlyWhenRobloxFocused && !Svc.Roblox.IsForeground))) return;
+        // Always checked, including for the Auto mode: the Auto Clicker stays "clicking" while it is paused behind another window,
+        // and a switch started from there would type slot numbers and click into whatever app is in front.
+        if (FocusBlocks(startDelayMs, RobloxService.IsOwnWindowForeground(), s.OnlyWhenRobloxFocused, Svc.Roblox.IsForeground)) return;
         CancellationTokenSource cts;
         lock (_gate)   // the clicker thread and the UI timer can both ask at once
         {

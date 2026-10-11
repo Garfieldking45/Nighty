@@ -359,6 +359,20 @@ public sealed class OverlaysViewModel : ObservableObject
 {
     public ObservableCollection<OverlayConfig> Items => Svc.S.Overlays.Items;
     public OverlaySettings Settings => Svc.S.Overlays;
+    public sealed record AdapterChoice(string Id, string Name);
+    /// <summary>"Automatic" plus every connected network adapter, for the Ping overlay.</summary>
+    public ObservableCollection<AdapterChoice> PingAdapters { get; } = new();
+    public RelayCommand RefreshPingAdaptersCommand { get; }
+    private void LoadPingAdapters()
+    {
+        string keep = Settings.PingAdapterId;
+        PingAdapters.Clear();
+        PingAdapters.Add(new AdapterChoice("", "Automatic (Windows chooses)"));
+        try { foreach (var a in Svc.Dns.GetAdapters()) PingAdapters.Add(new AdapterChoice(a.Id, a.Name)); } catch { }
+        // A saved adapter that is unplugged right now stays selectable, so the choice is not silently forgotten.
+        if (keep.Length > 0 && PingAdapters.All(a => a.Id != keep)) PingAdapters.Add(new AdapterChoice(keep, "Saved adapter (not connected)"));
+        Settings.PingAdapterId = keep;   // clearing the list made the box write an empty choice back; put the real one back
+    }
     public bool FpsNeedsSetup => !Elevation.CanTraceEtw && Items.Any(i => i.Kind == OverlayKind.Fps && i.Enabled);
     public bool IsAdmin => Elevation.IsAdmin;
     public string LiveStatus { get => _live; private set => Set(ref _live, value); }
@@ -437,6 +451,8 @@ public sealed class OverlaysViewModel : ObservableObject
 
     public OverlaysViewModel()
     {
+        RefreshPingAdaptersCommand = new RelayCommand(LoadPingAdapters);
+        LoadPingAdapters();
         if (Items.Count == 0) SeedDefaults();
         if (!Items.Any(i => i.Kind == OverlayKind.FishTracker)) Items.Add(new OverlayConfig { Kind = OverlayKind.FishTracker, Title = "Fish tracker", X = 1, Y = 12 });
         if (!Items.Any(i => i.Kind == OverlayKind.Hud)) Items.Add(new OverlayConfig { Kind = OverlayKind.Hud, Title = "Macro HUD", X = 99, Y = 3 });

@@ -38,6 +38,7 @@ public sealed class MsViewModel : ObservableObject
 
     public IReadOnlyList<JinxyPreset> JinxyPresets { get; } = new JinxyPreset[]
     {
+        new("40 / 16", 40, 16),   // short ~4 ms hold at a moderate speed; later runs showed it is no better than other settings
         new("Measured", 41.2, 77.37, Hold: true),
         new("Ish", 193.62, 73.52),
         new("Snoopy", 75.65, 91.21),

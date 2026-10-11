@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
 using System.Windows;
@@ -31,9 +32,24 @@ public sealed class PingService
             {
                 try
                 {
-                    var r = await ping.SendPingAsync(Svc.S.Overlays.PingHost, 1000);
-                    if (r.Status == IPStatus.Success) { LastMs = (int)r.RoundtripTime; Status = "OK"; }
-                    else { LastMs = null; Status = r.Status == IPStatus.TimedOut ? "Timed out" : r.Status.ToString(); }
+                    var set = Svc.S.Overlays;
+                    if (set.PingAdapterId.Length > 0)
+                    {
+                        // Through a chosen adapter: .NET's Ping cannot pick a source address, Windows' ping.exe can.
+                        var src = SourceAddressOf(set.PingAdapterId);
+                        if (src == null) { LastMs = null; Status = "Adapter not connected"; }
+                        else
+                        {
+                            var ms = await PingFromAsync(src, set.PingHost, cts.Token);
+                            if (ms is int v) { LastMs = v; Status = "OK"; } else { LastMs = null; Status = "Timed out"; }
+                        }
+                    }
+                    else
+                    {
+                        var r = await ping.SendPingAsync(set.PingHost, 1000);
+                        if (r.Status == IPStatus.Success) { LastMs = (int)r.RoundtripTime; Status = "OK"; }
+                        else { LastMs = null; Status = r.Status == IPStatus.TimedOut ? "Timed out" : r.Status.ToString(); }
+                    }
                 }
                 catch (Exception ex) { LastMs = null; Status = ex.InnerException?.Message ?? ex.Message; }
                 try { await Task.Delay(1000, cts.Token); } catch { break; }
@@ -42,6 +58,38 @@ public sealed class PingService
     }
 
     public void Stop() { _cts?.Cancel(); _cts = null; LastMs = null; Status = "Idle"; }
+
+    /// <summary>The adapter's first IPv4 address, or null when it is missing or not connected.</summary>
+    internal static string? SourceAddressOf(string adapterId)
+    {
+        foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+        {
+            if (nic.Id != adapterId || nic.OperationalStatus != OperationalStatus.Up) continue;
+            var a = nic.GetIPProperties().UnicastAddresses.FirstOrDefault(u => u.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+            return a?.Address.ToString();
+        }
+        return null;
+    }
+
+    /// <summary>Reads the round-trip time out of ping.exe's reply line ("time=12ms" or "time&lt;1ms"), in any Windows language.</summary>
+    internal static int? ParsePingMs(string output)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(output, @"[=<]\s*(\d+)\s*ms", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (!m.Success) return null;
+        return Math.Max(1, int.Parse(m.Groups[1].Value));   // "<1ms" reads as 1
+    }
+
+    private static async Task<int?> PingFromAsync(string sourceIp, string host, CancellationToken ct)
+    {
+        if (!System.Net.IPAddress.TryParse(sourceIp, out _) || host.Any(ch => char.IsWhiteSpace(ch) || ch == '"')) return null;   // nothing odd reaches the command line
+        var psi = new System.Diagnostics.ProcessStartInfo("ping.exe") { RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true };
+        foreach (var a in new[] { "-n", "1", "-w", "1000", "-S", sourceIp, host }) psi.ArgumentList.Add(a);
+        using var p = System.Diagnostics.Process.Start(psi);
+        if (p == null) return null;
+        string text = await p.StandardOutput.ReadToEndAsync(ct);
+        await p.WaitForExitAsync(ct);
+        return p.ExitCode == 0 ? ParsePingMs(text) : null;
+    }
 }
 
 /// <summary>

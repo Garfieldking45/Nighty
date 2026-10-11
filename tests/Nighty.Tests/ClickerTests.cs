@@ -354,4 +354,37 @@ public class ClickerTests
         Assert.InRange(r.BestCps, 28, 35);
         Assert.InRange(r.Duty, 30, 70);
     }
+
+    [Fact]
+    public void Overlapping_shots_keep_the_clicker_paused_until_the_last_one_ends()
+    {
+        Assert.False(SlotMacroService.ShotInProgress);
+        SlotMacroService.BeginShot();   // crossbow
+        SlotMacroService.BeginShot();   // whim
+        SlotMacroService.EndShot();     // whim finishes first
+        Assert.True(SlotMacroService.ShotInProgress);
+        SlotMacroService.EndShot();
+        Assert.False(SlotMacroService.ShotInProgress);
+        SlotMacroService.EndShot();     // a stray extra end must not leave it negative and break the next shot
+        SlotMacroService.BeginShot();
+        Assert.True(SlotMacroService.ShotInProgress);
+        SlotMacroService.EndShot();
+    }
+
+    [Theory]
+    [InlineData(0, true, true, true, true)]     // Nighty in front: blocked
+    [InlineData(0, false, true, false, true)]   // Roblox required, browser in front: blocked
+    [InlineData(0, false, true, true, false)]   // Roblox in front: allowed
+    [InlineData(0, false, false, false, false)] // Roblox not required: allowed
+    [InlineData(3000, true, true, false, false)] // Test button delay: always allowed to start
+    public void Bow_switch_focus_rules(int delay, bool own, bool onlyRoblox, bool robloxFg, bool blocked) =>
+        Assert.Equal(blocked, BowSwitchService.FocusBlocks(delay, own, onlyRoblox, robloxFg));
+
+    [Theory]
+    [InlineData("Reply from 1.1.1.1: bytes=32 time=12ms TTL=57", 12)]
+    [InlineData("Reply from 1.1.1.1: bytes=32 time<1ms TTL=64", 1)]
+    [InlineData("Antwort von 1.1.1.1: Bytes=32 Zeit=23ms TTL=57", 23)]
+    [InlineData("Request timed out.", null)]
+    [InlineData("Destination host unreachable.", null)]
+    public void Ping_exe_output_is_read_in_any_language(string output, int? ms) => Assert.Equal(ms, PingService.ParsePingMs(output));
 }

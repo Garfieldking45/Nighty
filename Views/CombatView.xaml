@@ -126,7 +126,7 @@
                             <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE738;" Width="52" Height="52" Margin="18,0,8,0" Command="{Binding DutyDown}" AutomationProperties.Name="Decrease duty cycle"/>
                             <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE710;" Width="52" Height="52" Command="{Binding DutyUp}" AutomationProperties.Name="Increase duty cycle"/>
                         </Grid>
-                        <Slider Margin="0,22,0,0" Minimum="5" Maximum="95" Value="{Binding Settings.DutyCycle, Mode=TwoWay}" TickFrequency="5" IsSnapToTickEnabled="True" SmallChange="5" LargeChange="10"/>
+                        <Slider Margin="0,22,0,0" Minimum="5" Maximum="95" Value="{Binding Settings.DutyCycle, Mode=TwoWay}" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="1" LargeChange="5"/>
                         <Border Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Margin="0,16,0,0">
                             <c:DutyWaveform Height="104" DutyCycle="{Binding Settings.DutyCycle}"/>
                         </Border>

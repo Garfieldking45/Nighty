@@ -146,6 +146,10 @@
                         <CheckBox IsChecked="{Binding Settings.ApplyOnlyInRoblox}"/>
                     </c:SettingRow>
                     <Border Style="{StaticResource Divider}" Margin="0,14,0,18"/>
+                    <c:SettingRow Title="Slow down only while swinging" Description="The pointer uses the slow speed below only while the Auto Clicker is swinging in Roblox, and goes back to your normal speed the moment it stops. When this is on it replaces the slot 1 option.">
+                        <CheckBox IsChecked="{Binding Settings.SlowWhileSwinging}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}" Margin="0,14,0,18"/>
                     <c:SettingRow Title="Slow down in slot 1" Description="While hotbar slot 1 is selected (pick it with the 1 key) the pointer uses the slow speed below. In every other slot, or after scrolling the hotbar, it uses the other-slots speed. Roblox only.">
                         <CheckBox IsChecked="{Binding Settings.SlowInSlotOne}"/>
                     </c:SettingRow>

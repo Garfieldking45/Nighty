@@ -11,6 +11,15 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.0.6", "2026-10-11", new[]
+        {
+            "Tracking Helper: new \"Slow down only while swinging\" option. The pointer drops to the slow speed only while the Auto Clicker is swinging in Roblox, and returns to your normal speed the moment it stops",
+            "Auto Crossbow: the automatic cooldown is now 1350 ms (was 1300). A slightly longer reload gap gave the best hit counts in testing; set your own value with the Cooldown box on the Extras page",
+            "Combat: the click duty cycle slider and its + / - buttons now move in steps of 1 instead of 5",
+            "Overlays: new Ping adapter option. Pick which network adapter (for example Ethernet or Wi-Fi) the Ping overlay measures through, or leave it on Automatic",
+            "Fixed Bow Switch (Auto mode) typing slot numbers and clicking into other windows: it now checks that Roblox is in front before every switch, even while the Auto Clicker is paused behind another window",
+            "Fixed Auto Crossbow and Auto Whim running together letting the Auto Clicker click into a shot: shots are now counted, so one finishing no longer clears the other",
+        }),
         new("2.0.5", "2026-10-10", new[]
         {
             "Calibrate now aims for 34-35 CPS (it only goes lower if your PC cannot deliver that evenly) and also picks the click duty cycle your PC releases most accurately",

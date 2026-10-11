@@ -115,9 +115,16 @@ public sealed class MainViewModel : ObservableObject
             if (down) { Svc.StopAllInput(); Svc.Toast.Show("Emergency stop", "all input stopped", false); Log.Info("Emergency stop hotkey pressed"); }
         });
 
+        // Swing slowdown follows the clicker straight away; off the clicker thread so it never delays a click.
+        Svc.Clicker.StateChanged += () => { if (Svc.S.Utility.Tracking.SlowWhileSwinging) ThreadPool.QueueUserWorkItem(_ => Svc.Pointer.UpdateSlotSlowdown()); };
         Svc.Bow.SlotChanged += () => { if (Svc.S.Utility.Tracking.SlowInSlotOne) Svc.Pointer.UpdateSlotSlowdown(); };
         Svc.S.Utility.Tracking.PropertyChanged += (_, e) =>
         {
+            if (e.PropertyName == nameof(TrackingSettings.SlowWhileSwinging))
+            {
+                Svc.Toast.Toggled("Swing slowdown", Svc.S.Utility.Tracking.SlowWhileSwinging);
+                Svc.Pointer.UpdateSlotSlowdown();
+            }
             if (e.PropertyName == nameof(TrackingSettings.SlowInSlotOne))
             {
                 Svc.Toast.Toggled("Slot 1 slowdown", Svc.S.Utility.Tracking.SlowInSlotOne);
