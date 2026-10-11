@@ -634,9 +634,13 @@ public sealed class GeneralSettings : ObservableObject
 
     private bool _discord = false, _dActivity = true, _dTime = true;
     private string _discordId = "";
-    /// <summary>Show "Using Nighty" on your Discord profile. Needs your own Discord application id.</summary>
+    /// <summary>Show "Using Nighty" on your Discord profile. Uses Nighty's built-in Discord application unless you enter your own id.</summary>
     public bool DiscordPresence { get => _discord; set => Set(ref _discord, value); }
+    /// <summary>Nighty's own Discord application, used whenever <see cref="DiscordAppId"/> is left empty.</summary>
+    public const string DefaultDiscordAppId = "1558626694535970838";
+    /// <summary>Optional override; leave empty to use Nighty's built-in application.</summary>
     public string DiscordAppId { get => _discordId; set => Set(ref _discordId, (value ?? "").Trim()); }
+    public string EffectiveDiscordAppId => string.IsNullOrWhiteSpace(_discordId) ? DefaultDiscordAppId : _discordId;
     public bool DiscordShowActivity { get => _dActivity; set => Set(ref _dActivity, value); }
     public bool DiscordShowTime { get => _dTime; set => Set(ref _dTime, value); }
     /// <summary>Open in the taskbar instead of on screen (used with Start with Windows, and by the --minimized flag).</summary>

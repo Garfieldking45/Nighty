@@ -256,7 +256,7 @@
                         <CheckBox IsChecked="{Binding General.DiscordPresence}"/>
                     </c:SettingRow>
                     <Border Style="{StaticResource Divider}"/>
-                    <c:SettingRow Title="Application id" Description="From discord.com/developers → New Application → General Information. Name the application “Nighty” so that is what friends see.">
+                    <c:SettingRow Title="Application id (optional)" Description="Nighty already has its own Discord application built in. Only enter an id here to show your own application instead.">
                         <TextBox Text="{Binding General.DiscordAppId, UpdateSourceTrigger=LostFocus}" Width="240" Padding="10,7" AutomationProperties.Name="Discord application id"/>
                     </c:SettingRow>
                     <Border Style="{StaticResource Divider}"/>

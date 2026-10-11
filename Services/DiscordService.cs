@@ -32,7 +32,6 @@ public sealed class DiscordService
     {
         var g = Svc.S.General;
         if (!g.DiscordPresence) { Disconnect(); SetStatus("Off. Your Discord profile doesn't show Nighty."); _timer.Stop(); return; }
-        if (string.IsNullOrWhiteSpace(g.DiscordAppId)) { Disconnect(); SetStatus("Enter your Discord application id to turn this on."); _timer.Stop(); return; }
         if (!_timer.IsEnabled) { _timer.Start(); SetStatus("Connecting to Discord…"); Tick(); }
     }
 
@@ -44,19 +43,19 @@ public sealed class DiscordService
     {
         if (_busy) return;
         var g = Svc.S.General;
-        if (!g.DiscordPresence || string.IsNullOrWhiteSpace(g.DiscordAppId)) return;
+        if (!g.DiscordPresence) return;
 
         string details = !g.DiscordShowActivity ? "Using Nighty"
             : Svc.Clicker.IsClicking ? $"Clicking at {Svc.Clicker.MeasuredCps:0} CPS"
             : Svc.GameMode.IsActive ? "Game Mode on"
             : "Using Nighty";
         string state = g.DiscordShowTime ? "" : "";
-        string key = details + "|" + g.DiscordShowTime + "|" + g.DiscordAppId;
+        string key = details + "|" + g.DiscordShowTime + "|" + g.EffectiveDiscordAppId;
         bool stale = (DateTime.UtcNow - _lastSendAt).TotalSeconds > 20;
         if (_pipe is { IsConnected: true } && key == _lastSent && !stale) return;
 
         _busy = true;
-        var id = g.DiscordAppId;
+        var id = g.EffectiveDiscordAppId;
         bool showTime = g.DiscordShowTime;
         Task.Run(() =>
         {
