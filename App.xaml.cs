@@ -178,6 +178,7 @@ public partial class App : Application
                 Svc.Pointer.AutoRelease();
                 if (Svc.S.General.RestoreOnClose) Svc.RestoreSystemOnExit();
                 Svc.GameMode.RestoreOnExit();     // always give the user their original system settings back
+                Svc.Booster.Dispose();
                 Svc.Overlays.Shutdown();
                 Svc.LiveCursor.Shutdown();
                 Svc.Toast.Shutdown();

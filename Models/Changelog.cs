@@ -11,6 +11,17 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.2.0", "2026-10-12", new[]
+        {
+            "Gaming is now hardware-aware. Nighty reads this PC (processor, every graphics card, memory, storage, displays, Windows, laptop or desktop, power state), measures it live, and builds a personal plan: what would help here, why, how sure it is, what it costs and how it is undone. Things that do not apply to your PC are left out with the reason",
+            "Nothing changes until you approve: the new Plan tab has Balanced, Performance and Custom, lets you tick items one by one, and shows the evidence for each. A fresh install applies nothing until a plan is approved; an existing setup keeps its Game Mode choices",
+            "New Overview tab: live processor, graphics, memory, disk and power readings with history, which graphics card and display Roblox is really using, and a list of what is measured, what is only a possible cause, and what Nighty cannot see (for example processor temperature). Graphics temperature, clocks and heat slowdown come from the NVIDIA driver when present",
+            "Game Mode is safer: every change saves the real original value to disk first, is read back to confirm, and is undone exactly, including after a crash or a restart. If you change a setting yourself while Game Mode is on, Nighty leaves your value alone and says so. Only the Roblox client that is really running is touched (Bloxstrap, Fishstrap, Voidstrap, Froststrap and the official launcher are recognised), and background apps are limited to a short list that never includes Windows, security software, drivers or accessibility tools",
+            "Game Mode now skips what would not help or could hurt: no power change on battery, memory trimming only when memory is short, and the 1 ms timer is marked unverified because Windows applies it per program. Windows power mode (Best performance) is used where the High performance plan does not exist",
+            "New Benchmark tab: real frame times from Roblox (average FPS, median and 95th-percentile frame time, 1% low), several runs per side, and a comparison that calls a change an improvement only when it is larger than normal run-to-run variation. Runs made under different conditions are flagged as not comparable. Results from PresentMon or CapFrameX can be imported, and typed-in figures are labelled unverified",
+            "The FPS cap tweak now explains when a launcher such as Froststrap rewrites Roblox's flag file at each start and would undo it",
+            "Diagnostics can be copied or saved with names, folders, e-mail and network addresses removed. Switching a PC tweak off no longer overwrites a value you changed yourself afterwards",
+        }),
         new("2.1.1.1", "2026-10-11", new[]
         {
             "Fixed a burst of repeated sound when a page loaded: switches now only make a sound when you use them, and sounds can no longer stack on top of each other",

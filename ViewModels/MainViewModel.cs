@@ -170,7 +170,7 @@ public sealed class MainViewModel : ObservableObject
             foreach (var l in labels) _index.Add(new SearchHit(l, nav));
         }
         Add("Combat", "Activation", "Click speed", "Duty cycle", "Hotkey", "Mouse button", "Only while Roblox is focused", "Presets", "Clicker");
-        Add("Gaming", "Game Mode", "Tweaks", "PC tweaks", "FPS", "Cleaner", "Optimizations", "System usage", "What to clean");
+        Add("Gaming", "Game Mode", "Tweaks", "PC tweaks", "FPS", "Cleaner", "Optimizations", "System usage", "What to clean", "Overview", "Plan", "Benchmark", "Diagnostics", "Hardware", "Graphics card", "Frame rate", "Frame time", "Bottleneck", "Recommendations", "Balanced", "Performance profile");
         Add("Utility", "Brightness", "Movement Helper", "Tracking Helper", "Best DNS", "Apply the fastest automatically", "QoS Policy", "Disable Sticky Keys shortcut",
             "Disable Filter Keys shortcut", "Disable Toggle Keys shortcut", "Enhance pointer precision", "Fast key repeat", "Pointer speed", "Sensitivity calculator", "Network adapter", "Roblox traffic policy");
         Add("Mods", "Cursors", "Roblox cursor", "Cursor Builder", "Picture to cursor", "Fonts", "Roblox font", "Your mods", "Remove background");
@@ -208,8 +208,16 @@ public sealed class MainViewModel : ObservableObject
             if (Svc.S.Game.AutoGameMode && _robloxRunning != was && (_robloxRunning || _autoStarted))
             {
                 _autoStarted = _robloxRunning;
-                _ = Svc.GameMode.SetActiveAsync(_robloxRunning);
-                Svc.Toast.Toggled("Game Mode", _robloxRunning);
+                bool on = _robloxRunning;
+                _ = Task.Run(async () =>
+                {
+                    await Svc.GameMode.SetActiveAsync(on);
+                    Svc.Dispatch(() =>
+                    {
+                        if (on && Svc.GameMode.NeedsPlanApproval) Svc.Toast.Show("Game Mode", "Not started: approve a plan on Gaming > Plan first", false);
+                        else Svc.Toast.Toggled("Game Mode", on);
+                    });
+                });
             }
         }
         RobloxText = _robloxRunning ? "Running" : "Not running";

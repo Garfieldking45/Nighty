@@ -58,7 +58,11 @@ public sealed class TweaksService
     {
         try
         {
-            if (!on) { Revert(id); return new(StatusKind.Neutral, ""); }
+            if (!on)
+            {
+                var kept = Revert(id);
+                return new(StatusKind.Neutral, kept.Count == 0 ? "" : "Turned off. Left your newer value alone for: " + string.Join(", ", kept));
+            }
             var edits = EditsFor(id, out string? problem);
             if (edits == null) return new(StatusKind.Warning, problem ?? "Not available on this PC");
             foreach (var e in edits) ApplyEdit(id, e);
@@ -96,39 +100,59 @@ public sealed class TweaksService
         RevertAll();
     }
 
-    private void Revert(string id)
+    /// <summary>Puts a tweak's original values back. A value that was changed after the tweak wrote it (by the user or another program) is left alone; the names of those are returned.</summary>
+    private List<string> Revert(string id)
     {
+        var kept = new List<string>();
         string prefix = id + "|";
         foreach (var key in B.Tweaks.Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal)).ToList())
         {
             var parts = key.Split('|', 3);
             string subKey = parts[1], name = parts[2];
             string orig = B.Tweaks[key];
+            B.TweaksWritten.TryGetValue(key, out var written);
             if (subKey == FlagSubKey)
             {
                 var path = FlagFile();
-                if (path != null && File.Exists(path)) WriteFlag(path, name, orig == "N" ? null : orig[2..]);
+                if (path != null && File.Exists(path))
+                {
+                    var flags = ReadFlags(path);
+                    string cur = flags.TryGetValue(name, out var cv) ? "S:" + cv : "N";
+                    if (written != null && cur != written && cur != orig) { kept.Add(name); Log.Info($"Tweak {id}: {name} changed since Nighty set it; left as is"); }
+                    else WriteFlag(path, name, orig == "N" ? null : orig[2..]);
+                }
             }
             else if (subKey == AnimSubKey)
             {
-                if (orig.StartsWith("I:")) NativeMethods.SystemParametersInfo(SPI_SETCLIENTAREAANIMATION, 0, (IntPtr)int.Parse(orig[2..]), NativeMethods.SPIF_UPDATEINIFILE | NativeMethods.SPIF_SENDCHANGE);
-            }
-            else if (orig == "N")
-            {
-                using var k = Registry.CurrentUser.OpenSubKey(subKey, writable: true);
-                k?.DeleteValue(name, throwOnMissingValue: false);
+                NativeMethods.SystemParametersInfo(SPI_GETCLIENTAREAANIMATION, 0, out int now, 0);
+                string cur = "I:" + now;
+                if (written != null && cur != written && cur != orig) { kept.Add("window animations"); Log.Info($"Tweak {id}: animations changed since Nighty set them; left as is"); }
+                else if (orig.StartsWith("I:")) NativeMethods.SystemParametersInfo(SPI_SETCLIENTAREAANIMATION, 0, (IntPtr)int.Parse(orig[2..]), NativeMethods.SPIF_UPDATEINIFILE | NativeMethods.SPIF_SENDCHANGE);
             }
             else
             {
-                using var k = Registry.CurrentUser.CreateSubKey(subKey);
-                if (orig.StartsWith("I:")) k.SetValue(name, int.Parse(orig[2..]), RegistryValueKind.DWord);
-                else k.SetValue(name, orig[2..], RegistryValueKind.String);
+                using var read = Registry.CurrentUser.OpenSubKey(subKey);
+                string cur = read?.GetValue(name) switch { null => "N", int i => "I:" + i, string str => "S:" + str, var o => "S:" + o };
+                if (written != null && cur != written && cur != orig) { kept.Add(name); Log.Info($"Tweak {id}: {name} changed since Nighty set it; left as is"); }
+                else if (orig == "N")
+                {
+                    using var k = Registry.CurrentUser.OpenSubKey(subKey, writable: true);
+                    k?.DeleteValue(name, throwOnMissingValue: false);
+                }
+                else
+                {
+                    using var k = Registry.CurrentUser.CreateSubKey(subKey);
+                    if (orig.StartsWith("I:")) k.SetValue(name, int.Parse(orig[2..]), RegistryValueKind.DWord);
+                    else k.SetValue(name, orig[2..], RegistryValueKind.String);
+                }
             }
             B.Tweaks.Remove(key);
+            B.TweaksWritten.Remove(key);
         }
         B.TweaksApplied.Remove(id);
         Svc.Settings.Save();
         Log.Info("Tweak reverted: " + id);
+        return kept;
     }
 
     private void ApplyEdit(string id, Edit e)
@@ -143,6 +167,7 @@ public sealed class TweaksService
                 Svc.Settings.Save();
             }
             WriteFlag(path, e.Name, (string)e.Value);
+            B.TweaksWritten[key] = "S:" + (string)e.Value;
             return;
         }
         if (e.Kind == EditKind.Animations)
@@ -155,6 +180,7 @@ public sealed class TweaksService
             }
             if (!NativeMethods.SystemParametersInfo(SPI_SETCLIENTAREAANIMATION, 0, (IntPtr)(int)e.Value, NativeMethods.SPIF_UPDATEINIFILE | NativeMethods.SPIF_SENDCHANGE))
                 throw new InvalidOperationException("Windows rejected the setting");
+            B.TweaksWritten[key] = "I:" + (int)e.Value;
             return;
         }
 
@@ -166,6 +192,7 @@ public sealed class TweaksService
         }
         if (e.Value is int v) k.SetValue(e.Name, v, RegistryValueKind.DWord);
         else k.SetValue(e.Name, (string)e.Value, RegistryValueKind.String);
+        B.TweaksWritten[key] = e.Value is int wi ? "I:" + wi : "S:" + (string)e.Value;
     }
 
     /// <summary>The ClientAppSettings.json of the newest Roblox client (the file Roblox reads allowed FastFlags from).</summary>

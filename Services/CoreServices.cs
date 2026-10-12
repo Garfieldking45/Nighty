@@ -78,10 +78,14 @@ public sealed class SettingsService
     public void Load()
     {
         AppPaths.EnsureCreated();
+        bool fromFile = false;
         try
         {
             if (File.Exists(AppPaths.SettingsFile))
+            {
                 Current = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(AppPaths.SettingsFile), Json) ?? new AppSettings();
+                fromFile = true;
+            }
         }
         catch (Exception ex)
         {
@@ -89,6 +93,7 @@ public sealed class SettingsService
             try { File.Move(AppPaths.SettingsFile, AppPaths.SettingsFile + $".corrupt-{DateTime.Now:yyyyMMddHHmmss}"); } catch { }
             Current = new AppSettings();
         }
+        Services.Booster.BoosterMigration.Apply(Current, fromFile);
         Watch(Current);
     }
 

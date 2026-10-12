@@ -17,6 +17,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="System.IO" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\Nighty.csproj" />
   </ItemGroup>
 

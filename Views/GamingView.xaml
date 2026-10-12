@@ -37,21 +37,215 @@
             <Setter Property="Maximum" Value="100"/>
             <Setter Property="Height" Value="6"/>
         </Style>
+
+        <!-- One recommendation in the plan: tick box, title, tag, reason, and an expandable "why" -->
+        <DataTemplate x:Key="PlanItem">
+            <StackPanel>
+                <Border Style="{StaticResource Divider}" Margin="0,10"/>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <CheckBox IsChecked="{Binding Selected}" IsEnabled="{Binding CanSelect}" VerticalAlignment="Top" Margin="0,2,16,0" AutomationProperties.Name="{Binding Title}"/>
+                    <StackPanel Grid.Column="1">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Title}" FontWeight="Medium" FontSize="13.5" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding Tag}" FontSize="10.5" FontWeight="SemiBold" Margin="10,2,0,0" VerticalAlignment="Center"
+                                       Foreground="{Binding Kind, Converter={StaticResource StatusBrush}}"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding Reason}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding ChangeText}" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}"
+                                   Visibility="{Binding ChangeText, Converter={StaticResource NullVisible}}"/>
+                        <Button Content="Why? Show the evidence" Command="{Binding ToggleCommand}" Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Margin="0,6,0,0" FontSize="12"/>
+                        <StackPanel Visibility="{Binding Expanded, Converter={StaticResource BoolVisible}}" Margin="0,8,0,0">
+                            <Border Background="{DynamicResource Panel2Brush}" CornerRadius="8" Padding="12,10">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Evidence}" Style="{StaticResource Muted}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Details}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,10,0,0"
+                                               Visibility="{Binding Details, Converter={StaticResource NullVisible}}"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- A live measurement card -->
+        <DataTemplate x:Key="MetricCard">
+            <Border Style="{StaticResource Card}" Width="262" Margin="0,0,14,14" Padding="16,14">
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" Style="{StaticResource Label}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Value}" FontSize="24" FontWeight="SemiBold" Margin="0,4,0,0" Foreground="{Binding Kind, Converter={StaticResource StatusBrush}}"/>
+                    <c:Sparkline Values="{Binding Series}" Maximum="{Binding Maximum}" Height="34" Margin="0,6,0,6"/>
+                    <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11.5"/>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="FindingItem">
+            <StackPanel Margin="0,0,0,14">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="82"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Label}" FontSize="10.5" FontWeight="SemiBold" VerticalAlignment="Top" Margin="0,3,0,0"
+                               Foreground="{Binding Kind, Converter={StaticResource StatusBrush}}"/>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Statement}" FontWeight="Medium" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding Evidence}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,0" FontSize="12"/>
+                        <TextBlock Text="{Binding HowToVerify}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,0" FontSize="12"
+                                   Visibility="{Binding HowToVerify, Converter={StaticResource NullVisible}}"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </DataTemplate>
     </UserControl.Resources>
 
     <StackPanel>
         <StackPanel Margin="0,0,0,18">
-            <c:PageHeading Title="Gaming" Subtitle="Free up system resources while you play, and clean out junk files safely." Margin="0"/>
+            <c:PageHeading Title="Gaming" Subtitle="Understand this PC, review what would help, then let Game Mode apply it and put everything back." Margin="0"/>
         </StackPanel>
 
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
-            <RadioButton Style="{StaticResource TabButton}" Content="Game Mode" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Cleaner" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Tweaks" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
+        <WrapPanel Margin="0,0,0,18">
+            <RadioButton Style="{StaticResource TabButton}" Content="Overview" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Plan" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Game Mode" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Benchmark" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Cleaner" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Tweaks" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=5}"/>
+        </WrapPanel>
+
+        <!-- ================= Overview ================= -->
+        <Grid Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="330"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel DataContext="{Binding Overview}">
+                <c:InfoBanner Kind="{Binding BannerKind}" Text="{Binding Banner}" Visibility="{Binding Banner, Converter={StaticResource NullVisible}}"/>
+
+                <Border Style="{StaticResource Card}" Padding="18,14">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <c:StatusDot Kind="{Binding GameKind}" Margin="0,0,12,0" VerticalAlignment="Top"/>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="{Binding GameTitle}" FontWeight="SemiBold" FontSize="15"/>
+                            <TextBlock Text="{Binding GameDetail}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <ItemsControl ItemsSource="{Binding Cards}" ItemTemplate="{StaticResource MetricCard}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                </ItemsControl>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <c:CardHeader Icon="&#xE9D9;" Title="What the evidence says" Subtitle="Measured facts are kept apart from possible causes and from things Nighty cannot see." Margin="0,0,0,14"/>
+                        <ItemsControl ItemsSource="{Binding Findings}" ItemTemplate="{StaticResource FindingItem}"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" DataContext="{Binding Overview}">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <c:CardHeader Icon="&#xE770;" Title="This PC" Subtitle="{Binding ScanText}" Margin="0,0,0,10"/>
+                        <ItemsControl ItemsSource="{Binding Facts}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,6,0,0">
+                                        <TextBlock Text="{Binding Label}" Style="{StaticResource Label}"/>
+                                        <TextBlock Text="{Binding Value}" TextWrapping="Wrap" FontSize="12.5" Margin="0,1,0,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <WrapPanel Margin="0,16,0,0">
+                            <Button Content="Scan again" Command="{Binding RescanCommand}" Margin="0,0,8,8"/>
+                            <Button Content="Copy diagnostics" Command="{Binding CopyCommand}" Margin="0,0,8,8"/>
+                            <Button Content="Save diagnostics" Command="{Binding SaveCommand}" Margin="0,0,8,8"/>
+                        </WrapPanel>
+                        <TextBlock Text="Diagnostics have names, folders, e-mail and network addresses removed." Style="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11.5"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <c:CardHeader Icon="&#xE946;" Title="Where the numbers come from" Margin="0,0,0,10"/>
+                        <ItemsControl ItemsSource="{Binding Sources}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <c:StatusDot Kind="{Binding Kind}" VerticalAlignment="Top" Margin="0,5,10,0"/>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Name}" FontSize="12.5" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" FontSize="11.5" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- ================= Plan ================= -->
+        <StackPanel Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=1}" DataContext="{Binding Plan}">
+            <c:InfoBanner Kind="Info" Text="Nothing here changes your PC until you press Approve. Scanning and measuring only read. Every change saves your exact current value first and can be undone."/>
+            <c:InfoBanner Kind="{Binding ResultKind}" Text="{Binding Result}" Visibility="{Binding Result, Converter={StaticResource NullVisible}}"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <c:CardHeader Icon="&#xE7E8;" Title="Your plan" Subtitle="{Binding Summary}"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Re-check this PC" Command="{Binding RefreshCommand}" VerticalAlignment="Top"/>
+                    </Grid>
+                    <WrapPanel Margin="0,16,0,0">
+                        <RadioButton Style="{StaticResource TabButton}" Content="Balanced" GroupName="profile" IsChecked="{Binding Profile, Converter={StaticResource Eq}, ConverterParameter=Balanced}"/>
+                        <RadioButton Style="{StaticResource TabButton}" Content="Performance" GroupName="profile" IsChecked="{Binding Profile, Converter={StaticResource Eq}, ConverterParameter=Performance}"/>
+                        <RadioButton Style="{StaticResource TabButton}" Content="Custom" GroupName="profile" IsChecked="{Binding Profile, Converter={StaticResource Eq}, ConverterParameter=Custom}"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding ProfileHelp}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding Approved}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="{DynamicResource AccentBrush}"/>
+                    <Border Style="{StaticResource Divider}" Margin="0,14"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Approve and apply selected" Command="{Binding ApplyCommand}" Style="{StaticResource PrimaryButton}" MinWidth="200"/>
+                        <TextBlock Text="{Binding SelectedCount, StringFormat='{}{0} selected'}" VerticalAlignment="Center" Margin="14,0,0,0" Style="{StaticResource Muted}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Visibility="{Binding HasItems, ElementName=RecList, Converter={StaticResource BoolVisible}}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE73E;" Title="Recommended for this PC" Subtitle="There is a measurement or a clear reason behind each of these." Margin="0,0,0,2"/>
+                    <ItemsControl x:Name="RecList" ItemsSource="{Binding Recommended}" ItemTemplate="{StaticResource PlanItem}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Visibility="{Binding HasItems, ElementName=OptList, Converter={StaticResource BoolVisible}}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE713;" Title="Optional" Subtitle="Supported here, but nothing seen suggests they would help right now." Margin="0,0,0,2"/>
+                    <ItemsControl x:Name="OptList" ItemsSource="{Binding Optional}" ItemTemplate="{StaticResource PlanItem}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Visibility="{Binding HasItems, ElementName=UnList, Converter={StaticResource BoolVisible}}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE7BA;" Title="Not advised" Subtitle="Available, but their benefit is unproven or doubtful on this PC. No profile selects them." Margin="0,0,0,2"/>
+                    <ItemsControl x:Name="UnList" ItemsSource="{Binding Unadvised}" ItemTemplate="{StaticResource PlanItem}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Visibility="{Binding HasItems, ElementName=NaList, Converter={StaticResource BoolVisible}}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE711;" Title="Does not apply to this PC" Subtitle="Left out, with the reason." Margin="0,0,0,2"/>
+                    <ItemsControl x:Name="NaList" ItemsSource="{Binding NotApplicable}" ItemTemplate="{StaticResource PlanItem}"/>
+                </StackPanel>
+            </Border>
         </StackPanel>
 
         <!-- ================= Game Mode ================= -->
-        <Grid Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}">
+        <Grid Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="340"/>
                 <ColumnDefinition Width="14"/>
@@ -65,8 +259,10 @@
                                 AutomationProperties.Name="Game Mode power"/>
                         <TextBlock Text="{Binding PowerLabel}" HorizontalAlignment="Center" FontSize="16" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding PowerHint}" Style="{StaticResource Muted}" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,5,0,8"/>
-                        <TextBlock Text="{Binding GameStatus}" Style="{StaticResource Muted}" Foreground="{DynamicResource SuccessBrush}" TextAlignment="Center" Margin="0,2,0,4"
+                        <TextBlock Text="{Binding GameStatus}" Style="{StaticResource Muted}" Foreground="{DynamicResource SuccessBrush}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,2,0,4"
                                    Visibility="{Binding GameStatus, Converter={StaticResource NullVisible}}"/>
+                        <TextBlock Text="{Binding RestoreText}" Style="{StaticResource Muted}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,2,0,4" FontSize="11.5"
+                                   Visibility="{Binding RestoreText, Converter={StaticResource NullVisible}}"/>
                         <c:SettingRow Title="Turn on automatically" Description="Enables Game Mode when Roblox starts and restores your settings when it closes.">
                             <CheckBox IsChecked="{Binding Game.AutoGameMode}"/>
                         </c:SettingRow>
@@ -97,7 +293,9 @@
             </StackPanel>
 
             <StackPanel Grid.Column="2">
-                <c:InfoBanner Kind="Info" Text="Game Mode only changes the options you enable below. Everything it changes is remembered and put back when you turn it off or close Nighty."/>
+                <c:InfoBanner Kind="Warning" Text="Game Mode will not change anything until you approve a plan on the Plan tab."
+                              Visibility="{Binding NeedsPlan, Converter={StaticResource BoolVisible}}"/>
+                <c:InfoBanner Kind="Info" Text="Game Mode only does the options ticked below, and only where this PC supports them. Every change is saved first and put back exactly as it was when you turn it off or close Nighty. The Plan tab chooses these for you; changing them here makes it a Custom setup."/>
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <c:CardHeader Icon="&#xE7E8;" Title="Optimizations" Margin="0,0,0,12"/>
@@ -109,11 +307,11 @@
                                         <Grid>
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                             <StackPanel Margin="0,0,18,0">
-                                                <TextBlock Text="{Binding Title}" FontWeight="Medium" FontSize="13.5"/>
-                                                <TextBlock Text="{Binding Description}" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                                                <TextBlock Text="{Binding Title}" FontWeight="Medium" FontSize="13.5" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding Description}" Style="{StaticResource Muted}" Margin="0,3,0,0" TextWrapping="Wrap"/>
                                                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0" Visibility="{Binding Status, Converter={StaticResource NullVisible}}">
                                                     <c:StatusDot Kind="{Binding Kind}"/>
-                                                    <TextBlock Text="{Binding Status}" Margin="8,0,0,0" FontSize="12" Foreground="{Binding Kind, Converter={StaticResource StatusBrush}}"/>
+                                                    <TextBlock Text="{Binding Status}" Margin="8,0,0,0" FontSize="12" TextWrapping="Wrap" MaxWidth="520" Foreground="{Binding Kind, Converter={StaticResource StatusBrush}}"/>
                                                 </StackPanel>
                                             </StackPanel>
                                             <CheckBox Grid.Column="1" IsChecked="{Binding Enabled}" VerticalAlignment="Top" Margin="0,2,0,0" AutomationProperties.Name="{Binding Title}"/>
@@ -127,8 +325,144 @@
             </StackPanel>
         </Grid>
 
+        <!-- ================= Benchmark ================= -->
+        <StackPanel Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=3}" DataContext="{Binding Bench}">
+            <c:InfoBanner Kind="Info" Text="Stand in one spot in Roblox and Nighty records real frame times for a fixed time. Run a Baseline two or three times, approve a plan, run After two or three times, then compare. Nighty never claims a gain that is within normal run-to-run variation."/>
+            <c:InfoBanner Kind="Warning" Text="{Binding CaptureText}" Visibility="{Binding CaptureAvailable, Converter={StaticResource BoolVisible}, ConverterParameter=!}"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE768;" Title="New test" Subtitle="Roblox must be running and in front for the whole test." Margin="0,0,0,14"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="NAME OF THIS RUN" Style="{StaticResource Label}"/>
+                            <TextBox Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,12"/>
+                            <TextBlock Text="SCENE (WHERE YOU STAND, WHAT IS ON SCREEN)" Style="{StaticResource Label}"/>
+                            <TextBox Text="{Binding Scene, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0"/>
+                            <TextBlock Text="Runs with different scene notes are not compared." Style="{StaticResource Muted}" FontSize="11.5" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="THIS RUN IS" Style="{StaticResource Label}"/>
+                            <WrapPanel Margin="0,6,0,12">
+                                <RadioButton Style="{StaticResource TabButton}" Content="Baseline (before)" GroupName="bgroup" IsChecked="{Binding Group, Converter={StaticResource Eq}, ConverterParameter=Baseline}"/>
+                                <RadioButton Style="{StaticResource TabButton}" Content="After a plan" GroupName="bgroup" IsChecked="{Binding Group, Converter={StaticResource Eq}, ConverterParameter=After}"/>
+                            </WrapPanel>
+                            <TextBlock Text="GRAPHICS SETTINGS YOU USED (OPTIONAL)" Style="{StaticResource Label}"/>
+                            <TextBox Text="{Binding Settings, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                    <Grid Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="LENGTH" Style="{StaticResource Label}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                        <StackPanel Grid.Column="1">
+                            <Slider Minimum="0" Maximum="3" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="1" LargeChange="1" Value="{Binding LengthIndex, Mode=TwoWay}" MaxWidth="360" HorizontalAlignment="Left" Width="360"/>
+                            <TextBlock Text="{Binding LengthText}" Style="{StaticResource Muted}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                        <Button Content="Start test" Command="{Binding StartCommand}" Style="{StaticResource PrimaryButton}" MinWidth="120"/>
+                        <Button Content="Cancel" Command="{Binding CancelCommand}" Margin="10,0,0,0"/>
+                        <TextBlock Text="{Binding Stage}" VerticalAlignment="Center" Margin="16,0,0,0" Style="{StaticResource Muted}"/>
+                    </StackPanel>
+                    <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100" Margin="0,14,0,0" Visibility="{Binding Running, Converter={StaticResource BoolVisible}}"/>
+                    <c:InfoBanner Kind="{Binding StatusKind}" Text="{Binding Status}" Margin="0,14,0,0" Visibility="{Binding Status, Converter={StaticResource NullVisible}}"/>
+                    <Button Content="Set up frame capture (needs administrator approval)" Command="{Binding SetupCommand}" HorizontalAlignment="Left" Margin="0,12,0,0"
+                            Visibility="{Binding CaptureAvailable, Converter={StaticResource BoolVisible}, ConverterParameter=!}"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE8A5;" Title="Add a result from another tool" Subtitle="For when Nighty cannot capture frames, or you already measured with PresentMon or CapFrameX." Margin="0,0,0,14"/>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,24,10">
+                            <TextBlock Text="AVERAGE FPS" Style="{StaticResource Label}"/>
+                            <TextBox Text="{Binding ManualAvg, UpdateSourceTrigger=PropertyChanged}" Width="110" Margin="0,6,0,0"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,24,10">
+                            <TextBlock Text="1% LOW FPS (OPTIONAL)" Style="{StaticResource Label}"/>
+                            <TextBox Text="{Binding ManualLow, UpdateSourceTrigger=PropertyChanged}" Width="110" Margin="0,6,0,0"/>
+                        </StackPanel>
+                        <Button Content="Add typed-in result" Command="{Binding AddManualCommand}" VerticalAlignment="Bottom" Margin="0,0,24,10"/>
+                        <Button Content="Import a PresentMon / CapFrameX CSV…" Command="{Binding ImportCommand}" VerticalAlignment="Bottom" Margin="0,0,0,10"/>
+                    </WrapPanel>
+                    <TextBlock Text="Typed-in and imported results are marked as such. Typed-in figures cannot be verified, and neither compares with a run that Nighty measured itself." Style="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11.5"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <c:CardHeader Icon="&#xE81C;" Title="Saved runs" Subtitle="Tick Before on the runs made before a change, After on the runs made after, then compare."/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                            <Button Content="Compare" Command="{Binding CompareCommand}" Style="{StaticResource PrimaryButton}" MinWidth="96"/>
+                            <Button Content="Delete ticked" Command="{Binding DeleteSelectedCommand}" Margin="10,0,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Text="No runs yet." Style="{StaticResource Muted}" Margin="0,12,0,0">
+                        <TextBlock.Visibility>
+                            <Binding Path="HasRuns" Converter="{StaticResource BoolVisible}" ConverterParameter="!"/>
+                        </TextBlock.Visibility>
+                    </TextBlock>
+                    <ItemsControl ItemsSource="{Binding Runs}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <Border Style="{StaticResource Divider}" Margin="0,10"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel Margin="0,0,16,0">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Label}" FontWeight="Medium" FontSize="13.5"/>
+                                                <TextBlock Text="{Binding Source}" Style="{StaticResource Muted}" Margin="10,2,0,0" FontSize="11.5"/>
+                                                <TextBlock Text="{Binding When}" Style="{StaticResource Muted}" Margin="10,2,0,0" FontSize="11.5"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Numbers}" Margin="0,3,0,0" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
+                                            <TextBlock Text="{Binding Conditions}" Style="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11.5" Margin="0,3,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                                            <CheckBox IsChecked="{Binding IsBefore}" Content="Before" Margin="0,0,16,0" AutomationProperties.Name="Use as a before run"/>
+                                            <CheckBox IsChecked="{Binding IsAfter}" Content="After" AutomationProperties.Name="Use as an after run"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Visibility="{Binding Headline, Converter={StaticResource NullVisible}}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE9D2;" Title="Result" Margin="0,0,0,12"/>
+                    <c:InfoBanner Kind="{Binding VerdictKind}" Text="{Binding Headline}"/>
+                    <ItemsControl ItemsSource="{Binding Metrics}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,8,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Name}" FontWeight="Medium"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Values}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Outcome}" FontWeight="SemiBold" Foreground="{Binding Kind, Converter={StaticResource StatusBrush}}"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding Explanation}" Style="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11.5" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding CompareNotes}" Margin="0,12,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate><TextBlock Text="{Binding}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,3,0,0"/></DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
         <!-- ================= Cleaner ================= -->
-        <StackPanel Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=1}" DataContext="{Binding Cleaner}">
+        <StackPanel Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=4}" DataContext="{Binding Cleaner}">
             <c:InfoBanner Kind="Info" Text="The Cleaner only looks in the fixed locations listed below. Scan first to preview every file, then clean. Files that are in use are skipped, and nothing outside these locations is touched."/>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
@@ -199,14 +533,14 @@
         </StackPanel>
 
         <!-- ================= Tweaks ================= -->
-        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}">
-            <c:InfoBanner Kind="Info" Text="These tweaks change Windows settings for your account only (no administrator rights needed). Each one remembers your exact original value and can be switched off at any time. They stay on until you turn them off, even after closing Nighty."/>
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=5}">
+            <c:InfoBanner Kind="Info" Text="These tweaks change Windows settings for your account only (no administrator rights needed). Each one remembers your exact original value and can be switched off at any time. If you change one of these settings yourself afterwards, switching the tweak off leaves your newer value alone. They stay on until you turn them off, even after closing Nighty."/>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <StackPanel>
-                            <c:CardHeader Icon="&#xE713;" Title="PC tweaks" Subtitle="Small changes that free up GPU, CPU and focus for your game."/>
+                            <c:CardHeader Icon="&#xE713;" Title="PC tweaks" Subtitle="Small changes that free up GPU, CPU and focus for your game. The Plan tab says which of these actually suit this PC."/>
                         </StackPanel>
                         <Button Grid.Column="1" Content="Turn all off" Command="{Binding RestoreTweaksCommand}" VerticalAlignment="Top"/>
                     </Grid>

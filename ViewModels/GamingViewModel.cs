@@ -52,7 +52,35 @@ public sealed class GamingViewModel : ObservableObject
     private string _cpuText = "—", _ramText = "—", _robloxText = "Roblox is not running", _gameStatus = "";
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
 
-    public int Tab { get => _tab; set => Set(ref _tab, value); }
+    /// <summary>0 Overview, 1 Plan, 2 Game Mode, 3 Benchmark, 4 Cleaner, 5 Tweaks.</summary>
+    public int Tab
+    {
+        get => _tab;
+        set
+        {
+            if (!Set(ref _tab, value)) return;
+            if (value == 1 && (_planAt == default || DateTime.UtcNow - _planAt > TimeSpan.FromSeconds(30))) { _planAt = DateTime.UtcNow; _ = Plan.RefreshAsync(); }
+            if (value == 3) Bench.RefreshCapture();
+        }
+    }
+    private DateTime _planAt;
+
+    // ---------- Overview, Plan, Benchmark ----------
+    public OverviewViewModel Overview { get; } = new();
+    public PlanViewModel Plan { get; } = new();
+    public BenchmarkViewModel Bench { get; } = new();
+
+    /// <summary>The page became visible or hidden: live measurements run only while it is shown.</summary>
+    public void SetVisible(bool visible)
+    {
+        if (visible) { Overview.Attach(); if (Tab == 1) _ = Plan.RefreshAsync(); }
+        else Overview.Detach();
+    }
+
+    public bool NeedsPlan => !Svc.S.Booster.PlanReviewed;
+    public string RestoreText { get => _restoreText; private set => Set(ref _restoreText, value); }
+    private string _restoreText = "";
+    public RelayCommand OpenPlanCommand { get; }
 
     // ---------- Game Mode ----------
     public bool IsActive => Svc.GameMode.IsActive;
@@ -120,6 +148,7 @@ public sealed class GamingViewModel : ObservableObject
         });
 
         PowerCommand = new AsyncCommand(TogglePower, () => !IsBusy);
+        OpenPlanCommand = new RelayCommand(() => Tab = 1);
         Svc.GameMode.Changed += () => Application.Current.Dispatcher.BeginInvoke(RefreshGameMode);
 
         _timer.Tick += (_, _) => Sample();
@@ -147,7 +176,11 @@ public sealed class GamingViewModel : ObservableObject
     private async Task TogglePower()
     {
         IsBusy = true; OnPropertyChanged(nameof(PowerLabel));
-        try { await Svc.GameMode.SetActiveAsync(!Svc.GameMode.IsActive); }
+        try
+        {
+            await Svc.GameMode.SetActiveAsync(!Svc.GameMode.IsActive);
+            if (Svc.GameMode.NeedsPlanApproval) Tab = 1;   // nothing is applied until a plan has been approved
+        }
         finally { IsBusy = false; RefreshGameMode(); }
     }
 
@@ -169,7 +202,10 @@ public sealed class GamingViewModel : ObservableObject
             else { o.Status = ""; o.Kind = StatusKind.Neutral; }
         }
         OnPropertyChanged(nameof(AppsSlowedText)); OnPropertyChanged(nameof(MemoryFreedText));
-        GameStatus = Svc.GameMode.IsActive ? "Optimizations are applied. Turn Game Mode off to restore your original settings." : "";
+        GameStatus = Svc.GameMode.IsActive ? "Optimizations are applied. Turn Game Mode off to restore your original settings."
+            : Svc.GameMode.NeedsPlanApproval ? "Nothing was changed: approve a plan first (Plan tab)." : "";
+        RestoreText = !Svc.GameMode.IsActive && Svc.GameMode.RestoreSummary is { } rs ? "Last time: " + rs : "";
+        OnPropertyChanged(nameof(NeedsPlan));
     }
 
     private void Sample()

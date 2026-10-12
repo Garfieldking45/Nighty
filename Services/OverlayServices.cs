@@ -105,6 +105,9 @@ public sealed class FpsService
     private HashSet<int> _pids = new();
     private long _frames;
 
+    /// <summary>Raised for every frame Roblox presents: (process id, timestamp in milliseconds). Called on the tracing thread; keep handlers short.</summary>
+    public event Action<int, double>? FramePresented;
+
     public double? Fps { get; private set; }
     public string Status { get; private set; } = "Idle";
     public bool IsRunning => _cts != null;
@@ -140,7 +143,10 @@ public sealed class FpsService
             _session.Source.Dynamic.All += (TraceEvent e) =>
             {
                 if (e.ProviderGuid == DxgiProvider && (int)e.ID == 42 && _pids.Contains(e.ProcessID))
+                {
                     Interlocked.Increment(ref _frames);
+                    FramePresented?.Invoke(e.ProcessID, e.TimeStampRelativeMSec);
+                }
             };
             _session.Source.Process();
         }

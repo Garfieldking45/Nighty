@@ -233,6 +233,27 @@ public sealed class GameSettings : ObservableObject
     public HashSet<string> CleanerCategories { get; set; } = new() { "user_temp", "shader", "crash", "roblox_logs", "thumbs" };
 }
 
+/// <summary>
+/// What the user approved for Game Mode. Game Mode applies nothing until a plan has been reviewed; the individual choices stay in
+/// <see cref="GameSettings"/> so older profiles and the manual option list keep working.
+/// </summary>
+public sealed class BoosterSettings : ObservableObject
+{
+    private bool _reviewed;
+    private Nighty.Services.Booster.BoosterProfile _profile = Nighty.Services.Booster.BoosterProfile.Balanced;
+
+    /// <summary>0 = written by a Nighty from before the hardware-aware booster existed.</summary>
+    public int SchemaVersion { get; set; }
+    /// <summary>True once the user has approved a plan, or when an older setup already had Game Mode configured (their choices are kept).</summary>
+    public bool PlanReviewed { get => _reviewed; set => Set(ref _reviewed, value); }
+    public Nighty.Services.Booster.BoosterProfile Profile { get => _profile; set => Set(ref _profile, value); }
+    /// <summary>The fingerprint of the hardware the plan was approved on, so a changed PC can ask for a second look.</summary>
+    public string? ApprovedFingerprint { get; set; }
+    public DateTime? ApprovedUtc { get; set; }
+    /// <summary>True when the approval came from an older setup rather than from reviewing a plan.</summary>
+    public bool KeptFromOlderSetup { get; set; }
+}
+
 public sealed class MovementSettings : ObservableObject
 {
     private bool _sticky, _filter, _toggle, _repeat;
@@ -669,6 +690,8 @@ public sealed class SystemBackups
     /// <summary>Tweaks that were switched on when Nighty last closed; they are switched back on at the next start.</summary>
     public HashSet<string> TweaksToReapply { get; set; } = new();
     public Dictionary<string, string> Tweaks { get; set; } = new();
+    /// <summary>The value each tweak wrote (same keys and encoding as <see cref="Tweaks"/>), so switching a tweak off never overwrites a value changed since.</summary>
+    public Dictionary<string, string> TweaksWritten { get; set; } = new();
 
     public bool HasGameBarBackup { get; set; }
     public int? OriginalGameBarValue { get; set; }
@@ -705,6 +728,7 @@ public sealed class AppSettings
     public ClickerSettings Clicker { get; set; } = new();
     public ObservableCollection<ClickerPreset> Presets { get; set; } = new();
     public GameSettings Game { get; set; } = new();
+    public BoosterSettings Booster { get; set; } = new();
     public BowSwitchSettings Bow { get; set; } = new();
     public FishingSettings Fishing { get; set; } = new();
     public UtilitySettings Utility { get; set; } = new();

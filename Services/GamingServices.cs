@@ -4,354 +4,174 @@ using Microsoft.Win32;
 using Nighty.Models;
 using Nighty.Mvvm;
 using Nighty.Native;
+using Nighty.Services.Booster;
 
 namespace Nighty.Services;
 
 public sealed record OptionResult(StatusKind Kind, string Text);
 
 /// <summary>
-/// Game Mode: applies only the optimisations the user selected, remembers original values, and restores them
-/// when disabled, on exit, or after a crash (original values are persisted while active).
+/// Game Mode, as the rest of the app sees it. The work is done by <see cref="GameModeEngine"/>, which only applies what the user
+/// approved, only where this PC supports it, records every change on disk before making it, and restores exactly what it changed
+/// when Game Mode ends, when Nighty closes, or after a crash.
 /// </summary>
 public sealed class GameModeService
 {
-    private const string HighPerfGuid = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
-    private readonly Dictionary<int, ProcessPriorityClass> _origPriority = new();
-    private bool _timerActive, _awakeActive;
-    private readonly Dictionary<int, ProcessPriorityClass> _origCalm = new();
-    private readonly HashSet<int> _freedFor = new();
-    private readonly HashSet<int> _unthrottled = new();
+    private readonly GameModeEngine _engine;
+    private readonly ChangeTransactions _journal;
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private CancellationTokenSource? _watch;
 
-    /// <summary>Background apps that wait while Roblox runs. Discord and music players are deliberately not here.</summary>
-    private static readonly HashSet<string> Background = new(StringComparer.OrdinalIgnoreCase)
+    public GameModeService(BoosterService booster)
     {
-        "chrome", "msedge", "firefox", "opera", "opera_gx", "brave", "vivaldi", "msedgewebview2", "steam", "steamwebhelper", "epicgameslauncher",
-        "epicwebhelper", "battle.net", "eadesktop", "ubisoftconnect", "galaxyclient", "onedrive", "dropbox", "googledrivefs", "teams", "ms-teams",
-        "microsoftedgeupdate", "googleupdate", "phoneexperiencehost", "widgets", "searchhost", "searchindexer", "slack", "skype", "wallpaper32", "wallpaper64",
-        "adobeupdateservice", "adobecollabsync", "creativecloud", "ccxprocess", "acrotray", "gamingservices", "yourphone", "crossdeviceservice",
-        "razercentral", "icue", "lghub_agent", "nvcontainer", "nvidia share", "nvidia web helper", "evernote", "notion", "figma_agent", "overwolf", "overwolfbrowser",
-    };
-    /// <summary>Apps currently slowed, and memory given back since Game Mode was switched on.</summary>
-    public int AppsSlowed => _origCalm.Count;
-    public double MemoryFreedMb { get; private set; }
-    private System.Windows.Threading.DispatcherTimer? _watch;
+        var control = booster.Control;
+        _journal = new ChangeTransactions(new FileJournalStore(Path.Combine(AppPaths.Root, "recovery-journal.json")), new DefaultTargetResolver(control), log: m => Log.Warn(m));
+        _engine = new GameModeEngine(new GameModeDeps
+        {
+            Game = booster.Game, Processes = booster.Processes, Control = control, Targets = new DefaultTargetFactory(control), Journal = _journal,
+            Resources = new NativeSessionResources(), Hardware = () => booster.Hardware.Current,
+            RefreshPower = () => booster.Hardware.RefreshPower(), Memory = BoosterService.MemoryNow, Log = m => Log.Info(m),
+        });
+        _engine.Changed += () => Changed?.Invoke();
+    }
 
-    public bool IsActive { get; private set; }
-    public Dictionary<string, OptionResult> Results { get; } = new();
+    public GameModeEngine Engine => _engine;
+    public ChangeTransactions Journal => _journal;
+    public bool IsActive => _engine.IsActive;
     public event Action? Changed;
 
-    private SystemBackups Backups => Svc.S.Backups;
-    private GameSettings Opt => Svc.S.Game;
+    /// <summary>Apps currently slowed, and memory given back since Game Mode was switched on.</summary>
+    public int AppsSlowed => _engine.AppsSlowed;
+    public double MemoryFreedMb => _engine.MemoryFreedMb;
 
-    /// <summary>Called at startup: if the previous run ended while Game Mode was active, undo what it left behind.</summary>
+    /// <summary>The outcome of each option, shaped for the Game Mode list.</summary>
+    public Dictionary<string, OptionResult> Results
+        => _engine.Reports.ToDictionary(r => r.ActionId, r => new OptionResult(Kind(r.State), r.Text));
+
+    private static StatusKind Kind(ActionState s) => s switch
+    {
+        ActionState.Applied or ActionState.AlreadyInPlace => StatusKind.Success,
+        ActionState.AppliedUnverified => StatusKind.Warning,
+        ActionState.Waiting => StatusKind.Info,
+        ActionState.Skipped => StatusKind.Neutral,
+        _ => StatusKind.Error,
+    };
+
+    /// <summary>Set when Game Mode could not start because no plan has been approved yet.</summary>
+    public bool NeedsPlanApproval { get; private set; }
+    /// <summary>What the last restore did, in words, or null when it restored nothing or nothing has run.</summary>
+    public string? RestoreSummary => _engine.LastRestore is { Total: > 0 } r ? r.Summary() : null;
+    public RestoreReport? LastRestore => _engine.LastRestore;
+    /// <summary>A message about anything an earlier run left unfinished, shown until it has been dealt with.</summary>
+    public string? RecoveryNotice { get; private set; }
+
+    private SystemBackups Backups => Svc.S.Backups;
+
+    /// <summary>Called at startup: undoes whatever an earlier run left behind (crash, kill or restart).</summary>
     public void RecoverFromCrash()
     {
-        if (!Backups.GameModeActive) return;
-        Log.Warn("Previous session ended with Game Mode active; restoring system settings");
-        RestorePersistentSettings();
-        ResetLeftoverProcessSettings();
-    }
-
-    /// <summary>After a crash the slowed background apps keep their lowered priority and efficiency mode; put them back.</summary>
-    private void ResetLeftoverProcessSettings()
-    {
-        foreach (var p in Process.GetProcesses())
-        {
-            try
-            {
-                if (p.ProcessName == RobloxService.ProcessName) { SetThrottling(p.Id, 0, 0); continue; }
-                if (!Background.Contains(p.ProcessName) || p.Id == Environment.ProcessId) continue;
-                SetThrottling(p.Id, 0, 0);
-                if (p.PriorityClass == ProcessPriorityClass.BelowNormal) p.PriorityClass = ProcessPriorityClass.Normal;
-            }
-            catch { }
-            finally { p.Dispose(); }
-        }
-    }
-
-    public async Task SetActiveAsync(bool active)
-    {
-        if (active == IsActive) return;
-        if (active) await ActivateAsync(); else await DeactivateAsync();
-        Changed?.Invoke();
-    }
-
-    private async Task ActivateAsync()
-    {
-        Results.Clear();
-        Backups.GameModeActive = true;
-        Svc.Settings.Save();
-        IsActive = true;
-
-        if (Opt.HighPerformancePower) Results["power"] = await Task.Run(ApplyPower);
-        MemoryFreedMb = 0; _freedFor.Clear();
-        if (Opt.RobloxHighPriority) Results["priority"] = ApplyPriority();
-        if (Opt.RobloxNoThrottle) Results["throttle"] = ApplyNoThrottle();
-        if (Opt.CalmBackgroundApps) Results["calm"] = ApplyCalm();
-        if (Opt.FreeMemory) Results["memory"] = FreeBackgroundMemory();
-        if (Opt.RobloxHighPriority || Opt.RobloxNoThrottle || Opt.CalmBackgroundApps || Opt.FreeMemory) StartWatcher();
-        if (Opt.TimerResolution)
-        {
-            _timerActive = NativeMethods.timeBeginPeriod(1) == 0;
-            Results["timer"] = _timerActive ? new(StatusKind.Success, "1 ms timer resolution requested") : new(StatusKind.Error, "Windows rejected the timer request");
-        }
-        if (Opt.WindowsGameMode) Results["gamemode"] = ApplyGameBar();
-        if (Opt.KeepDisplayAwake)
-        {
-            _awakeActive = NativeMethods.SetThreadExecutionState(NativeMethods.ES_CONTINUOUS | NativeMethods.ES_DISPLAY_REQUIRED | NativeMethods.ES_SYSTEM_REQUIRED) != 0;
-            Results["awake"] = _awakeActive ? new(StatusKind.Success, "Display and system kept awake") : new(StatusKind.Error, "Windows rejected the request");
-        }
-        Log.Info("Game Mode enabled: " + string.Join(", ", Results.Select(r => $"{r.Key}={r.Value.Kind}")));
-    }
-
-    private async Task DeactivateAsync()
-    {
-        _watch?.Stop(); _watch = null;
-        RestorePriority();
-        if (_timerActive) { NativeMethods.timeEndPeriod(1); _timerActive = false; }
-        if (_awakeActive) { NativeMethods.SetThreadExecutionState(NativeMethods.ES_CONTINUOUS); _awakeActive = false; }
-        await Task.Run(RestorePersistentSettings);
-        IsActive = false;
-        Results.Clear();
-        Log.Info("Game Mode disabled; original settings restored");
-    }
-
-    /// <summary>Synchronous restore used on app exit.</summary>
-    public void RestoreOnExit()
-    {
-        if (!IsActive && !Backups.GameModeActive) return;
-        _watch?.Stop();
-        RestorePriority();
-        if (_timerActive) { NativeMethods.timeEndPeriod(1); _timerActive = false; }
-        if (_awakeActive) { NativeMethods.SetThreadExecutionState(NativeMethods.ES_CONTINUOUS); _awakeActive = false; }
-        RestorePersistentSettings();
-        IsActive = false;
-    }
-
-    // ---- power plan ----
-    private OptionResult ApplyPower()
-    {
         try
         {
-            var (_, active) = Run("powercfg", "/getactivescheme");
-            var m = Regex.Match(active, @"[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}");
-            if (!m.Success) return new(StatusKind.Error, "Could not read the current power plan");
-            var original = m.Value.ToLowerInvariant();
-            if (original == HighPerfGuid) return new(StatusKind.Success, "High performance plan already active");
+            var report = _engine.RecoverAtStartup();
+            if (Backups.GameModeActive && report.Total == 0) RestoreLegacyBackups();
+            else if (Backups.GameModeActive && report.FullyRestored) Backups.GameModeActive = false;
 
-            var (list, listing) = Run("powercfg", "/list");
-            if (!listing.ToLowerInvariant().Contains(HighPerfGuid))
-                return new(StatusKind.Warning, "This PC has no High performance plan (Modern Standby); skipped");
-
-            Backups.OriginalPowerScheme = original;
+            if (report.Total > 0 || _journal.LoadResult.State is LoadState.Unreadable or LoadState.RecoveredFromBackup)
+            {
+                RecoveryNotice = _journal.LoadResult.State == LoadState.Unreadable
+                    ? "Nighty could not read its recovery file, so it cannot tell what an earlier run changed. Check the power plan and process priorities if anything feels off."
+                    : "Nighty found changes left by the previous run. " + report.Summary();
+                if (!report.FullyRestored) RecoveryNotice += " It will try again the next time Nighty starts.";
+            }
             Svc.Settings.Save();
-            var (code, outp) = Run("powercfg", "/setactive " + HighPerfGuid);
-            return code == 0 ? new(StatusKind.Success, "Switched to High performance power plan")
-                             : new(StatusKind.Error, "powercfg failed: " + outp.Trim());
         }
-        catch (Exception ex) { Log.Error("Power plan change failed", ex); return new(StatusKind.Error, ex.Message); }
+        catch (Exception ex) { Log.Error("Startup recovery failed", ex); RecoveryNotice = "Startup recovery hit an error: " + ex.Message; }
     }
 
-    // ---- Roblox priority ----
-    private OptionResult ApplyPriority()
+    /// <summary>Game Mode sessions from older Nighty versions recorded only these two values.</summary>
+    private void RestoreLegacyBackups()
     {
-        var procs = Process.GetProcessesByName(RobloxService.ProcessName);
-        if (procs.Length == 0) return new(StatusKind.Info, "Waiting for Roblox to start");
-        int ok = 0, failed = 0;
-        foreach (var p in procs)
-        {
-            try
-            {
-                if (!_origPriority.ContainsKey(p.Id)) _origPriority[p.Id] = p.PriorityClass;
-                p.PriorityClass = ProcessPriorityClass.High;
-                ok++;
-            }
-            catch { failed++; }
-            finally { p.Dispose(); }
-        }
-        return failed == 0 ? new(StatusKind.Success, $"Roblox set to High priority ({ok} process{(ok == 1 ? "" : "es")})")
-                           : new(StatusKind.Warning, $"{ok} set, {failed} could not be changed (access denied)");
-    }
-
-    // ---- stop Windows throttling Roblox ----
-    /// <summary>Per-process power throttling: mask picks what to control, state picks what is switched on (0 with a mask = forced off, 0 and 0 = back to Windows' choice).</summary>
-    private static bool SetThrottling(int pid, uint mask, uint state)
-    {
-        IntPtr h = NativeMethods.OpenProcess(NativeMethods.PROCESS_SET_INFORMATION, false, pid);
-        if (h == IntPtr.Zero) return false;
+        Log.Warn("Previous session ended with Game Mode active (older format); restoring system settings");
         try
         {
-            var info = new NativeMethods.PROCESS_POWER_THROTTLING_STATE { Version = 1, ControlMask = mask, StateMask = state };
-            return NativeMethods.SetProcessInformation(h, NativeMethods.ProcessPowerThrottling, ref info, System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.PROCESS_POWER_THROTTLING_STATE>());
-        }
-        finally { NativeMethods.CloseHandle(h); }
-    }
-
-    private OptionResult ApplyNoThrottle()
-    {
-        var procs = Process.GetProcessesByName(RobloxService.ProcessName);
-        if (procs.Length == 0) return new(StatusKind.Info, "Waiting for Roblox to start");
-        _unthrottled.IntersectWith(procs.Select(p => p.Id));   // forget Roblox processes that closed
-        int ok = 0, failed = 0;
-        foreach (var p in procs)
-        {
-            try
+            if (!string.IsNullOrEmpty(Backups.OriginalPowerScheme) && Guid.TryParse(Backups.OriginalPowerScheme, out var g))
             {
-                if (_unthrottled.Contains(p.Id)) { ok++; continue; }
-                if (SetThrottling(p.Id, NativeMethods.THROTTLE_EXECUTION_SPEED | NativeMethods.THROTTLE_IGNORE_TIMER_RESOLUTION, 0)) { _unthrottled.Add(p.Id); ok++; }
-                else failed++;
-            }
-            finally { p.Dispose(); }
-        }
-        return failed == 0 ? new(StatusKind.Success, "Windows throttling is off for Roblox")
-                           : new(StatusKind.Warning, $"{ok} set, {failed} could not be changed (access denied)");
-    }
-
-    private void RestoreThrottle()
-    {
-        foreach (var pid in _unthrottled) SetThrottling(pid, 0, 0);
-        _unthrottled.Clear();
-    }
-
-    private void StartWatcher()
-    {
-        _watch = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-        _watch.Tick += (_, _) =>
-        {
-            if (Opt.RobloxHighPriority) Results["priority"] = ApplyPriority();
-            if (Opt.RobloxNoThrottle) Results["throttle"] = ApplyNoThrottle();
-            if (Opt.CalmBackgroundApps) Results["calm"] = ApplyCalm();
-            if (Opt.FreeMemory) Results["memory"] = FreeBackgroundMemory();
-            Changed?.Invoke();
-        };
-        _watch.Start();
-    }
-
-    // ---- calm background apps ----
-    private OptionResult ApplyCalm()
-    {
-        var roblox = Process.GetProcessesByName(RobloxService.ProcessName);
-        bool running = roblox.Length > 0;
-        foreach (var r in roblox) r.Dispose();
-        if (!running) { RestoreCalm(); return new(StatusKind.Info, "Waiting for Roblox to start"); }
-        int failed = 0;
-        foreach (var p in Process.GetProcesses())
-        {
-            try
-            {
-                if (!Background.Contains(p.ProcessName) || p.Id == Environment.ProcessId) continue;
-                if (_origCalm.ContainsKey(p.Id)) continue;
-                var cur = p.PriorityClass;
-                if (cur is ProcessPriorityClass.Idle or ProcessPriorityClass.BelowNormal) continue;
-                p.PriorityClass = ProcessPriorityClass.BelowNormal;
-                SetThrottling(p.Id, NativeMethods.THROTTLE_EXECUTION_SPEED, NativeMethods.THROTTLE_EXECUTION_SPEED);   // efficiency mode: off the fast cores
-                _origCalm[p.Id] = cur;
-            }
-            catch { failed++; }
-            finally { p.Dispose(); }
-        }
-        // Forget processes that have exited.
-        foreach (var pid in _origCalm.Keys.ToList()) { try { using var gone = Process.GetProcessById(pid); } catch { _origCalm.Remove(pid); } }
-        return new(StatusKind.Success, _origCalm.Count == 0 ? "No background apps needed slowing" : $"{_origCalm.Count} background app process{(_origCalm.Count == 1 ? "" : "es")} waiting" + (failed > 0 ? $" ({failed} could not be changed)" : ""));
-    }
-
-    private void RestoreCalm()
-    {
-        foreach (var (pid, prio) in _origCalm)
-        {
-            try { using var p = Process.GetProcessById(pid); p.PriorityClass = prio; SetThrottling(pid, 0, 0); } catch { /* gone */ }
-        }
-        _origCalm.Clear();
-    }
-
-    // ---- free up memory ----
-    private OptionResult FreeBackgroundMemory()
-    {
-        var roblox = Process.GetProcessesByName(RobloxService.ProcessName);
-        var pids = roblox.Select(p => p.Id).ToList();
-        foreach (var p in roblox) p.Dispose();
-        if (pids.Count == 0) return new(StatusKind.Info, "Waiting for Roblox to start");
-        if (pids.All(_freedFor.Contains)) return new(StatusKind.Success, $"{MemoryFreedMb:0} MB given back by background apps");
-        foreach (var id in pids) _freedFor.Add(id);
-        double freed = 0;
-        foreach (var p in Process.GetProcesses())
-        {
-            try
-            {
-                if (!Background.Contains(p.ProcessName) || p.Id == Environment.ProcessId) continue;
-                long before = p.WorkingSet64;
-                if (!NativeMethods.EmptyWorkingSet(p.Handle)) continue;
-                p.Refresh();
-                freed += Math.Max(0, before - p.WorkingSet64) / 1048576.0;
-            }
-            catch { }
-            finally { p.Dispose(); }
-        }
-        MemoryFreedMb += freed;
-        return new(StatusKind.Success, $"{MemoryFreedMb:0} MB given back by background apps");
-    }
-
-    private void RestorePriority()
-    {
-        RestoreCalm();
-        RestoreThrottle();
-        foreach (var (pid, prio) in _origPriority)
-        {
-            try { using var p = Process.GetProcessById(pid); p.PriorityClass = prio; } catch { /* process already gone */ }
-        }
-        _origPriority.Clear();
-    }
-
-    // ---- Windows Game Mode flag ----
-    private OptionResult ApplyGameBar()
-    {
-        try
-        {
-            using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\GameBar");
-            var cur = key.GetValue("AutoGameModeEnabled");
-            if (!Backups.HasGameBarBackup)
-            {
-                Backups.HasGameBarBackup = true;
-                Backups.OriginalGameBarValue = cur is int i ? i : null;
-                Svc.Settings.Save();
-            }
-            if (cur is int v && v == 1) return new(StatusKind.Success, "Windows Game Mode already on");
-            key.SetValue("AutoGameModeEnabled", 1, RegistryValueKind.DWord);
-            return new(StatusKind.Success, "Windows Game Mode turned on");
-        }
-        catch (Exception ex) { Log.Error("Game Mode flag failed", ex); return new(StatusKind.Error, ex.Message); }
-    }
-
-    private void RestorePersistentSettings()
-    {
-        try
-        {
-            if (!string.IsNullOrEmpty(Backups.OriginalPowerScheme))
-            {
-                Run("powercfg", "/setactive " + Backups.OriginalPowerScheme);
+                var now = PowerSchemeTarget.Active();
+                if (now != null && !string.Equals(now, Backups.OriginalPowerScheme, StringComparison.OrdinalIgnoreCase)) new PowerSchemeTarget().Write(g.ToString());
                 Backups.OriginalPowerScheme = null;
             }
             if (Backups.HasGameBarBackup)
             {
-                using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\GameBar");
-                if (Backups.OriginalGameBarValue is int v) key.SetValue("AutoGameModeEnabled", v, RegistryValueKind.DWord);
-                else key.DeleteValue("AutoGameModeEnabled", false);
-                Backups.HasGameBarBackup = false;
-                Backups.OriginalGameBarValue = null;
+                var t = new RegistryValueTarget(@"Software\Microsoft\GameBar", "AutoGameModeEnabled");
+                t.Write(Backups.OriginalGameBarValue is int v ? RegistryValueTarget.Dword(v) : null);
+                Backups.HasGameBarBackup = false; Backups.OriginalGameBarValue = null;
             }
         }
-        catch (Exception ex) { Log.Error("Restoring Game Mode settings failed", ex); }
+        catch (Exception ex) { Log.Error("Restoring older Game Mode settings failed", ex); }
         Backups.GameModeActive = false;
+    }
+
+    public IReadOnlySet<string> ApprovedActions() => GameChoices.Enabled(Svc.S.Game);
+
+    public async Task SetActiveAsync(bool active)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            if (active == IsActive) return;
+            if (active)
+            {
+                if (!Svc.S.Booster.PlanReviewed) { NeedsPlanApproval = true; Log.Info("Game Mode not started: no plan has been approved yet"); Changed?.Invoke(); return; }
+                NeedsPlanApproval = false;
+                await Svc.Booster.EnsureScannedAsync();
+                Backups.GameModeActive = true;
+                Svc.Settings.Save();
+                var approved = ApprovedActions();
+                await Task.Run(() => _engine.Activate(approved));
+                StartWatcher();
+            }
+            else await DeactivateCoreAsync();
+        }
+        finally { _gate.Release(); }
+        Changed?.Invoke();
+    }
+
+    private async Task DeactivateCoreAsync()
+    {
+        StopWatcher();
+        var report = await Task.Run(_engine.Deactivate);
+        FinishDeactivation(report);
+    }
+
+    private void FinishDeactivation(RestoreReport report)
+    {
+        if (report.FullyRestored && !_journal.HasPending) Backups.GameModeActive = false;
+        else Log.Warn("Game Mode ended but not everything is back: " + report.Summary());
         Svc.Settings.Save();
     }
 
-    private static (int Code, string Output) Run(string file, string args)
+    private void StartWatcher()
     {
-        var psi = new ProcessStartInfo(file, args) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
-        using var p = Process.Start(psi)!;
-        string o = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
-        p.WaitForExit(8000);
-        return (p.ExitCode, o);
+        StopWatcher();
+        var cts = _watch = new CancellationTokenSource();
+        _ = Task.Run(async () =>
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+            try { while (await timer.WaitForNextTickAsync(cts.Token)) { try { _engine.Tick(); } catch (Exception ex) { Log.Warn("Game Mode tick failed", ex); } } }
+            catch (OperationCanceledException) { }
+        });
+    }
+
+    private void StopWatcher() { try { _watch?.Cancel(); } catch { } _watch = null; }
+
+    /// <summary>Synchronous restore used on app exit.</summary>
+    public void RestoreOnExit()
+    {
+        StopWatcher();
+        RestoreReport report = RestoreReport.Empty;
+        if (_engine.IsActive) report = _engine.Deactivate();
+        if (_journal.HasPending) report = _journal.RestoreAll();
+        if (report.Total > 0 || Backups.GameModeActive) FinishDeactivation(report);
     }
 }
 

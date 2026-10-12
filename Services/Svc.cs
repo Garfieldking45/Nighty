@@ -1,4 +1,5 @@
 using Nighty.Models;
+using Nighty.Services.Booster;
 
 namespace Nighty.Services;
 
@@ -15,6 +16,7 @@ public static class Svc
     public static SlotMacroService SlotMacros { get; } = new();
     public static MacroPlayer Macros { get; private set; } = null!;
     public static CpsMonitor Cps { get; private set; } = null!;
+    public static BoosterService Booster { get; private set; } = null!;
     public static GameModeService GameMode { get; private set; } = null!;
     public static CleanerService Cleaner { get; private set; } = null!;
     public static BrightnessService Brightness { get; private set; } = null!;
@@ -74,7 +76,6 @@ public static class Svc
         S.Bow.Enabled = false;   // the old Bow Switch is replaced by the Auto Crossbow hotbar macro
         Bow.StartSlotTracking();
         Cps = new CpsMonitor();
-        GameMode = new GameModeService();
         Cleaner = new CleanerService();
         Brightness = new BrightnessService();
         Movement = new MovementService();
@@ -86,6 +87,10 @@ public static class Svc
         Qos = new QosService();
         Ping = new PingService();
         Fps = new FpsService();
+        Booster = new BoosterService();
+        Booster.Hardware.ListenForPowerChanges();
+        _ = Booster.EnsureScannedAsync();   // the first hardware scan runs in the background; nothing waits for it at start-up
+        GameMode = new GameModeService(Booster);
         Overlays = new OverlayManager();
         Mods = new ModsService();
         Tweaks.Reapply();
