@@ -48,3 +48,27 @@ public class LiveTelemetrySmokeTests
         _out.WriteLine($"Roblox running={r.IsRunning} launcher={r.Launcher} launcherRunning={r.LauncherRunning} notes={string.Join(';', r.Notes)}");
     }
 }
+
+public class LivePlanTests
+{
+    private readonly ITestOutputHelper _out;
+    public LivePlanTests(ITestOutputHelper o) => _out = o;
+
+    [Fact]
+    public void The_plan_for_this_pc_can_be_built_from_real_readings_without_changing_anything()
+    {
+        using var hwSource = new WindowsHardwareSource();
+        var hw = hwSource.Discover();
+        string? planBefore = PowerSchemeTarget.Active();
+        var procs = new WindowsProcessSource();
+        var game = RobloxClientDetector.Detect(procs, Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
+        var state = new WindowsSystemStateReader().Read(game, new HashSet<string>(), new HashSet<string>());
+        var plan = new RecommendationEngine().Evaluate(new EvaluationContext(hw, WindowStats.Empty, state, DateTimeOffset.UtcNow));
+        foreach (var i in plan.Items) _out.WriteLine($"{i.Applicability,-14} {i.Id,-13} {i.Title} :: {i.Reason}");
+        foreach (var f in plan.Findings) _out.WriteLine($"[{f.Level}] {f.Subject}: {f.Statement} | {string.Join(" / ", f.Evidence)}");
+        _out.WriteLine("Balanced: " + string.Join(",", plan.Select(BoosterProfile.Balanced)));
+        _out.WriteLine("Performance: " + string.Join(",", plan.Select(BoosterProfile.Performance)));
+        Assert.NotEmpty(plan.Items);
+        Assert.Equal(planBefore, PowerSchemeTarget.Active());   // read-only: the power plan is unchanged
+    }
+}
