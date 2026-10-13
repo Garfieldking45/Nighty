@@ -27,22 +27,49 @@ internal static class Wait
 
     public static void Until(long target, CancellationToken ct) => Until(target, ct, SpinMsValue);
 
-    public static void Until(long target, CancellationToken ct, double spinMs)
+    /// <param name="observer">If given, every timer wake reports how late it came back, so the spin window can tune itself.</param>
+    public static void Until(long target, CancellationToken ct, double spinMs, SpinTuner? observer = null) =>
+        Run(target, ct, spinMs, observer, followMargin: false);
+
+    /// <summary>Waits with the tuner's own margin, re-read on every pass, and feeds it each timer wake. This is HitFix's final wait.</summary>
+    public static void Until(long target, CancellationToken ct, SpinTuner tuner) =>
+        Run(target, ct, tuner.MarginMs, tuner, followMargin: true);
+
+    private static void Run(long target, CancellationToken ct, double spinMs, SpinTuner? observer, bool followMargin)
     {
         while (!ct.IsCancellationRequested)
         {
             double left = (target - Now) / TicksPerMs;
             if (left <= 0) return;
-            if (left > spinMs + 0.1) Sleep(Math.Min(left - spinMs, 15), ct);
+            if (followMargin) spinMs = observer!.MarginMs;
+            if (left > spinMs + 0.1)
+            {
+                if (Sleep(Math.Min(left - spinMs, 15), ct, out double overshoot)) observer?.Observe(overshoot);
+            }
             else Thread.SpinWait(8);
         }
     }
 
     [ThreadStatic] private static IntPtr[]? _handles;
 
-    /// <summary>Sleeps on the high-resolution timer, but wakes immediately when the token is cancelled, so Stop() never waits out a 15 ms sleep.</summary>
-    private static void Sleep(double ms, CancellationToken ct)
+    private static readonly Lazy<bool> _highRes = new(() =>
     {
+        var t = NativeMethods.CreateWaitableTimerExW(IntPtr.Zero, null, NativeMethods.CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, NativeMethods.TIMER_ALL_ACCESS);
+        if (t == IntPtr.Zero) return false;
+        NativeMethods.CloseHandle(t);
+        return true;
+    });
+
+    /// <summary>False on Windows too old for the high-resolution timer (before 10 1803).</summary>
+    public static bool HighResolutionAvailable => _highRes.Value;
+
+    /// <summary>
+    /// Sleeps on the high-resolution timer, but wakes immediately when the token is cancelled, so Stop() never waits out a 15 ms sleep.
+    /// True only when the timer itself fired; <paramref name="overshootMs"/> is then how much later than asked it came back.
+    /// </summary>
+    private static bool Sleep(double ms, CancellationToken ct, out double overshootMs)
+    {
+        overshootMs = 0;
         if (!_timerFailed && _timer == IntPtr.Zero)
         {
             _timer = NativeMethods.CreateWaitableTimerExW(IntPtr.Zero, null, NativeMethods.CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, NativeMethods.TIMER_ALL_ACCESS);
@@ -51,20 +78,25 @@ internal static class Wait
         if (_timer != IntPtr.Zero)
         {
             long due = -(long)(ms * 10_000);   // 100 ns units, negative = relative
+            long before = Now;
             if (NativeMethods.SetWaitableTimer(_timer, ref due, 0, IntPtr.Zero, IntPtr.Zero, false))
             {
                 var h = _handles ??= new IntPtr[2];
                 h[0] = _timer;
+                uint r;
                 if (ct.CanBeCanceled)
                 {
                     h[1] = ct.WaitHandle.SafeWaitHandle.DangerousGetHandle();
-                    NativeMethods.WaitForMultipleObjects(2, h, false, 50);
+                    r = NativeMethods.WaitForMultipleObjects(2, h, false, 50);
                 }
-                else NativeMethods.WaitForSingleObject(_timer, 50);
-                return;
+                else r = NativeMethods.WaitForSingleObject(_timer, 50);
+                if (r != 0) return false;   // cancelled or timed out: not a measurement of the timer
+                overshootMs = (Now - before) / TicksPerMs - ms;
+                return true;
             }
         }
         Thread.Sleep(ms >= 1 ? 1 : 0);   // fallback for older Windows
+        return false;
     }
 }
 
@@ -77,11 +109,13 @@ internal sealed class ThreadBoost : IDisposable
 {
     private IntPtr _mmcss;
     private UIntPtr _oldMask;
-    private bool _pinned;
+    private NativeMethods.GROUP_AFFINITY _oldGroupAffinity;
+    private NativeMethods.PROCESSOR_NUMBER _oldIdeal;
+    private bool _pinned, _pinnedByGroup, _throttleOptOut;
     private int _oldPriority;
     private readonly IntPtr _thread = NativeMethods.GetCurrentThread();
 
-    /// <summary>Core the thread was pinned to, or -1.</summary>
+    /// <summary>Core the thread was pinned to (its number inside its processor group), or -1.</summary>
     public int Core { get; private set; } = -1;
 
     public static ThreadBoost Apply(bool hitFix)
@@ -93,25 +127,56 @@ internal sealed class ThreadBoost : IDisposable
         b._oldPriority = NativeMethods.GetThreadPriority(b._thread);
         NativeMethods.SetThreadPriority(b._thread, hitFix ? NativeMethods.THREAD_PRIORITY_TIME_CRITICAL : 2);
 
+        // Windows 11 may run a thread on an efficiency core or slow it for power; say this one must not be throttled.
+        var state = new NativeMethods.PROCESS_POWER_THROTTLING_STATE { Version = 1, ControlMask = NativeMethods.THROTTLE_EXECUTION_SPEED, StateMask = 0 };
+        b._throttleOptOut = NativeMethods.SetThreadInformation(b._thread, NativeMethods.ThreadPowerThrottling, ref state, System.Runtime.InteropServices.Marshal.SizeOf(state));
+
         // Pinning only helps when there is a spare core; on 2-core PCs it would fight the game for it.
-        if (hitFix && Environment.ProcessorCount >= 4 && NativeMethods.GetProcessAffinityMask(NativeMethods.GetCurrentProcess(), out var procMask, out _))
-        {
-            ulong mask = procMask.ToUInt64();
-            int core = -1;
-            for (int i = Math.Min(63, Environment.ProcessorCount - 1); i >= 1; i--)
-                if ((mask >> i & 1) != 0) { core = i; break; }
-            if (core > 0)
-            {
-                var old = NativeMethods.SetThreadAffinityMask(b._thread, (UIntPtr)(1UL << core));
-                if (old != UIntPtr.Zero) { b._oldMask = old; b._pinned = true; b.Core = core; NativeMethods.SetThreadIdealProcessor(b._thread, (uint)core); }
-            }
-        }
+        if (hitFix && Environment.ProcessorCount >= 4 && !b.PinToFastCore()) b.PinToHighestCore();
         return b;
+    }
+
+    /// <summary>Pins to the fastest usable core (a performance core on hybrid CPUs). False if CPU Sets are unavailable or the pin was refused.</summary>
+    private bool PinToFastCore()
+    {
+        var pick = CpuTopology.PickFastCore(CpuTopology.Read());
+        if (pick is null) return false;
+        var (group, number) = pick.Value;
+        var affinity = new NativeMethods.GROUP_AFFINITY { Mask = (UIntPtr)(1UL << number), Group = group };
+        if (!NativeMethods.SetThreadGroupAffinity(_thread, ref affinity, out _oldGroupAffinity)) return false;
+        var ideal = new NativeMethods.PROCESSOR_NUMBER { Group = group, Number = number };
+        NativeMethods.SetThreadIdealProcessorEx(_thread, ref ideal, out _oldIdeal);
+        _pinned = _pinnedByGroup = true;
+        Core = number;
+        return true;
+    }
+
+    /// <summary>Fallback for systems without CPU Sets: the highest-numbered core the process may use, never core 0.</summary>
+    private void PinToHighestCore()
+    {
+        if (!NativeMethods.GetProcessAffinityMask(NativeMethods.GetCurrentProcess(), out var procMask, out _)) return;
+        ulong mask = procMask.ToUInt64();
+        int core = -1;
+        for (int i = Math.Min(63, Environment.ProcessorCount - 1); i >= 1; i--)
+            if ((mask >> i & 1) != 0) { core = i; break; }
+        if (core <= 0) return;
+        var old = NativeMethods.SetThreadAffinityMask(_thread, (UIntPtr)(1UL << core));
+        if (old != UIntPtr.Zero) { _oldMask = old; _pinned = true; Core = core; NativeMethods.SetThreadIdealProcessor(_thread, (uint)core); }
     }
 
     public void Dispose()
     {
-        if (_pinned) NativeMethods.SetThreadAffinityMask(_thread, _oldMask);
+        if (_pinnedByGroup)
+        {
+            NativeMethods.SetThreadGroupAffinity(_thread, ref _oldGroupAffinity, IntPtr.Zero);
+            NativeMethods.SetThreadIdealProcessorEx(_thread, ref _oldIdeal, out _);
+        }
+        else if (_pinned) NativeMethods.SetThreadAffinityMask(_thread, _oldMask);
+        if (_throttleOptOut)
+        {
+            var state = new NativeMethods.PROCESS_POWER_THROTTLING_STATE { Version = 1 };   // control mask 0 = back to what Windows decides
+            NativeMethods.SetThreadInformation(_thread, NativeMethods.ThreadPowerThrottling, ref state, System.Runtime.InteropServices.Marshal.SizeOf(state));
+        }
         NativeMethods.SetThreadPriority(_thread, _oldPriority);
         if (_mmcss != IntPtr.Zero) NativeMethods.AvRevertMmThreadCharacteristics(_mmcss);
     }
@@ -201,6 +266,21 @@ public sealed class ClickerService
     /// <summary>Clicks sent since the clicker was last started.</summary>
     public long TotalClicks => Interlocked.Read(ref _total);
 
+    // Timing health of the current run (reset by Start). Written only by the clicker thread; read by the UI and the Test page.
+    private long _resyncs, _lateClicks, _maxLateTicks, _maxAllowedTicks, _maxAfterClickTicks;
+    /// <summary>Times the clicker fell more than a whole click behind and dropped the missed click(s) to catch up.</summary>
+    public long Resyncs => Interlocked.Read(ref _resyncs);
+    /// <summary>Clicks that went out more than 1 ms after their deadline.</summary>
+    public long LateClicks => Interlocked.Read(ref _lateClicks);
+    /// <summary>Worst lateness of any click, in ms.</summary>
+    public double MaxLateMs => Wait.ToMs(Interlocked.Read(ref _maxLateTicks));
+    /// <summary>Slowest single "may I click?" check (foreground lookup), in ms.</summary>
+    public double MaxAllowedMs => Wait.ToMs(Interlocked.Read(ref _maxAllowedTicks));
+    /// <summary>Slowest single after-click hook, in ms.</summary>
+    public double MaxAfterClickMs => Wait.ToMs(Interlocked.Read(ref _maxAfterClickTicks));
+
+    private static void Raise(ref long max, long value) { if (value > Interlocked.Read(ref max)) Interlocked.Exchange(ref max, value); }
+
     /// <summary>Clicks actually sent during the last second.</summary>
     public double MeasuredCps
     {
@@ -215,7 +295,7 @@ public sealed class ClickerService
         }
     }
 
-    /// <summary>Spin window before each click, from the precision setting. HitFix always spins at least 2.5 ms.</summary>
+    /// <summary>Fixed spin window before each click, from the precision setting. With HitFix this is only the starting point: the clicker then follows a <see cref="SpinTuner"/>.</summary>
     internal static double SpinFor(PrecisionMode mode, bool hitFix)
     {
         double spin = mode switch { PrecisionMode.Efficient => 0.25, PrecisionMode.Precise => 2.0, _ => 0.6 };
@@ -251,6 +331,8 @@ public sealed class ClickerService
         previous?.Thread?.Join(250);
 
         Interlocked.Exchange(ref _total, 0);
+        Interlocked.Exchange(ref _resyncs, 0); Interlocked.Exchange(ref _lateClicks, 0); Interlocked.Exchange(ref _maxLateTicks, 0);
+        Interlocked.Exchange(ref _maxAllowedTicks, 0); Interlocked.Exchange(ref _maxAfterClickTicks, 0);
         bool hitFix = _s.HitFix;
         AcquireTuning(s);
         try
@@ -357,9 +439,9 @@ public sealed class ClickerService
         {
             using var boost = ThreadBoost.Apply(hitFix);
             EngineInfo = hitFix
-                ? $"HitFix on · {(boost.Core > 0 ? $"core {boost.Core}" : "shared cores")} · time-critical thread"
+                ? $"HitFix on · {(boost.Core >= 0 ? $"core {boost.Core}" : "shared cores")} · time-critical thread"
                 : "Standard timing";
-            RunLoop(s, hitFix);
+            RunLoop(s, hitFix, hitFix ? new SpinTuner(Wait.HighResolutionAvailable) : null);
         }
         catch (Exception ex)
         {
@@ -373,22 +455,27 @@ public sealed class ClickerService
     /// Waits for the next click, but keeps looking at the hold key so letting go cancels it right away.
     /// False = do not click (stopped, or the key was released).
     /// </summary>
-    private bool WaitForNext(Session s, long next, double spin)
+    private bool WaitForNext(Session s, long next, double spin, SpinTuner? tuner)
     {
         var ct = s.Cts.Token;
-        long spinTicks = Wait.FromMs(spin), chunk = Wait.FromMs(4);
+        long chunk = Wait.FromMs(4);
         while (!ct.IsCancellationRequested)
         {
             if (KeepClicking is { } keep && !keep()) return false;
             long now = Wait.Now, left = next - now;
             if (left <= 0) break;
-            if (left > spinTicks + Wait.FromMs(0.2)) Wait.Until(now + Math.Min(left - spinTicks, chunk), ct, 0.1);   // sleep in short slices
-            else { Wait.Until(next, ct, spin); break; }                                                              // last stretch: exact spin
+            long spinTicks = Wait.FromMs(tuner?.MarginMs ?? spin);   // HitFix: the margin it has measured so far
+            if (left > spinTicks + Wait.FromMs(0.2)) Wait.Until(now + Math.Min(left - spinTicks, chunk), ct, 0.1, tuner);   // sleep in short slices
+            else
+            {
+                if (tuner != null) Wait.Until(next, ct, tuner); else Wait.Until(next, ct, spin);                           // last stretch: exact spin
+                break;
+            }
         }
         return !ct.IsCancellationRequested && !(KeepClicking is { } k2 && !k2());
     }
 
-    private void RunLoop(Session s, bool hitFix)
+    private void RunLoop(Session s, bool hitFix, SpinTuner? tuner = null)
     {
         var ct = s.Cts.Token;
         bool allowed = true;
@@ -404,8 +491,8 @@ public sealed class ClickerService
         {
             if (KeepClicking is { } keep && !keep()) { StopSession(s); return; }
 
-            double spin = SpinFor(_host.Precision(), hitFix);
-            Wait.SpinMs = spin;
+            double spin = tuner?.MarginMs ?? SpinFor(_host.Precision(), hitFix);
+            Wait.SpinMs = spin;   // the hold waits below read this
 
             // Foreground checks involve process lookups, so refresh them every 40 ms instead of every click.
             if (Wait.Now >= nextCheck)
@@ -417,7 +504,9 @@ public sealed class ClickerService
                     wasInZone = inZone; wasRunning = true;
                     if (stop) { Finish(s, "Stopped: the mouse was thrown into a screen corner."); return; }
                 }
+                long c0 = Wait.Now;
                 allowed = _host.Allowed(_s);
+                Raise(ref _maxAllowedTicks, Wait.Now - c0);
                 nextCheck = Wait.Now + Wait.FromMs(40);
             }
             if (!allowed)
@@ -438,12 +527,15 @@ public sealed class ClickerService
             var button = _s.Button;
             s.Button = button;
 
-            if (!WaitForNext(s, next, spin))
+            if (!WaitForNext(s, next, spin, tuner))
             {
                 if (ct.IsCancellationRequested) break;
                 StopSession(s);   // the hold key was let go while waiting: no click
                 return;
             }
+            long late = Wait.Now - next;
+            Raise(ref _maxLateTicks, late);
+            if (late > Wait.FromMs(1)) Interlocked.Increment(ref _lateClicks);
             if (_host.Busy()) { next = Wait.Now + Wait.FromMs(1); continue; }   // don't interleave sword clicks with the crossbow shot
             for (int k = 0; k < perHit && !ct.IsCancellationRequested; k++)
             {
@@ -462,7 +554,9 @@ public sealed class ClickerService
                 if (k < perHit - 1) Wait.Ms(sliceMs - holdMs, ct);
             }
 
+            long h0 = Wait.Now;
             _host.AfterClick();   // react right after a click instead of waiting for the UI timer
+            Raise(ref _maxAfterClickTicks, Wait.Now - h0);
 
             if (_s.StopAfterClicks > 0 && Interlocked.Read(ref _total) >= _s.StopAfterClicks) { Finish(s, $"Stopped after {_s.StopAfterClicks:N0} clicks."); return; }
             if (Wait.Now >= deadline) { Finish(s, "Stopped: the time limit is up."); return; }
@@ -470,7 +564,7 @@ public sealed class ClickerService
             // Accumulate so an overshoot never compounds into a slow CPS, and resync after a stall instead of bursting.
             next += Wait.FromMs(periodMs);
             long now = Wait.Now;
-            if (next < now) next = now + Wait.FromMs(periodMs);
+            if (next < now) { next = now + Wait.FromMs(periodMs); Interlocked.Increment(ref _resyncs); }
         }
     }
 

@@ -11,6 +11,11 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.3.0", "2026-10-13", new[]
+        {
+            "HitFix now follows Lyre's approach: the click timer adapts how long it spins to your PC's real timer overshoot, runs on the fastest processor core (the best-performing cores on hybrid CPUs), and opts out of Windows power throttling so a minimised or background app does not get slowed",
+            "The CPS and duty-cycle numbers on the Combat page can now be typed directly (CPS 1 to 100 with one decimal, duty 5 to 95)",
+        }),
         new("2.2.0", "2026-10-12", new[]
         {
             "Gaming is now hardware-aware. Nighty reads this PC (processor, every graphics card, memory, storage, displays, Windows, laptop or desktop, power state), measures it live, and builds a personal plan: what would help here, why, how sure it is, what it costs and how it is undone. Things that do not apply to your PC are left out with the reason",

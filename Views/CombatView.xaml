@@ -82,7 +82,11 @@
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource BigNumberBox}">
-                                    <TextBlock VerticalAlignment="Center"><Run Text="{Binding CpsText, Mode=OneWay}" FontSize="40" FontWeight="SemiBold"/><Run Text=" CPS" FontSize="20" Foreground="{DynamicResource MutedBrush}"/></TextBlock>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <c:NumberEntry Value="{Binding Settings.Cps, Mode=TwoWay}" Minimum="1" Maximum="100" Decimals="1" MinWidth="96" FontSize="40" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextBrush}" CaretBrush="{DynamicResource TextBrush}" AutomationProperties.Name="Clicks per second"/>
+                                        <TextBlock Text=" CPS" FontSize="20" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="2,6,0,0"/>
+                                    </StackPanel>
                                 </Border>
                                 <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE738;" Width="52" Height="52" Margin="18,0,8,0" Command="{Binding CpsDown}" AutomationProperties.Name="Decrease CPS"/>
                                 <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE710;" Width="52" Height="52" Command="{Binding CpsUp}" AutomationProperties.Name="Increase CPS"/>
@@ -121,7 +125,11 @@
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <Border Style="{StaticResource BigNumberBox}">
-                                <TextBlock VerticalAlignment="Center"><Run Text="{Binding DutyText, Mode=OneWay}" FontSize="40" FontWeight="SemiBold"/><Run Text=" %" FontSize="20" Foreground="{DynamicResource MutedBrush}"/></TextBlock>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <c:NumberEntry Value="{Binding Settings.DutyCycle, Mode=TwoWay}" Minimum="5" Maximum="95" Decimals="0" MinWidth="60" FontSize="40" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}" CaretBrush="{DynamicResource TextBrush}" AutomationProperties.Name="Click duty cycle percent"/>
+                                    <TextBlock Text=" %" FontSize="20" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="2,6,0,0"/>
+                                </StackPanel>
                             </Border>
                             <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE738;" Width="52" Height="52" Margin="18,0,8,0" Command="{Binding DutyDown}" AutomationProperties.Name="Decrease duty cycle"/>
                             <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE710;" Width="52" Height="52" Command="{Binding DutyUp}" AutomationProperties.Name="Increase duty cycle"/>

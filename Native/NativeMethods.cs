@@ -126,6 +126,21 @@ internal static class NativeMethods
     [DllImport("kernel32.dll")] public static extern bool GetProcessAffinityMask(IntPtr process, out UIntPtr processMask, out UIntPtr systemMask);
     public const int THREAD_PRIORITY_TIME_CRITICAL = 15;
 
+    // Group-aware placement and CPU Sets (which core is the fast one), plus the per-thread power-throttling opt-out.
+    [StructLayout(LayoutKind.Sequential)] public struct PROCESSOR_NUMBER { public ushort Group; public byte Number; public byte Reserved; }
+    [StructLayout(LayoutKind.Sequential)] public struct GROUP_AFFINITY { public UIntPtr Mask; public ushort Group, Reserved0, Reserved1, Reserved2; }
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetThreadIdealProcessorEx(IntPtr thread, ref PROCESSOR_NUMBER ideal, out PROCESSOR_NUMBER previous);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetThreadGroupAffinity(IntPtr thread, ref GROUP_AFFINITY affinity, out GROUP_AFFINITY previous);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetThreadGroupAffinity(IntPtr thread, ref GROUP_AFFINITY affinity, IntPtr previous);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool GetSystemCpuSetInformation(IntPtr info, uint bufferLength, out uint returnedLength, IntPtr process, uint flags);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetThreadInformation(IntPtr thread, int infoClass, ref PROCESS_POWER_THROTTLING_STATE info, int size);
+    public const int ThreadPowerThrottling = 3;
+
     [DllImport("psapi.dll")] public static extern bool EmptyWorkingSet(IntPtr process);
 
     // ---------- Timing / power ----------

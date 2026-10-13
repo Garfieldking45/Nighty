@@ -33,6 +33,7 @@ public static class TimingTestService
         long period = Wait.FromMs(periodMs);
         int total = Math.Max(10, (int)(cps * seconds));
         double spin = ClickerService.SpinFor(mode, hitFix);
+        var tuner = hitFix ? new SpinTuner(Wait.HighResolutionAvailable) : null;   // same self-tuning wait the clicker uses
         var stamps = new long[total];
 
         NativeMethods.timeBeginPeriod(1);
@@ -46,7 +47,7 @@ public static class TimingTestService
             double holdMs = Math.Min(periodMs * 0.5, 20);
             for (int i = 0; i < total; i++)
             {
-                Wait.Until(next, ct, spin);
+                if (tuner != null) Wait.Until(next, ct, tuner); else Wait.Until(next, ct, spin);
                 ct.ThrowIfCancellationRequested();
                 stamps[i] = Wait.Now;
                 InputSender.Noop();
