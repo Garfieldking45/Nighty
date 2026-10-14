@@ -11,6 +11,13 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.3.1", "2026-10-13", new[]
+        {
+            "Tracking Helper now works like Lyre's: with \"Only while Roblox is in front\" on, your pointer settings switch in the moment Roblox gets focus and Windows' own come back the moment it loses it, with no waiting. These automatic switches are not saved to Windows, so a crash can no longer leave your mouse changed",
+            "New: \"Slow down in slot 1 while clicking\". The pointer uses a slow speed only while Roblox is in front, the Auto Clicker is clicking and hotbar slot 1 is selected; in any other slot, or when you are not clicking, it stays at your normal Windows speed. A live line on the tab shows the slot, Roblox focus, clicker and pointer state, so you can see why it is or is not slowing. Press the slot's number key once after starting Nighty so it knows your slot",
+            "Closing Nighty puts your pointer speed, acceleration, scroll lines and double-click time back to what Windows had",
+            "Removed the mouse-wheel reset of the remembered hotbar slot (camera zoom made the slot unknown and silently switched the slot-1 slowdown off)",
+        }),
         new("2.3.0", "2026-10-13", new[]
         {
             "HitFix now follows Lyre's approach: the click timer adapts how long it spins to your PC's real timer overshoot, runs on the fastest processor core (the best-performing cores on hybrid CPUs), and opts out of Windows power throttling so a minimised or background app does not get slowed",
