@@ -188,8 +188,18 @@ public sealed class TrackingViewModel : ObservableObject
     private string _current = "";
 
     public TrackingSettings Settings => Svc.S.Utility.Tracking;
-    public double SlowSpeed { get => Settings.SlowSpeed; set { Settings.SlowSpeed = (int)value; OnPropertyChanged(); Svc.Pointer.UpdateSlotSlowdown(); } }
-    public double OtherSlotSpeed { get => Settings.OtherSlotSpeed; set { Settings.OtherSlotSpeed = (int)value; OnPropertyChanged(); Svc.Pointer.UpdateSlotSlowdown(); } }
+
+    public double SlowSpeed { get => Settings.SlowSpeed; set { Settings.SlowSpeed = (int)value; OnPropertyChanged(); } }
+
+    private string _liveText = "";
+    /// <summary>What the slowdown sees right now, so a helper that does nothing always says why.</summary>
+    public string LiveText { get => _liveText; private set => Set(ref _liveText, value); }
+    private void RefreshLive()
+    {
+        int slot = Svc.Bow.CurrentSlot;
+        LiveText = $"Right now: hotbar slot {(slot == 0 ? "unknown (press its number key once)" : slot.ToString())}  ·  Roblox {(Svc.Roblox.IsForeground ? "in front" : "not in front")}  ·  Auto Clicker {(Svc.Clicker.IsClicking ? "clicking" : "idle")}  ·  pointer {(Svc.Pointer.IsSlowed ? "slowed" : "normal")} ({Svc.Pointer.ReadCurrent().Speed}/20)";
+    }
+
     public double ScrollLines { get => Settings.ScrollLines; set { Settings.ScrollLines = (int)value; OnPropertyChanged(); } }
     public double DoubleClickMs { get => Settings.DoubleClickMs; set { Settings.DoubleClickMs = (int)value; OnPropertyChanged(); } }
     public double Speed { get => Settings.PointerSpeed; set { Settings.PointerSpeed = (int)value; OnPropertyChanged(); } }
@@ -237,6 +247,8 @@ public sealed class TrackingViewModel : ObservableObject
             Message = $"Pointer speed set to {v} with acceleration off. Press Apply to use it."; Kind = StatusKind.Info;
         });
         Settings.PropertyChanged += (_, _) => OnPropertyChanged(nameof(CalcText));
+        RefreshLive();
+        new DispatcherTimer(TimeSpan.FromMilliseconds(500), DispatcherPriority.Background, (_, _) => RefreshLive(), Dispatcher.CurrentDispatcher).Start();
         Refresh();
     }
 

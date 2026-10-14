@@ -281,17 +281,12 @@ public sealed class TrackingSettings : ObservableObject
     public int PointerSpeed { get => _speed; set => Set(ref _speed, Math.Clamp(value, 1, 20)); }
     public bool EnhancePointerPrecision { get => _precision; set => Set(ref _precision, value); }
 
+
     private bool _slowOne;
     private int _slowSpeed = 6;
-    /// <summary>While hotbar slot 1 is selected (and Roblox is in front), use the slower pointer speed below.</summary>
+    /// <summary>Slow the pointer to the speed below only while Roblox is in front, the Auto Clicker is clicking and hotbar slot 1 is selected.</summary>
     public bool SlowInSlotOne { get => _slowOne; set => Set(ref _slowOne, value); }
     public int SlowSpeed { get => _slowSpeed; set => Set(ref _slowSpeed, Math.Clamp(value, 1, 20)); }
-    private bool _slowSwing;
-    /// <summary>Use the slow speed only while the Auto Clicker is swinging (and Roblox is in front); the normal speed the rest of the time.</summary>
-    public bool SlowWhileSwinging { get => _slowSwing; set => Set(ref _slowSwing, value); }
-    private int _otherSlotSpeed = 10;
-    /// <summary>While Roblox is in front with the slot-1 slowdown on, the pointer speed in every slot other than 1.</summary>
-    public int OtherSlotSpeed { get => _otherSlotSpeed; set => Set(ref _otherSlotSpeed, Math.Clamp(value, 1, 20)); }
 
     private int _scrollLines, _doubleClickMs;
     /// <summary>Lines per wheel notch. 0 leaves the Windows setting alone.</summary>

@@ -205,11 +205,18 @@ public sealed class MovementService
     }
 }
 
-/// <summary>Tracking Helper: pointer speed and "Enhance pointer precision" through SystemParametersInfo.</summary>
+/// <summary>
+/// Tracking Helper: pointer speed, "Enhance pointer precision", scroll lines and double-click time through SystemParametersInfo.
+/// With "Only while Roblox is in front" on, the values switch in the moment Roblox gets focus and the user's own come back the moment it
+/// loses it (a foreground-change event, plus a slow safety tick). Those automatic switches are not written to the registry, so a crash can
+/// never leave Windows with the tracking values after the next sign-in.
+/// </summary>
 public sealed class PointerService
 {
     private SystemBackups B => Svc.S.Backups;
     public bool HasBackup => B.HasPointerBackup;
+    private readonly object _gate = new();
+    private bool _autoApplied;
 
     public (int Speed, bool Precision) ReadCurrent()
     {
@@ -219,35 +226,41 @@ public sealed class PointerService
         return (speed, mouse[2] != 0);
     }
 
-    public string Apply(int speed, bool precision)
+    /// <summary>Applies the values and saves them in Windows (the Apply button).</summary>
+    public string Apply(int speed, bool precision) => ApplyCore(speed, precision, persist: true);
+
+    private string ApplyCore(int speed, bool precision, bool persist)
     {
         try
         {
-            if (!B.HasPointerBackup)
+            lock (_gate)
             {
-                var mouse0 = new int[3];
-                NativeMethods.SystemParametersInfo(NativeMethods.SPI_GETMOUSE, 0, mouse0, 0);
-                NativeMethods.SystemParametersInfo(NativeMethods.SPI_GETMOUSESPEED, 0, out int s0, 0);
-                B.MouseParams = mouse0; B.PointerSpeed = s0; B.HasPointerBackup = true;
-                Svc.Settings.Save();
+                if (!B.HasPointerBackup)
+                {
+                    var mouse0 = new int[3];
+                    NativeMethods.SystemParametersInfo(NativeMethods.SPI_GETMOUSE, 0, mouse0, 0);
+                    NativeMethods.SystemParametersInfo(NativeMethods.SPI_GETMOUSESPEED, 0, out int s0, 0);
+                    B.MouseParams = mouse0; B.PointerSpeed = s0; B.HasPointerBackup = true;
+                    Svc.Settings.Save();
+                }
+                var mouse = new int[3];
+                NativeMethods.SystemParametersInfo(NativeMethods.SPI_GETMOUSE, 0, mouse, 0);
+                if (precision) { mouse[0] = B.MouseParams.Length == 3 && B.MouseParams[2] != 0 ? B.MouseParams[0] : 6; mouse[1] = B.MouseParams.Length == 3 && B.MouseParams[2] != 0 ? B.MouseParams[1] : 10; mouse[2] = 1; }
+                else { mouse[0] = 0; mouse[1] = 0; mouse[2] = 0; }
+                uint f = Flags(persist);
+                ApplyScrollAndDoubleClick(f);
+                bool ok = NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSE, 0, mouse, f)
+                        & NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)Math.Clamp(speed, 1, 20), f);
+                if (!ok) return "Windows rejected the pointer settings.";
+                var now = ReadCurrent();
+                Rebase(Math.Clamp(speed, 1, 20));
+                return now.Speed == Math.Clamp(speed, 1, 20) && now.Precision == precision ? "Applied and verified." : "Applied, but Windows reports different values than requested.";
             }
-            var mouse = new int[3];
-            NativeMethods.SystemParametersInfo(NativeMethods.SPI_GETMOUSE, 0, mouse, 0);
-            if (precision) { mouse[0] = B.MouseParams.Length == 3 && B.MouseParams[2] != 0 ? B.MouseParams[0] : 6; mouse[1] = B.MouseParams.Length == 3 && B.MouseParams[2] != 0 ? B.MouseParams[1] : 10; mouse[2] = 1; }
-            else { mouse[0] = 0; mouse[1] = 0; mouse[2] = 0; }
-            uint f = NativeMethods.SPIF_UPDATEINIFILE | NativeMethods.SPIF_SENDCHANGE;
-            ApplyScrollAndDoubleClick(f);
-            bool ok = NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSE, 0, mouse, f)
-                    & NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)Math.Clamp(speed, 1, 20), f);
-            if (!ok) return "Windows rejected the pointer settings.";
-            RebaseSlow(Math.Clamp(speed, 1, 20));
-            var now = ReadCurrent();
-            return now.Speed == speed && now.Precision == precision ? "Applied and verified." : "Applied, but Windows reports different values than requested.";
         }
         catch (Exception ex) { Log.Error("Pointer apply failed", ex); return ex.Message; }
     }
 
-    private bool _autoApplied;
+    private static uint Flags(bool persist) => persist ? NativeMethods.SPIF_UPDATEINIFILE | NativeMethods.SPIF_SENDCHANGE : NativeMethods.SPIF_SENDCHANGE;
 
     /// <summary>Scroll speed (lines per notch) and double-click time; 0 in the settings leaves Windows' value alone.</summary>
     private void ApplyScrollAndDoubleClick(uint flags)
@@ -268,100 +281,133 @@ public sealed class PointerService
 
     private bool _slowApplied;
     private int _speedBeforeSlow;
-    private readonly object _slowGate = new();
+
+    /// <summary>True while the pointer is held at the slow speed.</summary>
+    public bool IsSlowed => _slowApplied;
 
     /// <summary>
-    /// The "normal" speed changed while the slot-1 slowdown is on (tracking speed applied, restored, or edited). Remember the new
-    /// normal so leaving slot 1 goes back to it, and keep the slow speed in place until then.
+    /// The slot-1 slowdown: slow only while Roblox is in front, the Auto Clicker is clicking AND hotbar slot 1 is selected.
+    /// In any other slot (or an unknown one), not clicking, or Roblox not in front, the pointer is at its normal speed.
     /// </summary>
-    private void RebaseSlow(int normalSpeed)
+    internal static bool WantSlow(bool enabled, bool robloxFront, bool clicking, int slot) => enabled && robloxFront && clicking && slot == 1;
+
+    private static void SetSpeed(int speed) =>
+        NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)Math.Clamp(speed, 1, 20), NativeMethods.SPIF_SENDCHANGE);
+
+    /// <summary>The normal speed changed while slowed (tracking values applied or restored): remember it and keep the slow speed in place.</summary>
+    private void Rebase(int normalSpeed)
     {
-        lock (_slowGate)
-        {
-            if (!_slowApplied) return;
-            _speedBeforeSlow = normalSpeed;
-            NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)SlotSpeed(), 0);
-        }
+        if (!_slowApplied) return;
+        _speedBeforeSlow = normalSpeed;
+        SetSpeed(Svc.S.Utility.Tracking.SlowSpeed);
     }
 
-    private static int SlotSpeed()
+    /// <summary>Slows or restores the pointer to match the rule above. Not written to the registry.</summary>
+    public void UpdateSlowdown()
     {
         var t = Svc.S.Utility.Tracking;
-        if (t.SlowWhileSwinging) return Math.Clamp(t.SlowSpeed, 1, 20);
-        return Math.Clamp(Svc.Bow.CurrentSlot == 1 ? t.SlowSpeed : t.OtherSlotSpeed, 1, 20);
-    }
-
-    /// <summary>Slot-1 slowdown: drops the pointer speed while slot 1 is selected in Roblox and puts it back after.
-    /// Not persisted (no registry write), so a crash can't leave a slow pointer after the next sign-in.</summary>
-    public void UpdateSlotSlowdown()
-    {
-        lock (_slowGate)
+        bool want = WantSlow(t.SlowInSlotOne, Svc.Roblox.IsForeground, Svc.Clicker.IsClicking, Svc.Bow.CurrentSlot);
+        lock (_gate)
         {
-            var t = Svc.S.Utility.Tracking;
-            // While Roblox is in front the slot decides the speed: slot 1 is slow, every other slot (or an unknown one) uses its own speed.
-            bool want = t.SlowWhileSwinging
-                ? Svc.Roblox.IsForeground && Svc.Clicker.IsClicking && (!t.SlowInSlotOne || Svc.Bow.CurrentSlot == 1)   // with both options on: only while swinging in slot 1
-                : t.SlowInSlotOne && Svc.Roblox.IsForeground;
             if (want && !_slowApplied)
             {
-                if (!B.HasPointerBackup) Apply(ReadCurrent().Speed, ReadCurrent().Precision);   // record originals so Restore works
                 _speedBeforeSlow = ReadCurrent().Speed;
-                NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)SlotSpeed(), 0);
                 _slowApplied = true;
+                SetSpeed(t.SlowSpeed);
             }
-            else if (want && _slowApplied)
+            else if (want)
             {
-                int target = SlotSpeed();
                 NativeMethods.SystemParametersInfo(NativeMethods.SPI_GETMOUSESPEED, 0, out int now, 0);
-                if (now != target) NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)target, 0);
+                if (now != Math.Clamp(t.SlowSpeed, 1, 20)) SetSpeed(t.SlowSpeed);
             }
-            else if (!want && _slowApplied)
+            else if (_slowApplied)
             {
                 _slowApplied = false;
-                NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)Math.Clamp(_speedBeforeSlow, 1, 20), 0);
+                SetSpeed(_speedBeforeSlow);
             }
         }
     }
 
-    /// <summary>Called a couple of times per second. Applies the tracking settings while Roblox is focused and puts Windows' values back afterwards.</summary>
+    /// <summary>Puts the pointer back at its normal speed at once (used before a restore and on exit).</summary>
+    private void ReleaseSlow()
+    {
+        if (!_slowApplied) return;
+        _slowApplied = false;
+        SetSpeed(_speedBeforeSlow);
+    }
+
+    /// <summary>Whether the tracking values should be in force right now: "only in Roblox" is on and Roblox is the window in front.</summary>
+    internal static bool WantApplied(bool onlyInRoblox, bool robloxFront) => onlyInRoblox && robloxFront;
+
+    /// <summary>Applies the tracking settings while Roblox is in front and puts Windows' own values back the moment it is not.</summary>
     public void AutoTick()
     {
         var t = Svc.S.Utility.Tracking;
-        UpdateSlotSlowdown();
-        bool want = t.ApplyOnlyInRoblox && Svc.Roblox.IsForeground;
-        if (want && !_autoApplied)
+        bool want = WantApplied(t.ApplyOnlyInRoblox, Svc.Roblox.IsForeground);
+        lock (_gate)
         {
-            _autoApplied = true;
-            if (t.SlowWhileSwinging)
+            if (want && !_autoApplied)
             {
-                // Swing slowdown mode: outside the swing the pointer must be exactly what Windows had, not the tracking speed.
-                var cur = ReadCurrent();
-                bool hadBackup = B.HasPointerBackup;
-                Apply(hadBackup ? B.PointerSpeed : cur.Speed, hadBackup && B.MouseParams.Length == 3 ? B.MouseParams[2] != 0 : cur.Precision);
+                _autoApplied = true;
+                if (t.SlowInSlotOne)
+                {
+                    // The slot-1 slowdown is on: outside slot 1 + clicking the pointer must be exactly what Windows had, not the tracking speed.
+                    var cur = ReadCurrent();
+                    bool hadBackup = B.HasPointerBackup;
+                    ApplyCore(hadBackup ? B.PointerSpeed : cur.Speed, hadBackup && B.MouseParams.Length == 3 ? B.MouseParams[2] != 0 : cur.Precision, persist: false);
+                }
+                else ApplyCore(t.PointerSpeed, t.EnhancePointerPrecision, persist: false);
             }
-            else Apply(t.PointerSpeed, t.EnhancePointerPrecision);
+            else if (!want && _autoApplied)
+            {
+                _autoApplied = false;
+                RestoreCore(persist: false);
+            }
         }
-        else if (!want && _autoApplied)
-        {
-            _autoApplied = false;
-            Restore();
-        }
-        UpdateSlotSlowdown();   // apply after our own speed is in place
+        UpdateSlowdown();   // after our own speed is in place
+    }
+
+    private NativeMethods.WinEventProc? _fgProc;
+    private IntPtr _fgHook;
+
+    /// <summary>Switches the moment the foreground window changes instead of waiting for the next tick. Call on the UI thread (the hook needs its message loop).</summary>
+    public void StartForegroundWatch()
+    {
+        if (_fgHook != IntPtr.Zero) return;
+        _fgProc = (_, _, _, _, _, _, _) => { try { AutoTick(); } catch (Exception ex) { Log.Error("Tracking Helper foreground switch failed", ex); } };
+        _fgHook = NativeMethods.SetWinEventHook(NativeMethods.EVENT_SYSTEM_FOREGROUND, NativeMethods.EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, _fgProc, 0, 0, NativeMethods.WINEVENT_OUTOFCONTEXT);
+        if (_fgHook == IntPtr.Zero) Log.Warn("Tracking Helper could not watch the foreground window; falling back to the timer");
     }
 
     /// <summary>Leaves Windows with its own pointer settings if we only applied ours temporarily.</summary>
     public void AutoRelease()
     {
-        lock (_slowGate) { if (_slowApplied) { _slowApplied = false; NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)Math.Clamp(_speedBeforeSlow, 1, 20), 0); } }
-        if (!_autoApplied) return;
-        _autoApplied = false;
-        Restore();
+        lock (_gate)
+        {
+            ReleaseSlow();
+            if (!_autoApplied) return;
+            _autoApplied = false;
+            RestoreCore(persist: false);
+        }
     }
 
-    public string Restore()
+    /// <summary>Nighty is closing: pointer, scroll and double-click go back to what Windows had, whatever was applied and however.</summary>
+    public void RestoreOnExit()
+    {
+        lock (_gate)
+        {
+            ReleaseSlow();
+            _autoApplied = false;
+            if (B.HasPointerBackup) RestoreCore(persist: true);
+        }
+    }
+
+    public string Restore() { lock (_gate) { ReleaseSlow(); _autoApplied = false; return RestoreCore(persist: true); } }
+
+    private string RestoreCore(bool persist)
     {
         if (!B.HasPointerBackup) return "Nothing to restore — no changes have been made.";
-        uint f = NativeMethods.SPIF_UPDATEINIFILE | NativeMethods.SPIF_SENDCHANGE;
+        uint f = Flags(persist);
         if (B.MouseParams.Length == 3) NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSE, 0, (int[])B.MouseParams.Clone(), f);
         NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETMOUSESPEED, 0, (IntPtr)B.PointerSpeed, f);
         if (B.ScrollLinesOriginal >= 0) NativeMethods.SystemParametersInfo(NativeMethods.SPI_SETWHEELSCROLLLINES, (uint)B.ScrollLinesOriginal, IntPtr.Zero, f);
@@ -369,7 +415,6 @@ public sealed class PointerService
         B.ScrollLinesOriginal = -1; B.DoubleClickOriginal = -1;
         B.HasPointerBackup = false;
         Svc.Settings.Save();
-        RebaseSlow(Math.Clamp(ReadCurrent().Speed, 1, 20));
         return "Original pointer settings restored.";
     }
 }

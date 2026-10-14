@@ -101,7 +101,7 @@ public static class Svc
     public static void RestoreSystemOnExit()
     {
         try { SoftBrightness.RestoreOnExit(); } catch (Exception ex) { Log.Error("Software brightness restore on exit failed", ex); }
-        try { Pointer.AutoRelease(); if (Pointer.HasBackup) Pointer.Restore(); } catch (Exception ex) { Log.Error("Pointer restore on exit failed", ex); }
+        try { Pointer.RestoreOnExit(); } catch (Exception ex) { Log.Error("Pointer restore on exit failed", ex); }
         try { if (Movement.HasBackup) Movement.Restore(); } catch (Exception ex) { Log.Error("Movement restore on exit failed", ex); }
         try { Tweaks.RevertAllRemembering(); } catch (Exception ex) { Log.Error("Tweaks restore on exit failed", ex); }
     }

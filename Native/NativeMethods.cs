@@ -64,6 +64,11 @@ internal static class NativeMethods
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] public static extern bool PostThreadMessage(uint threadId, uint msg, IntPtr wParam, IntPtr lParam);
     [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
 
+    // ---------- Foreground-change events ----------
+    public delegate void WinEventProc(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);
+    public const uint EVENT_SYSTEM_FOREGROUND = 0x3, WINEVENT_OUTOFCONTEXT = 0x0;
+    [DllImport("user32.dll")] public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmod, WinEventProc proc, uint pid, uint thread, uint flags);
+
     // ---------- System parameters ----------
     public const uint SPI_GETMOUSE = 0x3, SPI_SETMOUSE = 0x4, SPI_GETKEYBOARDSPEED = 0xA, SPI_SETKEYBOARDSPEED = 0xB,
         SPI_GETKEYBOARDDELAY = 0x16, SPI_SETKEYBOARDDELAY = 0x17,

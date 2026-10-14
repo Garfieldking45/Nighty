@@ -175,7 +175,7 @@ public partial class App : Application
                 Svc.SoftBrightness.RestoreOnExit();
                 Svc.StopAllInput();
                 Svc.Socd.Stop();
-                Svc.Pointer.AutoRelease();
+                Svc.Pointer.RestoreOnExit();     // pointer speed, scroll and double-click back to the Windows originals
                 if (Svc.S.General.RestoreOnClose) Svc.RestoreSystemOnExit();
                 Svc.GameMode.RestoreOnExit();     // always give the user their original system settings back
                 Svc.Booster.Dispose();
