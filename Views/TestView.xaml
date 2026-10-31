@@ -1,0 +1,202 @@
+<UserControl x:Class="Nighty.Views.TestView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Nighty.Controls">
+    <UserControl.Resources>
+        <Style x:Key="FieldBox" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource Panel2Brush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Height" Value="42"/>
+        </Style>
+        <Style x:Key="FieldNumber" TargetType="c:NumberEntry">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}"/>
+        </Style>
+    </UserControl.Resources>
+    <StackPanel>
+        <c:PageHeading Title="Test" Subtitle="Temporary crossbow-switch test page. Only shown when Nighty is started with --testtab."/>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <c:CardHeader Icon="&#xE9D9;" Title="Timed run" Subtitle="Runs your Auto Clicker and the Auto Crossbow together for the window, then stops both. You count the hits in the game."/>
+
+                <TextBlock Text="AUTO CLICKER (YOUR 34-HIT SETTING)" Style="{StaticResource Label}" Margin="0,0,0,8"/>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,10,0">
+                        <TextBlock Text="CLICKS PER SECOND" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <Border Style="{StaticResource FieldBox}">
+                            <c:NumberEntry Style="{StaticResource FieldNumber}" Value="{Binding Clicker.Cps, Mode=TwoWay}" Minimum="1" Maximum="100" Decimals="1" AutomationProperties.Name="Clicks per second"/>
+                        </Border>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                        <TextBlock Text="DUTY CYCLE %" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <Border Style="{StaticResource FieldBox}">
+                            <c:NumberEntry Style="{StaticResource FieldNumber}" Value="{Binding Clicker.DutyCycle, Mode=TwoWay}" Minimum="5" Maximum="95" Decimals="0" AutomationProperties.Name="Duty cycle percent"/>
+                        </Border>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding Clicker.HitFix, Mode=TwoWay}" AutomationProperties.Name="HitFix"/>
+                        <TextBlock Text="HitFix" VerticalAlignment="Center" Margin="10,0,0,0" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Text="AUTO CROSSBOW" Style="{StaticResource Label}" Margin="0,20,0,8"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,10,0">
+                        <TextBlock Text="EQUIP (MS)" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <Border Style="{StaticResource FieldBox}">
+                            <c:NumberEntry Style="{StaticResource FieldNumber}" Value="{Binding Crossbow.EquipDelayMs, Mode=TwoWay}" Minimum="22" Maximum="200" Decimals="0" AutomationProperties.Name="Equip delay"/>
+                        </Border>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                        <TextBlock Text="SHOT HOLD (MS)" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <Border Style="{StaticResource FieldBox}">
+                            <c:NumberEntry Style="{StaticResource FieldNumber}" Value="{Binding Crossbow.ShotHoldMs, Mode=TwoWay}" Minimum="10" Maximum="150" Decimals="0" AutomationProperties.Name="Shot hold"/>
+                        </Border>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Margin="0,0,10,0">
+                        <TextBlock Text="SWAP (MS)" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <Border Style="{StaticResource FieldBox}">
+                            <c:NumberEntry Style="{StaticResource FieldNumber}" Value="{Binding Crossbow.SwapDelayMs, Mode=TwoWay}" Minimum="0" Maximum="150" Decimals="0" AutomationProperties.Name="Swap delay"/>
+                        </Border>
+                    </StackPanel>
+                    <StackPanel Grid.Column="3">
+                        <TextBlock Text="COOLDOWN (MS, 0 = AUTO)" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <Border Style="{StaticResource FieldBox}">
+                            <c:NumberEntry Style="{StaticResource FieldNumber}" Value="{Binding Crossbow.CooldownMs, Mode=TwoWay}" Minimum="0" Maximum="3000" Decimals="0" AutomationProperties.Name="Cooldown"/>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                    <CheckBox IsChecked="{Binding Crossbow.UseClickerShots, Mode=TwoWay}" AutomationProperties.Name="Clicker fires the shot"/>
+                    <TextBlock Text="The Auto Clicker's own clicks fire the shot (it never pauses)" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                </StackPanel>
+
+                <TextBlock Text="HIT COUNTER (READ FROM THE SCREEN)" Style="{StaticResource Label}" Margin="0,20,0,8"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                    <RadioButton GroupName="readmode" Content="Find the number next to a word (whole Roblox window)" IsChecked="{Binding FindByWord, Mode=TwoWay}" Margin="0,0,24,0" VerticalAlignment="Center"/>
+                    <RadioButton GroupName="readmode" Content="Read a box I draw" IsChecked="{Binding UseBox, Mode=TwoWay}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10" Visibility="{Binding FindByWord, Converter={StaticResource BoolVisible}}">
+                    <TextBlock Text="Word beside the number:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBox Text="{Binding Keyword, UpdateSourceTrigger=PropertyChanged}" Width="200" FontWeight="SemiBold" FontSize="15"
+                             AutomationProperties.Name="Word beside the number"/>
+                    <TextBlock Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="12,0,0,0" Text="e.g. Hits"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Select hit area" Command="{Binding SelectArea}" Padding="18,8" Visibility="{Binding UseBox, Converter={StaticResource BoolVisible}}" Margin="0,0,10,0"/>
+                    <Button Content="Show area" Command="{Binding ShowArea}" Padding="18,8" ToolTip="Outlines in orange where Nighty is reading from"/>
+                    <Button Content="Test read" Command="{Binding TestRead}" Margin="10,0,0,0" Padding="18,8"/>
+                    <CheckBox IsChecked="{Binding AutoRead, Mode=TwoWay}" Margin="22,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="Fill in the hits after each run"/>
+                    <TextBlock Text="Fill in the hits after each run" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                </StackPanel>
+                <TextBlock Text="{Binding AreaText}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,0" Visibility="{Binding UseBox, Converter={StaticResource BoolVisible}}"/>
+                <Border Margin="0,8,0,0" HorizontalAlignment="Left" BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1" CornerRadius="6" Padding="4"
+                        Visibility="{Binding Preview, Converter={StaticResource NullVisible}}">
+                    <Image Source="{Binding Preview}" MaxHeight="70" MaxWidth="360" Stretch="Uniform"/>
+                </Border>
+                <TextBlock Text="{Binding ReadText}" TextWrapping="Wrap" Margin="0,6,0,0" FontWeight="Medium" Visibility="{Binding ReadText, Converter={StaticResource NullVisible}}"/>
+                <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"
+                           Text="Word mode reads the whole Roblox window, even with other windows on top, and takes the number beside the word you type. Box mode: Select hit area minimises Nighty for 5 seconds so you can bring up the game, then drag a tight box around just the number. Show area and Test read minimise Nighty for a few seconds so the game is visible. The game must be windowed or borderless, not exclusive fullscreen. The picture shows exactly what was read."/>
+
+                <TextBlock Text="RUN" Style="{StaticResource Label}" Margin="0,20,0,8"/>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,10,0">
+                        <TextBlock Text="WINDOW (SECONDS)" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <Border Style="{StaticResource FieldBox}">
+                            <c:NumberEntry Style="{StaticResource FieldNumber}" Value="{Binding WindowSec, Mode=TwoWay}" Minimum="1" Maximum="120" Decimals="1" AutomationProperties.Name="Window in seconds"/>
+                        </Border>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                        <TextBlock Text="WAIT BEFORE EACH RUN (S)" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <Border Style="{StaticResource FieldBox}">
+                            <c:NumberEntry Style="{StaticResource FieldNumber}" Value="{Binding WaitSec, Mode=TwoWay}" Minimum="0" Maximum="60" Decimals="0" AutomationProperties.Name="Wait before each run"/>
+                        </Border>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="RUNS PER TEST" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <Border Style="{StaticResource FieldBox}">
+                            <c:NumberEntry Style="{StaticResource FieldNumber}" Value="{Binding Reps, Mode=TwoWay}" Minimum="1" Maximum="20" Decimals="0" AutomationProperties.Name="Runs per test"/>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                    <Button Content="Run now" Command="{Binding Run}" Style="{StaticResource PrimaryButton}" Padding="22,10"/>
+                    <Button Content="Run ticked tests" Command="{Binding RunQueue}" Margin="10,0,0,0" Padding="22,10"/>
+                    <Button Content="Stop" Command="{Binding StopCommand}" Margin="10,0,0,0" Padding="22,10"/>
+                </StackPanel>
+                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,14,0,0" FontWeight="Medium"/>
+                <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,0"
+                           Text="Nighty stays quiet while it is in front, so use the countdown to switch to Roblox with your sword selected. Short beeps count down, a high beep means it started, a low beep means it stopped. For the run your crossbow macro is switched on in Toggle style and not tied to slot 1, then your own settings are put back. The Emergency stop hotkey still works."/>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <c:CardHeader Icon="&#xE762;" Title="Crossbow tests" Subtitle="Tick the ones &quot;Run ticked tests&quot; goes through. Each runs once per &quot;runs per test&quot;."/>
+                <ItemsControl ItemsSource="{Binding Presets}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,12,0" AutomationProperties.Name="Include in queue"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Line}" Style="{StaticResource Muted}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="2" Content="Set" Padding="16,5" Command="{Binding DataContext.UsePreset, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}" ToolTip="Put these values in the boxes above"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <c:CardHeader Icon="&#xE9D2;" Title="Results" Subtitle="Type the hits you counted for each run.">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Copy" Command="{Binding CopyResults}" Padding="16,5"/>
+                        <Button Content="Clear" Command="{Binding ClearResults}" Padding="16,5" Margin="8,0,0,0"/>
+                    </StackPanel>
+                </c:CardHeader>
+                <TextBlock Text="No runs yet." Style="{StaticResource Muted}"
+                           Visibility="{Binding Results.Count, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                <ItemsControl ItemsSource="{Binding Results}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,14">
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="36"/><ColumnDefinition Width="*"/><ColumnDefinition Width="90"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Number}" Style="{StaticResource Muted}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Summary}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                <TextBox Grid.Column="2" Grid.RowSpan="2" Text="{Binding HitsText, UpdateSourceTrigger=PropertyChanged}" HorizontalContentAlignment="Center"
+                                         VerticalAlignment="Center" ToolTip="Hits you counted" AutomationProperties.Name="Hits counted"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Detail}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,2,10,0"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Health}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Note}" TextWrapping="Wrap" Margin="0,2,0,0" Foreground="{DynamicResource AccentBrush}"
+                                           Visibility="{Binding Note, Converter={StaticResource NullVisible}}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

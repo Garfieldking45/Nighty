@@ -15,8 +15,118 @@ public sealed class UtilityViewModel : ObservableObject
     public BrightnessViewModel Brightness { get; } = new();
     public MovementViewModel Movement { get; } = new();
     public TrackingViewModel Tracking { get; } = new();
+    public ShakeViewModel Shake { get; } = new();
     public DnsViewModel Dns { get; } = new();
     public QosViewModel Qos { get; } = new();
+    public ResolutionViewModel Resolution { get; } = new();
+}
+
+// ============================================================ Tracking Helper (aim shake)
+
+public sealed class ShakeViewModel : ObservableObject
+{
+    private bool _toggled;
+    private string _status = "";
+    public ShakeSettings Settings => Svc.S.Utility.Shake;
+    public ActivationMode[] KeyModes { get; } = { ActivationMode.Hold, ActivationMode.Toggle };
+
+    public double Strength { get => Settings.Strength; set { Settings.Strength = (int)value; OnPropertyChanged(); OnPropertyChanged(nameof(StrengthText)); } }
+    public double Speed { get => Settings.Speed; set { Settings.Speed = (int)value; OnPropertyChanged(); OnPropertyChanged(nameof(SpeedText)); } }
+    public double Smoothness { get => Settings.Smoothness; set { Settings.Smoothness = (int)value; OnPropertyChanged(); OnPropertyChanged(nameof(SmoothText)); } }
+    public string StrengthText => $"{ShakePath.AmplitudeFor(Settings.Strength):0.0} px reach";
+    public string SpeedText => $"a new point every {ShakePath.PeriodFor(Settings.Speed):0} ms";
+    public string SmoothText => Settings.Smoothness switch { <= 15 => "sharp jitter", >= 85 => "smooth glide", _ => "in between" };
+    public string Status { get => _status; private set => Set(ref _status, value); }
+    public RelayCommand ResetCommand { get; }
+
+    public ShakeViewModel()
+    {
+        Svc.Shake.KeyActive = () => Settings.KeyMode == ActivationMode.Toggle ? _toggled : HotkeyService.IsDown((Settings.KeyVk, Settings.KeyMods));
+        Svc.Hotkeys.Register("shake", () => Settings.Enabled && Settings.UseKey ? (Settings.KeyVk, Settings.KeyMods) : (0, 0), down =>
+        {
+            if (Settings.KeyMode == ActivationMode.Toggle && down) { _toggled = !_toggled; Svc.Toast.Toggled("Shake", _toggled); }
+            Svc.Shake.Poke();
+        });
+        Settings.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ShakeSettings.Enabled)) { _toggled = false; Svc.Toast.Toggled("Shake", Settings.Enabled); }
+            if (e.PropertyName is nameof(ShakeSettings.KeyMode) or nameof(ShakeSettings.UseKey)) _toggled = false;
+            Svc.Shake.Poke();
+        };
+        ResetCommand = new RelayCommand(() =>
+        {
+            var d = new ShakeSettings();
+            Strength = d.Strength; Speed = d.Speed; Smoothness = d.Smoothness;
+        });
+        var t = new DispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, (_, _) => Status = Svc.Shake.Status, Dispatcher.CurrentDispatcher);
+        t.Start();
+        Status = Svc.Shake.Status;
+    }
+}
+
+// ============================================================ Stretched resolution
+
+public sealed class ResolutionViewModel : ObservableObject
+{
+    private DisplayMode? _selected;
+    private bool _stretch = true, _onlyWide;
+    private string _current = "", _message = "";
+    private StatusKind _kind = StatusKind.Info;
+    private List<DisplayMode> _all = new();
+
+    public ObservableCollection<DisplayMode> Modes { get; } = new();
+    public DisplayMode? Selected { get => _selected; set { if (Set(ref _selected, value)) ApplyCommand.Refresh(); } }
+    /// <summary>Fill the whole screen (no black bars). Off keeps the display's default scaling.</summary>
+    public bool Stretch { get => _stretch; set => Set(ref _stretch, value); }
+    /// <summary>Show only 4:3 and 5:4, the shapes used for stretched play.</summary>
+    public bool OnlyStretchShapes { get => _onlyWide; set { if (Set(ref _onlyWide, value)) Fill(); } }
+    public string CurrentText { get => _current; private set => Set(ref _current, value); }
+    public string Message { get => _message; private set => Set(ref _message, value); }
+    public StatusKind Kind { get => _kind; private set => Set(ref _kind, value); }
+
+    public RelayCommand ApplyCommand { get; }
+    public RelayCommand RestoreCommand { get; }
+    public RelayCommand RescanCommand { get; }
+
+    public ResolutionViewModel()
+    {
+        ApplyCommand = new RelayCommand(Apply, () => Selected != null);
+        RestoreCommand = new RelayCommand(() =>
+        {
+            var (ok, msg) = Svc.Resolution.Restore();
+            Message = msg; Kind = ok ? StatusKind.Success : StatusKind.Error; ShowCurrent();
+        });
+        RescanCommand = new RelayCommand(Rescan);
+        Rescan();
+    }
+
+    private void Rescan()
+    {
+        _all = Svc.Resolution.Modes();
+        Fill(); ShowCurrent();
+    }
+
+    private void Fill()
+    {
+        var keep = Selected;
+        Modes.Clear();
+        foreach (var m in _all.Where(m => !OnlyStretchShapes || m.Ratio is "4:3" or "5:4")) Modes.Add(m);
+        Selected = Modes.FirstOrDefault(m => m == keep) ?? Modes.FirstOrDefault(m => m.Ratio == "4:3") ?? Modes.FirstOrDefault();
+    }
+
+    private void ShowCurrent()
+    {
+        var c = Svc.Resolution.Current();
+        CurrentText = c == null ? "Current resolution unknown" : $"Now: {c.Width} x {c.Height} ({c.Ratio}, {c.Hz} Hz)";
+    }
+
+    private void Apply()
+    {
+        if (Selected == null) return;
+        var (ok, msg) = Svc.Resolution.Apply(Selected, Stretch);
+        Message = msg; Kind = ok ? StatusKind.Success : StatusKind.Error;
+        ShowCurrent();
+    }
 }
 
 // ============================================================ Brightness

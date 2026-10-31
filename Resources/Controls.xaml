@@ -45,8 +45,8 @@
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}"/>
-        <Setter Property="Padding" Value="22"/>
-        <Setter Property="Margin" Value="0,0,0,16"/>
+        <Setter Property="Padding" Value="26"/>
+        <Setter Property="Margin" Value="0,0,0,18"/>
     </Style>
     <Style x:Key="Divider" TargetType="Border">
         <Setter Property="Height" Value="1"/>
@@ -355,24 +355,33 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
-                    <Grid Margin="0,0,8,8" RenderTransformOrigin="0.5,0.5">
+                    <Grid Margin="2" RenderTransformOrigin="0.5,0.5">
                         <Grid.RenderTransform><ScaleTransform x:Name="PressScale"/></Grid.RenderTransform>
-                        <Border x:Name="Bd" Padding="18,9" CornerRadius="20" Background="{DynamicResource PanelBrush}" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
-                            <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}" TextElement.FontWeight="SemiBold"/>
+                        <Border x:Name="Bd" Padding="18,10" CornerRadius="13" Background="Transparent" BorderThickness="0">
+                            <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}" TextElement.FontWeight="SemiBold" TextElement.FontSize="15"/>
                         </Border>
-                        <Border x:Name="HoverLayer" CornerRadius="20" Background="{DynamicResource HoverLayerBrush}" Opacity="0" IsHitTestVisible="False"/>
+                        <Border x:Name="HoverLayer" CornerRadius="13" Background="{DynamicResource HoverLayerBrush}" Opacity="0" IsHitTestVisible="False"/>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource TextBrush}"/></Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Panel3Brush}"/>
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}"/>
-                            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                            <Setter Property="Foreground" Value="White"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+    <!-- the rounded bar the tab buttons sit in -->
+    <Style x:Key="TabBar" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="16"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="Margin" Value="0,0,0,20"/>
     </Style>
 
     <!-- Option card (mouse button, activation mode…) with a check badge when selected -->
@@ -474,9 +483,9 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
-                    <Grid Margin="0,2" RenderTransformOrigin="0.5,0.5">
+                    <Grid Margin="0,1" RenderTransformOrigin="0.5,0.5">
                         <Grid.RenderTransform><ScaleTransform x:Name="PressScale"/></Grid.RenderTransform>
-                        <Border x:Name="Bd" Background="Transparent" CornerRadius="12" Padding="14,10">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="12" Padding="14,7">
                             <Grid>
                                 <Border x:Name="Bar" Width="3" Height="22" Background="{DynamicResource AccentBrush}" CornerRadius="2" HorizontalAlignment="Left" Margin="-14,0,0,0" RenderTransformOrigin="0.5,0.5">
                                     <Border.RenderTransform><ScaleTransform x:Name="BarScale" ScaleY="0"/></Border.RenderTransform>
@@ -498,22 +507,23 @@
         </Setter>
     </Style>
 
-    <!-- Page heading: accent bar, big title, muted subtitle; content on the right -->
+    <!-- Page heading: big gradient icon tile, large title, muted subtitle; content on the right -->
     <Style TargetType="c:PageHeading">
-        <Setter Property="Margin" Value="0,0,0,22"/>
+        <Setter Property="Margin" Value="0,0,0,24"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="c:PageHeading">
                     <Grid>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Border Width="4" Height="30" CornerRadius="2" Background="{DynamicResource HeadingBarBrush}" VerticalAlignment="Center"/>
-                                <TextBlock Text="{TemplateBinding Title}" Style="{StaticResource PageTitle}" Margin="16,0,0,0"/>
-                            </StackPanel>
-                            <TextBlock Text="{TemplateBinding Subtitle}" Style="{StaticResource PageSubtitle}" Margin="20,6,0,0"/>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <Border Width="80" Height="80" CornerRadius="22" Background="{DynamicResource PremiumBrush}" VerticalAlignment="Center">
+                            <Border.Effect><DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="26" ShadowDepth="0" Opacity="0.35"/></Border.Effect>
+                            <TextBlock Text="{Binding Glyph, RelativeSource={RelativeSource TemplatedParent}}" Style="{StaticResource Icon}" FontSize="34" Foreground="White"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="22,0,16,0" VerticalAlignment="Center">
+                            <TextBlock Text="{TemplateBinding Title}" FontSize="36" FontWeight="SemiBold"/>
+                            <TextBlock Text="{TemplateBinding Subtitle}" Style="{StaticResource PageSubtitle}" FontSize="16" Margin="1,4,0,0"/>
                         </StackPanel>
-                        <ContentPresenter Grid.Column="1" VerticalAlignment="Center"/>
+                        <ContentPresenter Grid.Column="2" VerticalAlignment="Center"/>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>

@@ -8,7 +8,7 @@ public enum ClickButton { Left, Right, Middle }
 /// <summary>Efficient waits on the OS timer only, Balanced spins the last 0.4 ms, Precise spins the last 2 ms.</summary>
 public enum PrecisionMode { Efficient, Balanced, Precise }
 public enum ActivationMode { Toggle, Hold }
-public enum OverlayKind { Cps, Fps, Ping, Wasd, Mouse, Key, Crosshair, FishTracker, Hud }
+public enum OverlayKind { Cps, Fps, Ping, Wasd, Mouse, Key, Crosshair, FishTracker, Hud, Picture, Video, Music, Server }
 public enum CrosshairStyle { Cross, CrossDot, Dot, Circle }
 
 public sealed record CrosshairStyleChoice(string Name, CrosshairStyle Value);
@@ -274,6 +274,29 @@ public sealed class SocdSettings : ObservableObject
     public bool ForwardBack { get => _forwardBack; set => Set(ref _forwardBack, value); }
 }
 
+/// <summary>Aim shake for Roblox first person (the Tracking Helper): small hand-like mouse movements that always return to where they started.</summary>
+public sealed class ShakeSettings : ObservableObject
+{
+    private bool _enabled, _onlyClicking, _useKey;
+    private int _strength = 40, _speed = 40, _smooth = 60, _vk = 0x56 /* V */, _mods;
+    private ActivationMode _mode = ActivationMode.Hold;
+
+    public bool Enabled { get => _enabled; set => Set(ref _enabled, value); }
+    /// <summary>How far the shake reaches, 1-100 (about 0.4 to 16 pixels).</summary>
+    public int Strength { get => _strength; set => Set(ref _strength, Math.Clamp(value, 1, 100)); }
+    /// <summary>How fast it moves, 1-100 (slow sway to fast buzz).</summary>
+    public int Speed { get => _speed; set => Set(ref _speed, Math.Clamp(value, 1, 100)); }
+    /// <summary>0 is a sharp jitter, 100 is a smooth glide.</summary>
+    public int Smoothness { get => _smooth; set => Set(ref _smooth, Math.Clamp(value, 0, 100)); }
+    /// <summary>Shake only while the Auto Clicker is clicking.</summary>
+    public bool OnlyWhileClicking { get => _onlyClicking; set => Set(ref _onlyClicking, value); }
+    /// <summary>Shake only with the key below (hold it, or press to start and again to stop).</summary>
+    public bool UseKey { get => _useKey; set => Set(ref _useKey, value); }
+    public int KeyVk { get => _vk; set => Set(ref _vk, value); }
+    public int KeyMods { get => _mods; set => Set(ref _mods, value); }
+    public ActivationMode KeyMode { get => _mode; set => Set(ref _mode, value); }
+}
+
 public sealed class TrackingSettings : ObservableObject
 {
     private int _speed = 10;
@@ -329,6 +352,7 @@ public sealed class UtilitySettings : ObservableObject
     public MovementSettings Movement { get; set; } = new();
     public SocdSettings Socd { get; set; } = new();
     public TrackingSettings Tracking { get; set; } = new();
+    public ShakeSettings Shake { get; set; } = new();
     public DnsSettings Dns { get; set; } = new();
     public QosSettings Qos { get; set; } = new();
 }
@@ -405,6 +429,18 @@ public sealed class OverlayConfig : ObservableObject
     /// <summary>Mouse overlay: buttons also light up when the auto clicker clicks.</summary>
     public bool IncludeClicker { get => _includeClicker; set => Set(ref _includeClicker, value); }
 
+    // ---- picture / video overlays
+    private string _mediaPath = "";
+    private int _mediaWidth = 320;
+    private bool _muted = true;
+    /// <summary>Picture or video file shown by a Picture or Video overlay.</summary>
+    public string MediaPath { get => _mediaPath; set { if (Set(ref _mediaPath, value ?? "")) OnPropertyChanged(nameof(MediaName)); } }
+    /// <summary>Width of the picture or video on screen, in pixels (the height follows its shape).</summary>
+    public int MediaWidth { get => _mediaWidth; set => Set(ref _mediaWidth, Math.Clamp(value, 40, 3840)); }
+    /// <summary>Video overlay: play without sound.</summary>
+    public bool Muted { get => _muted; set => Set(ref _muted, value); }
+    [JsonIgnore] public string MediaName => string.IsNullOrEmpty(_mediaPath) ? "No file chosen" : System.IO.Path.GetFileName(_mediaPath);
+
     /// <summary>Puts every look option back to its default (position and kind-specific choices stay).</summary>
     public void ResetStyle()
     {
@@ -417,8 +453,9 @@ public sealed class OverlayConfig : ObservableObject
         BgOpacity = o.BgOpacity; CornerRadius = o.CornerRadius; ShowBorder = o.ShowBorder; Shadow = o.Shadow; Labels = o.Labels;
     }
 
-    [JsonIgnore] public bool IsStylable => Kind != OverlayKind.Crosshair;
-    [JsonIgnore] public bool IsCustom => Kind is OverlayKind.Key or OverlayKind.Crosshair;
+    [JsonIgnore] public bool IsMedia => Kind is OverlayKind.Picture or OverlayKind.Video;
+    [JsonIgnore] public bool IsStylable => Kind is not (OverlayKind.Crosshair or OverlayKind.Picture or OverlayKind.Video);
+    [JsonIgnore] public bool IsCustom => Kind is OverlayKind.Key or OverlayKind.Crosshair or OverlayKind.Picture or OverlayKind.Video;
     [JsonIgnore] public string Glyph => Kind switch
     {
         OverlayKind.Crosshair => "",
@@ -435,6 +472,10 @@ public sealed class OverlayConfig : ObservableObject
         OverlayKind.Hud => "Lists every macro you have switched on with its key; the ones running right now are marked.",
         OverlayKind.FishTracker => "Fish caught by Auto Fish this session, with a count for each rarity.",
         OverlayKind.Crosshair => "A crosshair drawn on top of your screen. Position 50% / 50% is the exact centre.",
+        OverlayKind.Picture => "A picture of your choice on top of your screen. It never takes clicks.",
+        OverlayKind.Video => "A video that loops on top of your screen. It never takes clicks.",
+        OverlayKind.Music => "What is playing on the Music page: title, artist and progress.",
+        OverlayKind.Server => "The Roblox server you are in: its address, region and your ping to it (read from Roblox's own log).",
         _ => $"Shows when {Hotkeys.KeyName(KeyVk)} is held.",
     };
 }
@@ -717,8 +758,19 @@ public sealed class DnsBackup
     public List<string> Servers { get; set; } = new();
 }
 
+public sealed class MusicSettings : ObservableObject
+{
+    private double _volume = 0.6;
+    private bool _shuffle;
+    private Nighty.Services.RepeatMode _repeat = Nighty.Services.RepeatMode.All;
+    public double Volume { get => _volume; set => Set(ref _volume, Math.Clamp(value, 0, 1)); }
+    public bool Shuffle { get => _shuffle; set => Set(ref _shuffle, value); }
+    public Nighty.Services.RepeatMode Repeat { get => _repeat; set => Set(ref _repeat, value); }
+}
+
 public sealed class AppSettings
 {
+    public MusicSettings Music { get; set; } = new();
     public GeneralSettings General { get; set; } = new();
     public ClickerSettings Clicker { get; set; } = new();
     public ObservableCollection<ClickerPreset> Presets { get; set; } = new();

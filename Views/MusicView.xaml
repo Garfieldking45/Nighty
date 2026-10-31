@@ -1,0 +1,135 @@
+<UserControl x:Class="Nighty.Views.MusicView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Nighty.Controls">
+    <StackPanel>
+        <c:PageHeading Title="Music" Subtitle="Play songs from this PC or from YouTube while you play. Show what's playing with the Music overlay."/>
+
+        <!-- ===== now playing ===== -->
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <TextBlock Text="{Binding NowTitle}" Style="{StaticResource CardTitle}" FontSize="17" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding NowSubtitle}" Style="{StaticResource Muted}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                <Grid Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <Slider x:Name="PosSlider" Minimum="0" Maximum="{Binding Duration}" Value="{Binding Position, Mode=OneWay}" SmallChange="5" LargeChange="15"
+                            PreviewMouseLeftButtonDown="PosSlider_Down" PreviewMouseLeftButtonUp="PosSlider_Up" AutomationProperties.Name="Song position"/>
+                    <TextBlock Grid.Column="1" Text="{Binding TimeText}" Style="{StaticResource Muted}" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                </Grid>
+                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                    <Button Style="{StaticResource IconButton}" Content="&#xE892;" Command="{Binding PrevCommand}" ToolTip="Previous" AutomationProperties.Name="Previous"/>
+                    <Button Style="{StaticResource IconButton}" Content="{Binding PlayGlyph}" Command="{Binding PlayPauseCommand}" Margin="8,0,0,0" ToolTip="Play or pause" AutomationProperties.Name="Play or pause"/>
+                    <Button Style="{StaticResource IconButton}" Content="&#xE893;" Command="{Binding NextCommand}" Margin="8,0,0,0" ToolTip="Next" AutomationProperties.Name="Next"/>
+                    <CheckBox Content="Shuffle" IsChecked="{Binding Shuffle}" Margin="22,0,0,0" VerticalAlignment="Center"/>
+                    <ComboBox ItemsSource="{Binding RepeatChoices}" SelectedItem="{Binding Repeat}" Width="90" Margin="14,0,0,0" AutomationProperties.Name="Repeat"/>
+                    <TextBlock Text="VOLUME" Style="{StaticResource Label}" Margin="22,0,8,0" VerticalAlignment="Center"/>
+                    <Slider Minimum="0" Maximum="100" Value="{Binding Volume, Mode=TwoWay}" Width="130" VerticalAlignment="Center" AutomationProperties.Name="Volume"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource TabBar}">
+            <StackPanel Orientation="Horizontal">
+                <RadioButton Style="{StaticResource TabButton}" Content="Library" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="YouTube" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="0,0,0,12" TextWrapping="Wrap" Foreground="{Binding Kind, Converter={StaticResource StatusBrush}}"
+                   Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+
+        <!-- ===== library ===== -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE8D6;" Title="Your library" Subtitle="Songs on this PC and songs you added from YouTube.">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Add songs" Command="{Binding AddFilesCommand}"/>
+                            <Button Content="Add folder" Command="{Binding AddFolderCommand}" Margin="8,0,0,0"/>
+                        </StackPanel>
+                    </c:CardHeader>
+                    <TextBlock Text="No songs yet. Add files or a folder, or find music on the YouTube tab." Style="{StaticResource Muted}" Margin="0,14,0,0"
+                               Visibility="{Binding Library.Count, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                    <ItemsControl ItemsSource="{Binding Library}" Margin="0,10,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <Button Style="{StaticResource IconButton}" Content="&#xE768;" ToolTip="Play" AutomationProperties.Name="Play"
+                                            Command="{Binding DataContext.PlayTrackCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                    <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis">
+                                            <Run Text="{Binding Subtitle, Mode=OneWay}"/><Run Text="  "/><Run Text="{Binding State, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{Binding Length}" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <Button Grid.Column="3" Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Remove from library" AutomationProperties.Name="Remove"
+                                            Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ===== YouTube ===== -->
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}">
+            <c:InfoBanner Kind="Info" Text="Songs are downloaded as audio to this PC with yt-dlp, then played from there. Only use it for music you're allowed to listen to. The first use downloads the music engine (about 20 MB)."/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE721;" Title="Find music" Subtitle="Search YouTube, or paste a song, album or playlist link."/>
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Search YouTube"/>
+                        <Button Grid.Column="1" Content="Search" Command="{Binding SearchCommand}" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"/>
+                    </Grid>
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding Link, UpdateSourceTrigger=PropertyChanged}" ToolTip="A YouTube or YouTube Music link" AutomationProperties.Name="YouTube link"/>
+                        <Button Grid.Column="1" Content="Add from link" Command="{Binding ImportCommand}" Margin="8,0,0,0"/>
+                    </Grid>
+                    <Button Content="Cancel" Command="{Binding CancelCommand}" HorizontalAlignment="Left" Margin="0,10,0,0" Visibility="{Binding Busy, Converter={StaticResource BoolVisible}}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="Results" Style="{StaticResource CardTitle}"/>
+                        <Button Grid.Column="1" Content="Add all to library" Command="{Binding AddAllResultsCommand}"/>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Results}" Margin="0,10,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <Button Style="{StaticResource IconButton}" Content="&#xE768;" ToolTip="Play" AutomationProperties.Name="Play"
+                                            Command="{Binding DataContext.PlayTrackCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                    <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Artist}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{Binding Length}" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <Button Grid.Column="3" Content="Add" ToolTip="Add to library"
+                                            Command="{Binding DataContext.AddResultCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE946;" Title="Music engine" Subtitle="{Binding Engine}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Content="Update music engine" Command="{Binding UpdateEngineCommand}"/>
+                        <Button Content="Clear downloaded songs" Command="{Binding ClearCacheCommand}" Margin="8,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding CacheText}" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

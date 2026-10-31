@@ -103,14 +103,16 @@
             <c:PageHeading Title="Gaming" Subtitle="Understand this PC, review what would help, then let Game Mode apply it and put everything back." Margin="0"/>
         </StackPanel>
 
-        <WrapPanel Margin="0,0,0,18">
-            <RadioButton Style="{StaticResource TabButton}" Content="Overview" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Plan" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Game Mode" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Benchmark" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Cleaner" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Tweaks" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=5}"/>
-        </WrapPanel>
+        <Border Style="{StaticResource TabBar}">
+            <WrapPanel>
+                <RadioButton Style="{StaticResource TabButton}" Content="Overview" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Plan" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Game Mode" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Benchmark" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Cleaner" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Tweaks" GroupName="gtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=5}"/>
+            </WrapPanel>
+        </Border>
 
         <!-- ================= Overview ================= -->
         <Grid Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}">

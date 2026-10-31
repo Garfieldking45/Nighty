@@ -14,12 +14,14 @@
     <StackPanel>
         <c:PageHeading Title="Owner" Subtitle="Only visible while you are signed in as the owner. Live details, the seasonal themes, logs and tools."/>
 
-        <WrapPanel Margin="0,0,0,10">
-            <RadioButton Style="{StaticResource TabButton}" Content="Overview" GroupName="otab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Seasons" GroupName="otab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Logs" GroupName="otab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Tools" GroupName="otab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
-        </WrapPanel>
+        <Border Style="{StaticResource TabBar}">
+            <WrapPanel>
+                <RadioButton Style="{StaticResource TabButton}" Content="Overview" GroupName="otab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Seasons" GroupName="otab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Logs" GroupName="otab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Tools" GroupName="otab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
+            </WrapPanel>
+        </Border>
 
         <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="2,0,0,10" Foreground="{DynamicResource AccentBrush}" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
 

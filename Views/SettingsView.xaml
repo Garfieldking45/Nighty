@@ -30,18 +30,20 @@
     <StackPanel>
         <c:PageHeading Title="Settings" Subtitle="How Nighty looks, sounds, performs and starts."/>
 
-        <WrapPanel Margin="0,0,0,10">
-            <RadioButton Style="{StaticResource TabButton}" Content="Appearance" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Themes" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Background" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Performance" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Startup" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Discord" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=5}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Safety" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=6}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Configuration" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=7}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Changelog" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=8}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Owner" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=9}"/>
-        </WrapPanel>
+        <Border Style="{StaticResource TabBar}">
+            <WrapPanel>
+                <RadioButton Style="{StaticResource TabButton}" Content="Appearance" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Themes" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Background" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Performance" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Startup" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Discord" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=5}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Safety" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=6}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Configuration" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=7}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Changelog" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=8}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Owner" GroupName="stab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=9}"/>
+            </WrapPanel>
+        </Border>
 
         <!-- ===== Appearance ===== -->
         <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}">

@@ -7,12 +7,39 @@
             <c:PageHeading Title="Utility" Subtitle="Display, input, and network helpers. Every change is saved first so it can be undone." Margin="0"/>
         </StackPanel>
 
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
-            <RadioButton Style="{StaticResource TabButton}" Content="Brightness" GroupName="utab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+        <Border Style="{StaticResource TabBar}">
+            <StackPanel Orientation="Horizontal">
+                <RadioButton Style="{StaticResource TabButton}" Content="Brightness" GroupName="utab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
             <RadioButton Style="{StaticResource TabButton}" Content="Movement Helper" GroupName="utab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
             <RadioButton Style="{StaticResource TabButton}" Content="Tracking Helper" GroupName="utab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
             <RadioButton Style="{StaticResource TabButton}" Content="Best DNS" GroupName="utab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
             <RadioButton Style="{StaticResource TabButton}" Content="QoS Policy" GroupName="utab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Stretched res" GroupName="utab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=5}"/>
+            <RadioButton Style="{StaticResource TabButton}" Content="Pointer" GroupName="utab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=6}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ================= Stretched resolution ================= -->
+        <StackPanel Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=5}" DataContext="{Binding Resolution}">
+            <c:InfoBanner Kind="Info" Text="Stretched resolution plays a 4:3 or 5:4 picture filled across the whole screen, with no black bars. Nighty only keeps it while it runs: closing Nighty, signing out or restarting puts your normal resolution back. Press Restore to undo it at any time."/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <c:CardHeader Icon="&#xE7F4;" Title="Resolution" Subtitle="{Binding CurrentText}"/>
+                        <Button Grid.Column="1" Content="Rescan displays" Command="{Binding RescanCommand}"/>
+                    </Grid>
+                    <ComboBox ItemsSource="{Binding Modes}" SelectedItem="{Binding Selected}" DisplayMemberPath="Label" Margin="0,14,0,0" AutomationProperties.Name="Resolution"/>
+                    <CheckBox Content="Only 4:3 and 5:4" IsChecked="{Binding OnlyStretchShapes}" Margin="0,12,0,0"/>
+                    <CheckBox Content="Stretch to fill the screen (no black bars)" IsChecked="{Binding Stretch}" Margin="0,8,0,0"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                        <Button Content="Use this resolution" Command="{Binding ApplyCommand}"/>
+                        <Button Content="Restore" Command="{Binding RestoreCommand}" Margin="8,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="0,12,0,0" Foreground="{Binding Kind, Converter={StaticResource StatusBrush}}"
+                               Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+                </StackPanel>
+            </Border>
         </StackPanel>
 
         <!-- ================= Brightness ================= -->
@@ -80,11 +107,13 @@
                     </c:SettingRow>
                     <Border Style="{StaticResource Divider}"/>
                     <c:SettingRow Title="Mode" Description="{Binding Mode, Converter={StaticResource SocdDesc}}">
-                        <StackPanel Orientation="Horizontal">
-                            <RadioButton Style="{StaticResource TabButton}" Content="Last input" GroupName="socd" IsChecked="{Binding Mode, Converter={StaticResource Eq}, ConverterParameter=LastInput}"/>
+                        <Border Style="{StaticResource TabBar}">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton Style="{StaticResource TabButton}" Content="Last input" GroupName="socd" IsChecked="{Binding Mode, Converter={StaticResource Eq}, ConverterParameter=LastInput}"/>
                             <RadioButton Style="{StaticResource TabButton}" Content="Neutral" GroupName="socd" IsChecked="{Binding Mode, Converter={StaticResource Eq}, ConverterParameter=Neutral}"/>
                             <RadioButton Style="{StaticResource TabButton}" Content="First input" GroupName="socd" IsChecked="{Binding Mode, Converter={StaticResource Eq}, ConverterParameter=FirstInput}"/>
-                        </StackPanel>
+                            </StackPanel>
+                        </Border>
                     </c:SettingRow>
                     <Border Style="{StaticResource Divider}"/>
                     <c:SettingRow Title="Left and right" Description="Your strafe keys.">
@@ -137,8 +166,66 @@
             </Border>
         </StackPanel>
 
-        <!-- ================= Tracking helper ================= -->
-        <StackPanel Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=2}" DataContext="{Binding Tracking}">
+                <!-- ================= Tracking Helper (aim shake) ================= -->
+        <StackPanel Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=2}" DataContext="{Binding Shake}">
+            <c:InfoBanner Kind="Info" Text="Shake moves the mouse a little, like a hand does, only while Roblox is in front with the mouse locked (first person or shift lock). It always comes back to where it started, so your aim does not drift. Some games do not allow aim helpers: check the rules."/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:SettingRow Title="Shake" Description="Aim shake in first person.">
+                        <CheckBox IsChecked="{Binding Settings.Enabled}" AutomationProperties.Name="Shake"/>
+                    </c:SettingRow>
+                    <TextBlock Text="{Binding Status}" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+                    <Border Style="{StaticResource Divider}" Margin="0,16"/>
+                    <c:ShakePreview Settings="{Binding Settings}"/>
+                    <Grid Margin="0,18,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="STRENGTH" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <c:ValueStepper Value="{Binding Strength, Mode=TwoWay}" Minimum="1" Maximum="100" Step="1"/>
+                            <TextBlock Text="{Binding StrengthText}" Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="SPEED" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <c:ValueStepper Value="{Binding Speed, Mode=TwoWay}" Minimum="1" Maximum="100" Step="1"/>
+                            <TextBlock Text="{Binding SpeedText}" Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="4">
+                            <TextBlock Text="SMOOTHNESS" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <c:ValueStepper Value="{Binding Smoothness, Mode=TwoWay}" Minimum="0" Maximum="100" Step="5"/>
+                            <TextBlock Text="{Binding SmoothText}" Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Text="Low smoothness is a sharp jitter, high is a smooth glide. Speed goes from a slow sway to a fast buzz." Style="{StaticResource Muted}" Margin="0,10,0,0" TextWrapping="Wrap"/>
+                    <Button Content="Reset to defaults" Command="{Binding ResetCommand}" HorizontalAlignment="Left" Margin="0,12,0,0"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:SettingRow Title="Only while autoclicking" Description="Shakes while the auto clicker is clicking, and stops when it stops.">
+                        <CheckBox IsChecked="{Binding Settings.OnlyWhileClicking}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}"/>
+                    <c:SettingRow Title="Use a shake key" Description="Shakes only with this key. Off: whenever Shake is on.">
+                        <CheckBox IsChecked="{Binding Settings.UseKey}"/>
+                    </c:SettingRow>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="SHAKE KEY" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <c:HotkeyBox Vk="{Binding Settings.KeyVk, Mode=TwoWay}" Mods="{Binding Settings.KeyMods, Mode=TwoWay}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="KEY MODE" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <ComboBox ItemsSource="{Binding KeyModes}" SelectedItem="{Binding Settings.KeyMode}" AutomationProperties.Name="Key mode"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Text="Hold: shakes while the key is down. Toggle: press to start, again to stop." Style="{StaticResource Muted}" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- ================= Pointer (pointer speed, slot-1 slowdown, sensitivity calculator) ================= -->
+        <StackPanel Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=6}" DataContext="{Binding Tracking}">
             <c:InfoBanner Kind="Info" Text="Sets Windows' pointer speed and “Enhance pointer precision” (mouse acceleration). Your original values are saved the first time you apply, and can be restored here."/>
             <Border Style="{StaticResource Card}">
                 <StackPanel>

@@ -59,13 +59,15 @@
     <StackPanel>
         <c:PageHeading Title="Mods" Subtitle="Change Roblox's cursor and font, or make your own cursor. Everything is reversible."/>
 
-        <WrapPanel Margin="0,0,0,10">
-            <RadioButton Style="{StaticResource TabButton}" Content="Cursors" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Fonts" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Cursor Builder" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="From a picture" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Content mods" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}"/>
-        </WrapPanel>
+        <Border Style="{StaticResource TabBar}">
+            <WrapPanel>
+                <RadioButton Style="{StaticResource TabButton}" Content="Cursors" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Fonts" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Cursor Builder" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="From a picture" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Content mods" GroupName="mtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}"/>
+            </WrapPanel>
+        </Border>
 
         <!-- ================= Where Roblox is (cursors + fonts) ================= -->
         <Border Style="{StaticResource Card}" DataContext="{Binding Location}">

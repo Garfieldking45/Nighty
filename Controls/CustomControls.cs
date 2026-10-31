@@ -15,6 +15,12 @@ public class PageHeading : ContentControl
     public static readonly DependencyProperty SubtitleProperty = DependencyProperty.Register(nameof(Subtitle), typeof(string), typeof(PageHeading));
     public string? Title { get => (string?)GetValue(TitleProperty); set => SetValue(TitleProperty, value); }
     public string? Subtitle { get => (string?)GetValue(SubtitleProperty); set => SetValue(SubtitleProperty, value); }
+    public static readonly DependencyProperty GlyphProperty = DependencyProperty.Register(nameof(Glyph), typeof(string), typeof(PageHeading), new PropertyMetadata("\uE713"));
+    /// <summary>The icon shown in the big tile. Defaults to the sidebar icon of the page with this title.</summary>
+    public string? Glyph { get => (string?)GetValue(GlyphProperty); set => SetValue(GlyphProperty, value); }
+    /// <summary>Title to sidebar icon, filled in by the main view model when it builds the sidebar.</summary>
+    public static readonly Dictionary<string, string> NavGlyphs = new(StringComparer.OrdinalIgnoreCase) { ["Video editor"] = "\uE714" };
+    public PageHeading() { Loaded += (_, _) => { if (Title != null && NavGlyphs.TryGetValue(Title, out var g)) Glyph = g; }; }
     static PageHeading() => DefaultStyleKeyProperty.OverrideMetadata(typeof(PageHeading), new FrameworkPropertyMetadata(typeof(PageHeading)));
 }
 

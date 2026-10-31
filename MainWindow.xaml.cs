@@ -20,6 +20,10 @@ public partial class MainWindow : Window
         SourceInitialized += (_, _) => ApplyFrameStyle();
         StateChanged += (_, _) => UpdateMaxState();
         Closing += (_, _) => SaveBounds();
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == Key.K && Keyboard.Modifiers == ModifierKeys.Control) { SearchBox.Focus(); SearchBox.SelectAll(); e.Handled = true; }   // Ctrl K jumps to search
+        };
         Loaded += (_, _) =>
         {
             Backdrop.Refresh();
@@ -56,6 +60,11 @@ public partial class MainWindow : Window
     private void SearchResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (e.AddedItems.Count == 1 && DataContext is MainViewModel vm) vm.OpenHitCommand.Execute(e.AddedItems[0]);
+    }
+
+    private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (e.AddedItems.Count > 0 && e.AddedItems[0] is NavItem n && DataContext is MainViewModel vm && vm.Selected != n) vm.Selected = n;
     }
 
     private void SearchBox_KeyDown(object sender, KeyEventArgs e)

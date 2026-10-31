@@ -11,6 +11,15 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.4.0", "2026-10-31", new[]
+        {
+            "New Editor page: a simple video editor with a timeline for videos, pictures, title cards and music, trim and split, and export to a video file",
+            "New Music page: play songs from your PC or YouTube, with a library, shuffle, repeat and volume",
+            "New overlays: Picture, Video (loops, can be muted), Music (what is playing) and Server (Roblox server address, region and your ping to it, read from Roblox's own log)",
+            "Tracking Helper: new aim shake, small hand-like mouse movements that always return to where they started, with strength, speed and smoothness, optionally only while clicking or on a key",
+            "Stretched resolution for the main display: lower or different-shaped resolutions fill the whole screen with no black bars",
+            "The sidebar now keeps Settings pinned at the bottom, and many pages got a tidier layout",
+        }),
         new("2.3.1", "2026-10-13", new[]
         {
             "Tracking Helper now works like Lyre's: with \"Only while Roblox is in front\" on, your pointer settings switch in the moment Roblox gets focus and Windows' own come back the moment it loses it, with no waiting. These automatic switches are not saved to Windows, so a crash can no longer leave your mouse changed",

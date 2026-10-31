@@ -1,0 +1,128 @@
+<UserControl x:Class="Nighty.Views.EditorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:Nighty.Controls">
+    <StackPanel>
+        <c:PageHeading Title="Video editor" Subtitle="Cut, join and add titles and music to your clips, then export an MP4."/>
+
+        <!-- ===== preview ===== -->
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <Border Background="Black" CornerRadius="8" Height="260" ClipToBounds="True">
+                    <Grid>
+                        <MediaElement x:Name="Player" LoadedBehavior="Manual" UnloadedBehavior="Manual" Stretch="Uniform" ScrubbingEnabled="True"/>
+                        <Image x:Name="Still" Stretch="Uniform" Visibility="Collapsed"/>
+                        <TextBlock x:Name="Caption" Foreground="White" FontSize="26" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24" Visibility="Collapsed"/>
+                    </Grid>
+                </Border>
+                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                    <Button Content="Play selected" Command="{Binding PlayCommand}"/>
+                    <Button Content="Stop" Click="Stop_Click" Margin="8,0,0,0"/>
+                    <TextBlock Text="{Binding TotalText}" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ===== timeline ===== -->
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <c:CardHeader Icon="&#xE714;" Title="Timeline" Subtitle="Clips play in this order. Pick one to trim it."/>
+                <WrapPanel Margin="0,14,0,0">
+                    <Button Content="+ Videos" Command="{Binding AddVideosCommand}" Margin="0,0,8,6"/>
+                    <Button Content="+ Pictures" Command="{Binding AddPicturesCommand}" Margin="0,0,8,6"/>
+                    <Button Content="+ Title" Command="{Binding AddTitleCommand}" Margin="0,0,8,6"/>
+                    <Button Content="+ Music" Command="{Binding AddMusicCommand}" Margin="0,0,8,6"/>
+                    <Button Content="Move up" Command="{Binding MoveUpCommand}" Margin="0,0,8,6"/>
+                    <Button Content="Move down" Command="{Binding MoveDownCommand}" Margin="0,0,8,6"/>
+                    <Button Content="Remove" Command="{Binding RemoveCommand}" Margin="0,0,8,6"/>
+                    <Button Content="Clear all" Command="{Binding ClearCommand}" Margin="0,0,8,6"/>
+                </WrapPanel>
+                <TextBlock Text="NEW TITLE TEXT" Style="{StaticResource Label}" Margin="0,6,0,4"/>
+                <TextBox Text="{Binding TitleText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="New title text"/>
+                <TextBlock Text="Nothing here yet. Use the buttons above to add videos, pictures, titles and music." Style="{StaticResource Muted}" Margin="0,12,0,0"
+                           Visibility="{Binding Timeline.Count, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                <ListBox ItemsSource="{Binding Timeline}" SelectedItem="{Binding Selected, Mode=TwoWay}" Margin="0,12,0,0" MaxHeight="260" AutomationProperties.Name="Timeline">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="2,3">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Glyph}" Style="{StaticResource Icon}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Column="2" Text="{Binding LengthText}" Style="{StaticResource Muted}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock Text="MUSIC UNDER THE VIDEO" Style="{StaticResource Label}" Margin="0,16,0,0"/>
+                <ListBox ItemsSource="{Binding Music}" SelectedItem="{Binding Selected, Mode=TwoWay}" Margin="0,8,0,0" MaxHeight="150" AutomationProperties.Name="Music tracks">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="2,3">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Glyph}" Style="{StaticResource Icon}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Column="2" Text="{Binding LengthText}" Style="{StaticResource Muted}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+        </Border>
+
+        <!-- ===== selected clip ===== -->
+        <Border Style="{StaticResource Card}" Visibility="{Binding HasSelection, Converter={StaticResource BoolVisible}}">
+            <StackPanel>
+                <c:CardHeader Icon="&#xE70F;" Title="Edit the selected clip" Subtitle="{Binding Selected.Label}"/>
+                <StackPanel Visibility="{Binding IsTitle, Converter={StaticResource BoolVisible}}" Margin="0,14,0,0">
+                    <TextBlock Text="TITLE TEXT" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                    <TextBox Text="{Binding Selected.Text, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Title text"/>
+                </StackPanel>
+                <Grid Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="START (SECONDS)" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <c:ValueStepper Value="{Binding Selected.Start, Mode=TwoWay}" Minimum="0" Maximum="{Binding Selected.Max}" Step="0.5" Decimals="2" Suffix=" s"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="END (SECONDS)" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <c:ValueStepper Value="{Binding Selected.End, Mode=TwoWay}" Minimum="0.1" Maximum="{Binding Selected.Max}" Step="0.5" Decimals="2" Suffix=" s"/>
+                    </StackPanel>
+                </Grid>
+                <StackPanel Visibility="{Binding CanSplit, Converter={StaticResource BoolVisible}}" Margin="0,14,0,0">
+                    <TextBlock Text="SPLIT AT (SECONDS INTO THE ORIGINAL)" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                    <StackPanel Orientation="Horizontal">
+                        <c:ValueStepper Value="{Binding SplitAt, Mode=TwoWay}" Minimum="0" Maximum="{Binding Selected.Max}" Step="0.5" Decimals="2" Suffix=" s" Width="260"/>
+                        <Button Content="Split" Command="{Binding SplitCommand}" Margin="12,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Visibility="{Binding CanVolume, Converter={StaticResource BoolVisible}}" Margin="0,14,0,0">
+                    <TextBlock Text="VOLUME" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                    <Slider Minimum="0" Maximum="1" Value="{Binding Selected.Volume, Mode=TwoWay}" Width="360" HorizontalAlignment="Left" AutomationProperties.Name="Clip volume"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ===== export ===== -->
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <c:CardHeader Icon="&#xE896;" Title="Export" Subtitle="Saves an MP4 using your graphics card's video encoder when it has one."/>
+                <Grid Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <StackPanel><TextBlock Text="HEIGHT (PIXELS)" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <ComboBox ItemsSource="{Binding Heights}" SelectedItem="{Binding Height}" AutomationProperties.Name="Export height"/></StackPanel>
+                    <StackPanel Grid.Column="2"><TextBlock Text="FRAME RATE" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <ComboBox ItemsSource="{Binding FpsChoices}" SelectedItem="{Binding Fps}" AutomationProperties.Name="Export frame rate"/></StackPanel>
+                    <StackPanel Grid.Column="4"><TextBlock Text="QUALITY" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <ComboBox ItemsSource="{Binding Qualities}" SelectedIndex="{Binding Quality}" AutomationProperties.Name="Export quality"/></StackPanel>
+                </Grid>
+                <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                    <Button Content="Export video" Command="{Binding ExportCommand}" Style="{StaticResource PrimaryButton}"/>
+                    <Button Content="Cancel" Command="{Binding CancelCommand}" Margin="8,0,0,0" Visibility="{Binding Busy, Converter={StaticResource BoolVisible}}"/>
+                </StackPanel>
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress, Mode=OneWay}" Height="6" Margin="0,12,0,0" Visibility="{Binding Busy, Converter={StaticResource BoolVisible}}"/>
+                <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,12,0,0" Foreground="{Binding Kind, Converter={StaticResource StatusBrush}}"
+                           Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

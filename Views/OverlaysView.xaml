@@ -11,6 +11,8 @@
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <Button Content="+ Add crosshair" Command="{Binding AddCrosshairCommand}"/>
                 <Button Content="+ Add key overlay" Command="{Binding AddKeyCommand}" Margin="8,0,0,0"/>
+                <Button Content="+ Add picture" Command="{Binding AddPictureCommand}" Margin="8,0,0,0"/>
+                <Button Content="+ Add video" Command="{Binding AddVideoCommand}" Margin="8,0,0,0"/>
             </StackPanel>
         </Grid>
 
@@ -148,6 +150,25 @@
                                     <StackPanel Grid.Column="4"><TextBlock Text="BUTTONS" Style="{StaticResource Label}" Margin="0,0,0,6"/>
                                         <ComboBox SelectedItem="{Binding CpsButtons}" ItemsSource="{x:Static c:OverlayChoices.CpsButtonSets}"/></StackPanel>
                                 </Grid>
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding IsMedia, Converter={StaticResource BoolVisible}}">
+                                <Border Style="{StaticResource Divider}" Margin="0,14"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="FILE" Style="{StaticResource Label}" Margin="0,0,0,4"/>
+                                        <TextBlock Text="{Binding MediaName}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="Choose file" Margin="12,0,0,0"
+                                            Command="{Binding DataContext.ChooseMediaCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                </Grid>
+                                <StackPanel Margin="0,14,0,0">
+                                    <TextBlock Text="WIDTH ON SCREEN" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                                    <c:ValueStepper Value="{Binding MediaWidth, Mode=TwoWay}" Minimum="40" Maximum="3840" Step="20" Suffix=" px"/>
+                                </StackPanel>
+                                <StackPanel Visibility="{Binding Kind, Converter={StaticResource Eq}, ConverterParameter=Video}">
+                                    <c:SettingRow Title="Muted" Description="Play the video without sound."><CheckBox IsChecked="{Binding Muted}"/></c:SettingRow>
+                                </StackPanel>
                             </StackPanel>
                             <StackPanel Visibility="{Binding Kind, Converter={StaticResource Eq}, ConverterParameter=Fps}">
                                 <Border Style="{StaticResource Divider}" Margin="0,14"/>

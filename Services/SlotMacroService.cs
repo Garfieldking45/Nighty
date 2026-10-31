@@ -22,6 +22,10 @@ public sealed class SlotMacroService
     internal static void BeginShot() => Interlocked.Increment(ref _shots);
     internal static void EndShot() { if (Interlocked.Decrement(ref _shots) < 0) Interlocked.Exchange(ref _shots, 0); }
 
+    private static long _shotsFired;
+    /// <summary>Crossbow / whim shots fired since the app started (the Test page reads the difference over a run).</summary>
+    public static long ShotsFired => Interlocked.Read(ref _shotsFired);
+
     private readonly ConcurrentDictionary<SlotMacroKind, CancellationTokenSource> _running = new();
     public event Action? Changed;
 
@@ -248,6 +252,7 @@ public sealed class SlotMacroService
             finally { InputSender.KeyScan(swordVk, false); }
             } finally { if (shotOpen) EndShot(); }
             }
+            Interlocked.Increment(ref _shotsFired);
             if (c.Style == SlotMacroStyle.Press) return;
 
             long swapAt = fired + Wait.FromMs(cooldownMs);

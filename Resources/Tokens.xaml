@@ -76,6 +76,6 @@
     <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
     <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
-    <CornerRadius x:Key="RadiusCard">14</CornerRadius>
+    <CornerRadius x:Key="RadiusCard">18</CornerRadius>
     <CornerRadius x:Key="RadiusControl">10</CornerRadius>
 </ResourceDictionary>

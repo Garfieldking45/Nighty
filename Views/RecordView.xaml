@@ -5,13 +5,15 @@
     <StackPanel>
         <c:PageHeading Title="Record" Subtitle="Save your best moments with one key, or record whole sessions. Built to stay out of your game's way."/>
 
-        <WrapPanel Margin="0,0,0,10">
-            <RadioButton Style="{StaticResource TabButton}" Content="Overview" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Library" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Hotkeys" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Source and quality" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
-            <RadioButton Style="{StaticResource TabButton}" Content="Feedback and files" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}"/>
-        </WrapPanel>
+        <Border Style="{StaticResource TabBar}">
+            <WrapPanel>
+                <RadioButton Style="{StaticResource TabButton}" Content="Overview" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Library" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Hotkeys" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=2}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Source and quality" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=3}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Feedback and files" GroupName="rtab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=4}"/>
+            </WrapPanel>
+        </Border>
 
         <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="2,0,0,10" Foreground="{DynamicResource AccentBrush}" Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
 

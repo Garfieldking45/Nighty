@@ -432,6 +432,16 @@ public sealed class OverlaysViewModel : ObservableObject
 
     public RelayCommand AddKeyCommand { get; }
     public RelayCommand AddCrosshairCommand { get; }
+    public RelayCommand AddPictureCommand { get; }
+    public RelayCommand AddVideoCommand { get; }
+    public RelayCommand ChooseMediaCommand { get; }
+    private const string PictureFilter = "Pictures (*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp)|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp|All files (*.*)|*.*";
+    private const string VideoFilter = "Videos (*.mp4;*.wmv;*.avi;*.mov;*.mkv;*.webm)|*.mp4;*.wmv;*.avi;*.mov;*.mkv;*.webm|All files (*.*)|*.*";
+    private static string? PickMedia(OverlayKind kind)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog { Title = kind == OverlayKind.Picture ? "Pick a picture for the overlay" : "Pick a video for the overlay", Filter = kind == OverlayKind.Picture ? PictureFilter : VideoFilter };
+        return dlg.ShowDialog() == true ? dlg.FileName : null;
+    }
     public IReadOnlyList<CrosshairStyleChoice> CrosshairStyles => CrosshairOptions.Styles;
     public IReadOnlyList<CrosshairColorChoice> CrosshairColors => CrosshairOptions.Colors;
     public RelayCommand RemoveCommand { get; }
@@ -444,6 +454,14 @@ public sealed class OverlaysViewModel : ObservableObject
     private string _shareMsg = "";
     private List<OverlayConfig>? _beforeLoad;
     private const int MaxLayoutBytes = 256 * 1024;
+    private void AddMedia(OverlayKind kind)
+    {
+        if (Items.Count(i => i.IsMedia) >= 8) { Dialogs.Info("Overlay limit", "You can add up to 8 pictures and videos."); return; }
+        if (PickMedia(kind) is not { } f) return;
+        int n = Items.Count(i => i.Kind == kind) + 1;
+        string label = kind == OverlayKind.Picture ? "Picture" : "Video";
+        Items.Add(new OverlayConfig { Kind = kind, MediaPath = f, Title = n == 1 ? label : $"{label} {n}", Enabled = true, X = 50, Y = 50, Opacity = 1 });
+    }
     public AsyncCommand SetupFpsCommand { get; }
     public string SetupMessage { get => _setupMsg; private set => Set(ref _setupMsg, value); }
     private string _setupMsg = "";
@@ -455,6 +473,8 @@ public sealed class OverlaysViewModel : ObservableObject
         LoadPingAdapters();
         if (Items.Count == 0) SeedDefaults();
         if (!Items.Any(i => i.Kind == OverlayKind.FishTracker)) Items.Add(new OverlayConfig { Kind = OverlayKind.FishTracker, Title = "Fish tracker", X = 1, Y = 12 });
+        if (!Items.Any(i => i.Kind == OverlayKind.Music)) Items.Add(new OverlayConfig { Kind = OverlayKind.Music, Title = "Music", X = 1, Y = 20 });
+        if (!Items.Any(i => i.Kind == OverlayKind.Server)) Items.Add(new OverlayConfig { Kind = OverlayKind.Server, Title = "Server", X = 99, Y = 20 });
         if (!Items.Any(i => i.Kind == OverlayKind.Hud)) Items.Add(new OverlayConfig { Kind = OverlayKind.Hud, Title = "Macro HUD", X = 99, Y = 3 });
         foreach (var i in Items) Hook(i);
         Items.CollectionChanged += (_, e) =>
@@ -517,6 +537,9 @@ public sealed class OverlaysViewModel : ObservableObject
             int n = Items.Count(i => i.Kind == OverlayKind.Crosshair) + 1;
             Items.Add(new OverlayConfig { Kind = OverlayKind.Crosshair, Title = n == 1 ? "Crosshair" : $"Crosshair {n}", Enabled = true, X = 50, Y = 50, Opacity = 1 });
         });
+        AddPictureCommand = new RelayCommand(() => AddMedia(OverlayKind.Picture));
+        AddVideoCommand = new RelayCommand(() => AddMedia(OverlayKind.Video));
+        ChooseMediaCommand = new RelayCommand(p => { if (p is OverlayConfig c && PickMedia(c.Kind) is { } f) { c.MediaPath = f; Svc.Overlays.Sync(); } });
         RemoveCommand = new RelayCommand(p => { if (p is OverlayConfig c) Items.Remove(c); });
         SaveLayoutCommand = new RelayCommand(() =>
         {

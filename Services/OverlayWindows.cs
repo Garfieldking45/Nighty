@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
@@ -28,6 +29,11 @@ public sealed class OverlayWindow : Window
     private readonly ScaleTransform _scale = new(1, 1);
     private Nighty.Controls.CrosshairVisual? _cross;
     private string _signature = "";
+    private MediaElement? _video;
+    private Image? _picture;
+    private TextBlock? _musicTitle, _musicSub;
+    private ProgressBar? _musicBar;
+    private bool IsBare => _cfg.Kind is OverlayKind.Crosshair or OverlayKind.Picture or OverlayKind.Video;
 
     public OverlayWindow(OverlayConfig cfg)
     {
@@ -43,7 +49,7 @@ public sealed class OverlayWindow : Window
         Focusable = false;
 
         _chrome = new Border { BorderThickness = new Thickness(1), Padding = new Thickness(14, 8, 14, 8), LayoutTransform = _scale };
-        if (_cfg.Kind == OverlayKind.Crosshair) { _chrome.Background = Brushes.Transparent; _chrome.BorderThickness = new Thickness(0); _chrome.Padding = new Thickness(0); }
+        if (IsBare) { _chrome.Background = Brushes.Transparent; _chrome.BorderThickness = new Thickness(0); _chrome.Padding = new Thickness(0); }
         _chrome.Child = BuildContent();
         _signature = Signature();
         Content = _chrome;
@@ -67,11 +73,12 @@ public sealed class OverlayWindow : Window
     }
 
     /// <summary>What the content is built from: when any of it changes the content is rebuilt.</summary>
-    private string Signature() => $"{_cfg.Kind}|{_cfg.CpsLayout}|{_cfg.ShowSpace}|{_cfg.ShowShift}|{_cfg.SideButtons}|{_cfg.CpsOnButtons}|{_cfg.PressCounter}|{_cfg.KeyVk}";
+    private string Signature() => $"{_cfg.Kind}|{_cfg.CpsLayout}|{_cfg.ShowSpace}|{_cfg.ShowShift}|{_cfg.SideButtons}|{_cfg.CpsOnButtons}|{_cfg.PressCounter}|{_cfg.KeyVk}|{_cfg.MediaPath}|{_cfg.MediaWidth}";
 
     private UIElement BuildContent()
     {
         _caps.Clear(); _capCps.Clear(); _big = _sub = null; _graph = null;
+        StopVideo(); _picture = null; _musicTitle = _musicSub = null; _musicBar = null;
         switch (_cfg.Kind)
         {
             case OverlayKind.Wasd:
@@ -96,6 +103,42 @@ public sealed class OverlayWindow : Window
                 sp.Children.Add(Cap(0x01, "L", 44, _cfg.CpsOnButtons)); sp.Children.Add(Cap(0x04, "M", 44)); sp.Children.Add(Cap(0x02, "R", 44, _cfg.CpsOnButtons));
                 if (_cfg.SideButtons) sp.Children.Add(Cap(0x06, "5", 40));
                 return sp;
+            }
+            case OverlayKind.Picture:
+            {
+                _picture = new Image { Width = _cfg.MediaWidth, Stretch = Stretch.Uniform, SnapsToDevicePixels = true };
+                RenderOptions.SetBitmapScalingMode(_picture, BitmapScalingMode.HighQuality);
+                try
+                {
+                    if (File.Exists(_cfg.MediaPath))
+                    {
+                        var bi = new System.Windows.Media.Imaging.BitmapImage();
+                        bi.BeginInit(); bi.UriSource = new Uri(_cfg.MediaPath); bi.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; bi.DecodePixelWidth = Math.Min(3840, _cfg.MediaWidth * 2); bi.EndInit(); bi.Freeze();
+                        _picture.Source = bi;
+                    }
+                }
+                catch (Exception ex) { Log.Error("Picture overlay couldn't load its file", ex); }
+                if (_picture.Source == null) return Placeholder("Choose a picture");
+                return _picture;
+            }
+            case OverlayKind.Video:
+            {
+                if (!File.Exists(_cfg.MediaPath)) return Placeholder("Choose a video");
+                _video = new MediaElement { LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Manual, Width = _cfg.MediaWidth, Stretch = Stretch.Uniform, Volume = _cfg.Muted ? 0 : 0.5, IsMuted = _cfg.Muted, ScrubbingEnabled = false };
+                _video.MediaEnded += (_, _) => { if (_video != null) { _video.Position = TimeSpan.Zero; _video.Play(); } };
+                _video.MediaFailed += (_, e) => Log.Error("Video overlay couldn't play", e.ErrorException);
+                _video.Source = new Uri(_cfg.MediaPath);
+                _video.Play();
+                return _video;
+            }
+            case OverlayKind.Music:
+            {
+                _musicTitle = new TextBlock { FontSize = 14, FontWeight = FontWeights.SemiBold, MaxWidth = 260, TextTrimming = TextTrimming.CharacterEllipsis };
+                _musicSub = new TextBlock { FontSize = 11, Opacity = 0.7, MaxWidth = 260, TextTrimming = TextTrimming.CharacterEllipsis };
+                _musicBar = new ProgressBar { Height = 3, Minimum = 0, Maximum = 1, Margin = new Thickness(0, 6, 0, 0), BorderThickness = new Thickness(0), Background = B("#FFFFFF", 0.15) };
+                var st = new StackPanel { MinWidth = 180 };
+                st.Children.Add(_musicTitle); st.Children.Add(_musicSub); st.Children.Add(_musicBar);
+                return st;
             }
             case OverlayKind.Crosshair:
                 return _cross = new Nighty.Controls.CrosshairVisual(_cfg);
@@ -125,6 +168,18 @@ public sealed class OverlayWindow : Window
                 return _text;
         }
     }
+
+    private static UIElement Placeholder(string text) =>
+        new TextBlock { Text = text, Foreground = Brushes.White, Background = B("#101014", 0.7), Padding = new Thickness(10, 6, 10, 6), FontSize = 12 };
+
+    private void StopVideo()
+    {
+        if (_video == null) return;
+        try { _video.Stop(); _video.Close(); } catch { }
+        _video = null;
+    }
+
+    protected override void OnClosed(EventArgs e) { StopVideo(); base.OnClosed(e); }
 
     private void Add(Grid g, int vk, string label, int col, int row)
     {
@@ -163,7 +218,7 @@ public sealed class OverlayWindow : Window
 
         _scale.ScaleX = _scale.ScaleY = _cfg.Scale;
         Opacity = _cfg.Opacity;
-        if (_cfg.Kind != OverlayKind.Crosshair)
+        if (!IsBare)
         {
             _chrome.Background = B(_cfg.BgColor, _cfg.BgOpacity);
             _chrome.BorderBrush = B(_cfg.BorderColor);
@@ -175,6 +230,9 @@ public sealed class OverlayWindow : Window
             if (_big != null) _big.Foreground = fg;
             if (_sub != null) _sub.Foreground = fg;
             if (_graph != null) _graph.Stroke = B(_cfg.HighlightColor);
+            if (_musicBar != null) _musicBar.Foreground = B(_cfg.HighlightColor);
+            if (_musicTitle != null) _musicTitle.Foreground = fg;
+            if (_musicSub != null) _musicSub.Foreground = fg;
             foreach (var cap in _caps.Values) SetCapText(cap, fg);
         }
         _cross?.Update();
@@ -192,7 +250,7 @@ public sealed class OverlayWindow : Window
         var area = Svc.Overlays.Area;
         Left = area.Left + _cfg.X / 100.0 * Math.Max(0, area.Width - ActualWidth);
         Top = area.Top + _cfg.Y / 100.0 * Math.Max(0, area.Height - ActualHeight);
-        if (_cfg.Kind == OverlayKind.Crosshair) { Left = Math.Round(Left); Top = Math.Round(Top); }   // keep the centre on a whole pixel
+        if (IsBare) { Left = Math.Round(Left); Top = Math.Round(Top); }   // keep the centre on a whole pixel
     }
 
     /// <summary>One line per enabled feature with its key; a dot marks the ones running right now.</summary>
@@ -263,6 +321,18 @@ public sealed class OverlayWindow : Window
                 break;
             case OverlayKind.Hud:
                 _text.Text = HudText();
+                break;
+            case OverlayKind.Music when _musicTitle != null:
+            {
+                var t = Svc.Music.Current;
+                _musicTitle.Text = t == null ? "Nothing playing" : t.Title;
+                _musicSub!.Text = t == null ? "Play a song on the Music page" : (t.State.Length > 0 ? t.State : t.Artist);
+                _musicBar!.Value = Svc.Music.DurationSeconds > 0 ? Math.Clamp(Svc.Music.PositionSeconds / Svc.Music.DurationSeconds, 0, 1) : 0;
+                break;
+            }
+            case OverlayKind.Server:
+                Svc.Server.Poll();
+                _text.Text = Svc.Server.Text();
                 break;
             case OverlayKind.Ping:
                 if (Svc.Ping.LastMs is int ms)

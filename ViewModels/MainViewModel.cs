@@ -33,6 +33,10 @@ public sealed class MainViewModel : ObservableObject
     private bool _robloxRunning, _autoStarted;
 
     public ObservableCollection<NavItem> Items { get; }
+    /// <summary>Every page except Settings, for the main sidebar list.</summary>
+    public System.ComponentModel.ICollectionView NavMain { get; private set; } = null!;
+    /// <summary>Just Settings, pinned under a divider at the bottom of the sidebar like Lyre.</summary>
+    public System.ComponentModel.ICollectionView NavFoot { get; private set; } = null!;
     public CombatViewModel Combat { get; } = new();
     public MsViewModel Ms { get; } = new();
     public GamingViewModel Gaming { get; } = new();
@@ -42,6 +46,8 @@ public sealed class MainViewModel : ObservableObject
     public MacrosViewModel Macros { get; } = new();
     public OverlaysViewModel Overlays { get; } = new();
     public RecordViewModel Record { get; } = new();
+    public MusicViewModel Music { get; } = new();
+    public EditorViewModel Editor { get; } = new();
     public SettingsViewModel Settings { get; } = new();
     private OwnerViewModel? _owner;
 
@@ -114,8 +120,16 @@ public sealed class MainViewModel : ObservableObject
             new() { Title = "Macros", Glyph = "", Page = Macros },
             new() { Title = "Overlays", Glyph = "", Page = Overlays },
             new() { Title = "Record", Glyph = "", Page = Record },
+            new() { Title = "Editor", Glyph = "", Page = Editor },
+            new() { Title = "Music", Glyph = "", Page = Music },
             new() { Title = "Settings", Glyph = "", Page = Settings },
         };
+        foreach (var n in Items) Controls.PageHeading.NavGlyphs[n.Title] = n.Glyph;
+        NavMain = new System.Windows.Data.CollectionViewSource { Source = Items }.View; NavMain.Filter = o => ((NavItem)o).Title != "Settings";
+        NavFoot = new System.Windows.Data.CollectionViewSource { Source = Items }.View; NavFoot.Filter = o => ((NavItem)o).Title == "Settings";
+        // TEMPORARY hit-test page: present only when started with --testtab (or NIGHTY_TESTTAB=1). Not in search or the changelog.
+        if (Environment.GetCommandLineArgs().Any(a => a.Equals("--testtab", StringComparison.OrdinalIgnoreCase)) || Environment.GetEnvironmentVariable("NIGHTY_TESTTAB") == "1")
+            Items.Add(new NavItem { Title = "Test", Glyph = "", Page = new TestViewModel() });
         _selected = Items.FirstOrDefault(i => i.Title.Equals(startPage, StringComparison.OrdinalIgnoreCase)) ?? Items[0];
         SyncOwnerPage();
         OwnerService.Changed += () => Svc.Dispatch(SyncOwnerPage);
@@ -164,13 +178,15 @@ public sealed class MainViewModel : ObservableObject
         }
         Add("Combat", "Activation", "Click speed", "Duty cycle", "Hotkey", "Mouse button", "Only while Roblox is focused", "Presets", "Clicker");
         Add("Gaming", "Game Mode", "Tweaks", "PC tweaks", "FPS", "Cleaner", "Optimizations", "System usage", "What to clean", "Overview", "Plan", "Benchmark", "Diagnostics", "Hardware", "Graphics card", "Frame rate", "Frame time", "Bottleneck", "Recommendations", "Balanced", "Performance profile");
-        Add("Utility", "Brightness", "Movement Helper", "Tracking Helper", "Best DNS", "Apply the fastest automatically", "QoS Policy", "Disable Sticky Keys shortcut",
+        Add("Utility", "Brightness", "Movement Helper", "Tracking Helper", "Aim shake", "Shake strength", "Shake speed", "Shake smoothness", "Pointer", "Best DNS", "Apply the fastest automatically", "QoS Policy", "Disable Sticky Keys shortcut",
             "Disable Filter Keys shortcut", "Disable Toggle Keys shortcut", "Enhance pointer precision", "Fast key repeat", "Pointer speed", "Sensitivity calculator", "Network adapter", "Roblox traffic policy");
         Add("Mods", "Cursors", "Roblox cursor", "Cursor Builder", "Picture to cursor", "Fonts", "Roblox font", "Your mods", "Remove background");
         Add("Extras", "Auto Crossbow", "Hotbar macros", "Auto Whim", "Auto Lasso", "Auto Build Up", "Auto Melody", "Auto fish");
         Add("Ms's", "Milliseconds", "Click timing", "Hold time", "Shot hold", "Equip delay", "Swap delay", "Cooldown");
         Add("Macros", "Your macros", "Steps", "Repeat", "Hotkey enabled");
         Add("Overlays", "Ping host", "Preview and position", "Crosshair", "Add crosshair");
+        Add("Editor", "Video editor", "Trim", "Split", "Titles", "Export video");
+        Add("Music", "Play music", "YouTube", "Library", "Music engine", "Shuffle", "Volume");
         Add("Record", "Instant Replay", "Save clip", "Start recording", "Screen recording", "Clips and recordings", "Record hotkeys", "Clip length", "Video quality");
         Add("Settings", "Emergency stop hotkey", "Keep window on top", "Start with Windows", "Permissions", "Logs", "App data folder", "Restore system changes", "Reset everything", "Safety");
     }
@@ -192,7 +208,7 @@ public sealed class MainViewModel : ObservableObject
     {
         Svc.Pointer.AutoTick();
         var tr = Svc.S.Utility.Tracking.ApplyOnlyInRoblox;
-        if (tr != _trackingWas) { _trackingWas = tr; Svc.Toast.Toggled("Tracking Helper", tr); if (!tr) Svc.Pointer.AutoRelease(); }
+        if (tr != _trackingWas) { _trackingWas = tr; Svc.Toast.Toggled("Pointer settings (Roblox only)", tr); if (!tr) Svc.Pointer.AutoRelease(); }
         if (_robloxTick++ % 4 == 0)
         {
             bool was = _robloxRunning;
