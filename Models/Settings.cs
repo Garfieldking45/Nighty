@@ -26,7 +26,6 @@ public static class CrosshairOptions
         new("Yellow", "#FFE600"), new("Magenta", "#FF2DDC"), new("Blue", "#3B82F6"), new("Black", "#000000"),
     };
 }
-public enum SocdMode { LastInput, Neutral, FirstInput }
 public enum OverlayVisibility { Always, WhileRobloxOpen, WhileRobloxFront }
 public enum CpsLayout { Compact, Big, Graph }
 /// <summary>Which clicks the CPS overlay counts: both, only your own, or only the auto clicker's (and macros').</summary>
@@ -215,22 +214,22 @@ public sealed class ClickerPreset : ObservableObject
 
 public sealed class GameSettings : ObservableObject
 {
-    private bool _power = true, _priority = true, _timer = true, _gameMode = true, _awake, _auto = true;
-    /// <summary>Turn Game Mode on when Roblox starts and off again when it closes.</summary>
+    private bool _power = true, _priority = true, _timer, _gameMode = true, _awake, _auto;
+    /// <summary>The FPS boost is switched on: its Roblox settings stay applied, and Game Mode follows Roblox starting and closing. Off until the user presses the button.</summary>
     public bool AutoGameMode { get => _auto; set => Set(ref _auto, value); }
     public bool HighPerformancePower { get => _power; set => Set(ref _power, value); }
     public bool RobloxHighPriority { get => _priority; set => Set(ref _priority, value); }
     public bool TimerResolution { get => _timer; set => Set(ref _timer, value); }
     public bool WindowsGameMode { get => _gameMode; set => Set(ref _gameMode, value); }
     public bool KeepDisplayAwake { get => _awake; set => Set(ref _awake, value); }
-    private bool _calm = true, _freeMem = true, _noThrottle = true;
+    private bool _calm, _freeMem, _noThrottle = true;
     /// <summary>Stops Windows from putting Roblox on efficiency cores or coarsening its timers (Windows 11 does this to windows it thinks are in the background).</summary>
     public bool RobloxNoThrottle { get => _noThrottle; set => Set(ref _noThrottle, value); }
     /// <summary>While Roblox runs, browsers, launchers and updaters wait: they drop to Below normal priority until Game Mode ends.</summary>
     public bool CalmBackgroundApps { get => _calm; set => Set(ref _calm, value); }
     /// <summary>When Roblox starts, those same background apps give back memory they are not using.</summary>
     public bool FreeMemory { get => _freeMem; set => Set(ref _freeMem, value); }
-    public HashSet<string> CleanerCategories { get; set; } = new() { "user_temp", "shader", "crash", "roblox_logs", "thumbs" };
+    public HashSet<string> CleanerCategories { get; set; } = new() { "user_temp", "crash", "roblox_logs", "thumbs" };   // never the shader caches: deleting them makes games stutter while they rebuild
 }
 
 /// <summary>
@@ -264,39 +263,7 @@ public sealed class MovementSettings : ObservableObject
 }
 
 /// <summary>Resolves opposite directions held together (A+D, W+S) so one of them always wins.</summary>
-public sealed class SocdSettings : ObservableObject
-{
-    private bool _enabled, _leftRight = true, _forwardBack = true;
-    private SocdMode _mode = SocdMode.FirstInput;
-    public bool Enabled { get => _enabled; set => Set(ref _enabled, value); }
-    public SocdMode Mode { get => _mode; set => Set(ref _mode, value); }
-    public bool LeftRight { get => _leftRight; set => Set(ref _leftRight, value); }
-    public bool ForwardBack { get => _forwardBack; set => Set(ref _forwardBack, value); }
-}
-
 /// <summary>Aim shake for Roblox first person (the Tracking Helper): small hand-like mouse movements that always return to where they started.</summary>
-public sealed class ShakeSettings : ObservableObject
-{
-    private bool _enabled, _onlyClicking, _useKey;
-    private int _strength = 40, _speed = 40, _smooth = 60, _vk = 0x56 /* V */, _mods;
-    private ActivationMode _mode = ActivationMode.Hold;
-
-    public bool Enabled { get => _enabled; set => Set(ref _enabled, value); }
-    /// <summary>How far the shake reaches, 1-100 (about 0.4 to 16 pixels).</summary>
-    public int Strength { get => _strength; set => Set(ref _strength, Math.Clamp(value, 1, 100)); }
-    /// <summary>How fast it moves, 1-100 (slow sway to fast buzz).</summary>
-    public int Speed { get => _speed; set => Set(ref _speed, Math.Clamp(value, 1, 100)); }
-    /// <summary>0 is a sharp jitter, 100 is a smooth glide.</summary>
-    public int Smoothness { get => _smooth; set => Set(ref _smooth, Math.Clamp(value, 0, 100)); }
-    /// <summary>Shake only while the Auto Clicker is clicking.</summary>
-    public bool OnlyWhileClicking { get => _onlyClicking; set => Set(ref _onlyClicking, value); }
-    /// <summary>Shake only with the key below (hold it, or press to start and again to stop).</summary>
-    public bool UseKey { get => _useKey; set => Set(ref _useKey, value); }
-    public int KeyVk { get => _vk; set => Set(ref _vk, value); }
-    public int KeyMods { get => _mods; set => Set(ref _mods, value); }
-    public ActivationMode KeyMode { get => _mode; set => Set(ref _mode, value); }
-}
-
 public sealed class TrackingSettings : ObservableObject
 {
     private int _speed = 10;
@@ -326,35 +293,10 @@ public sealed class TrackingSettings : ObservableObject
     public double GameSensitivity { get => _sens; set => Set(ref _sens, Math.Clamp(Math.Round(value, 3), 0.01, 100)); }
 }
 
-public sealed class DnsSettings : ObservableObject
-{
-    private string? _adapter;
-    private bool _autoBest;
-    public string? AdapterId { get => _adapter; set => Set(ref _adapter, value); }
-    /// <summary>Resolvers you added yourself (up to 6), each "primary" or "primary,secondary" (IPv4).</summary>
-    public List<string> Custom { get; set; } = new();
-    public bool AutoApplyBest { get => _autoBest; set => Set(ref _autoBest, value); }
-}
-
-public sealed class QosSettings : ObservableObject
-{
-    private int _dscp = 46;
-    public int Dscp { get => _dscp; set => Set(ref _dscp, value); }
-    private bool _home = true, _nlaSet;
-    /// <summary>Also apply the policy on home Wi-Fi and Ethernet. Without this Windows only marks traffic on domain networks.</summary>
-    public bool UseOnHomeNetworks { get => _home; set => Set(ref _home, value); }
-    /// <summary>True when Nighty created the "Do not use NLA" value, so Remove only deletes what Nighty added.</summary>
-    public bool NlaSetByNighty { get => _nlaSet; set => Set(ref _nlaSet, value); }
-}
-
 public sealed class UtilitySettings : ObservableObject
 {
     public MovementSettings Movement { get; set; } = new();
-    public SocdSettings Socd { get; set; } = new();
     public TrackingSettings Tracking { get; set; } = new();
-    public ShakeSettings Shake { get; set; } = new();
-    public DnsSettings Dns { get; set; } = new();
-    public QosSettings Qos { get; set; } = new();
 }
 
 public sealed class OverlayConfig : ObservableObject
@@ -745,17 +687,6 @@ public sealed class SystemBackups
     public int PointerSpeed { get; set; }
     public int[] MouseParams { get; set; } = Array.Empty<int>();
 
-    public DnsBackup? Dns { get; set; }
-    public Dictionary<string, int> BrightnessOriginal { get; set; } = new();
-}
-
-public sealed class DnsBackup
-{
-    public string AdapterId { get; set; } = "";
-    public string AdapterName { get; set; } = "";
-    public int InterfaceIndex { get; set; }
-    public bool WasStatic { get; set; }
-    public List<string> Servers { get; set; } = new();
 }
 
 public sealed class MusicSettings : ObservableObject

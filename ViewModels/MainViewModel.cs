@@ -9,11 +9,24 @@ using Nighty.Views;
 
 namespace Nighty.ViewModels;
 
-public sealed class NavItem
+public sealed class NavItem : ObservableObject
 {
+    private bool _current;
+    public bool IsCurrent { get => _current; set => Set(ref _current, value); }
     public required string Title { get; init; }
     public required string Glyph { get; init; }
     public required ObservableObject Page { get; init; }
+    /// <summary>The top-bar heading this page lives under.</summary>
+    public string Group { get; init; } = "";
+}
+
+/// <summary>One heading in the top bar. A group with several pages shows them as a second row of pills.</summary>
+public sealed class NavGroup : ObservableObject
+{
+    private bool _selected;
+    public required string Title { get; init; }
+    public required IReadOnlyList<NavItem> Items { get; init; }
+    public bool IsSelected { get => _selected; set => Set(ref _selected, value); }
 }
 
 public sealed record SearchHit(string Label, NavItem Nav)
@@ -33,14 +46,33 @@ public sealed class MainViewModel : ObservableObject
     private bool _robloxRunning, _autoStarted;
 
     public ObservableCollection<NavItem> Items { get; }
-    /// <summary>Every page except Settings, for the main sidebar list.</summary>
-    public System.ComponentModel.ICollectionView NavMain { get; private set; } = null!;
-    /// <summary>Just Settings, pinned under a divider at the bottom of the sidebar like Lyre.</summary>
-    public System.ComponentModel.ICollectionView NavFoot { get; private set; } = null!;
+    /// <summary>The headings across the top bar.</summary>
+    public ObservableCollection<NavGroup> Groups { get; } = new();
+    /// <summary>The pages of the selected heading (shown as a second row only when there is more than one).</summary>
+    public IReadOnlyList<NavItem> SubItems => Groups.FirstOrDefault(g => g.IsSelected)?.Items ?? Array.Empty<NavItem>();
+    public bool HasSubItems => SubItems.Count > 1;
+    public ICommand SelectGroupCommand { get; }
+    public ICommand SelectItemCommand { get; }
+    private readonly Dictionary<string, NavItem> _lastInGroup = new();
+
+    private void BuildGroups()
+    {
+        Groups.Clear();
+        foreach (var g in Items.GroupBy(i => i.Group).Where(g => g.Key.Length > 0))
+            Groups.Add(new NavGroup { Title = g.Key, Items = g.ToList() });
+        SyncGroups();
+    }
+
+    private void SyncGroups()
+    {
+        foreach (var g in Groups) g.IsSelected = g.Items.Contains(_selected);
+        foreach (var i in Items) i.IsCurrent = ReferenceEquals(i, _selected);
+        _lastInGroup[_selected.Group] = _selected;
+        OnPropertyChanged(nameof(SubItems)); OnPropertyChanged(nameof(HasSubItems));
+    }
     public CombatViewModel Combat { get; } = new();
     public MsViewModel Ms { get; } = new();
     public GamingViewModel Gaming { get; } = new();
-    public UtilityViewModel Utility { get; } = new();
     public ModsViewModel Mods { get; } = new();
     public ExtrasViewModel Extras { get; } = new();
     public MacrosViewModel Macros { get; } = new();
@@ -53,7 +85,7 @@ public sealed class MainViewModel : ObservableObject
 
     public GeneralSettings General => Svc.S.General;
 
-    public NavItem Selected { get => _selected; set { if (Set(ref _selected, value)) OnPropertyChanged(nameof(Current)); } }
+    public NavItem Selected { get => _selected; set { if (Set(ref _selected, value)) { OnPropertyChanged(nameof(Current)); SyncGroups(); } } }
     public ObservableObject Current => _selected.Page;
 
     public string RobloxText { get => _robloxText; private set => Set(ref _robloxText, value); }
@@ -98,12 +130,14 @@ public sealed class MainViewModel : ObservableObject
         {
             _owner ??= new OwnerViewModel();
             _owner.Refresh();
-            Items.Add(new NavItem { Title = "Owner", Glyph = "\uE72E", Page = _owner });
+            Items.Add(new NavItem { Group = "Owner", Title = "Owner", Glyph = "\uE72E", Page = _owner });
         }
         else if (!OwnerService.IsOwner && existing != null)
         {
             if (ReferenceEquals(_selected, existing)) Selected = Items[0];
             Items.Remove(existing);
+            BuildGroups();
+            BuildGroups();
         }
     }
 
@@ -111,27 +145,27 @@ public sealed class MainViewModel : ObservableObject
     {
         Items = new ObservableCollection<NavItem>
         {
-            new() { Title = "Combat", Glyph = "", Page = Combat },
-            new() { Title = "Gaming", Glyph = "", Page = Gaming },
-            new() { Title = "Utility", Glyph = "", Page = Utility },
-            new() { Title = "Mods", Glyph = "", Page = Mods },
-            new() { Title = "Extras", Glyph = "\uE734", Page = Extras },
-            new() { Title = "Ms's", Glyph = "", Page = Ms },
-            new() { Title = "Macros", Glyph = "", Page = Macros },
-            new() { Title = "Overlays", Glyph = "", Page = Overlays },
-            new() { Title = "Record", Glyph = "", Page = Record },
-            new() { Title = "Editor", Glyph = "", Page = Editor },
-            new() { Title = "Music", Glyph = "", Page = Music },
-            new() { Title = "Settings", Glyph = "", Page = Settings },
+            new() { Group = "Combat", Title = "Combat", Glyph = "", Page = Combat },
+            new() { Group = "Gaming", Title = "Gaming", Glyph = "", Page = Gaming },
+            new() { Group = "Tools", Title = "Mods", Glyph = "", Page = Mods },
+            new() { Group = "Tools", Title = "Extras", Glyph = "\uE734", Page = Extras },
+            new() { Group = "Tools", Title = "Ms's", Glyph = "", Page = Ms },
+            new() { Group = "Tools", Title = "Macros", Glyph = "", Page = Macros },
+            new() { Group = "Media", Title = "Overlays", Glyph = "", Page = Overlays },
+            new() { Group = "Media", Title = "Record", Glyph = "", Page = Record },
+            new() { Group = "Media", Title = "Editor", Glyph = "", Page = Editor },
+            new() { Group = "Media", Title = "Music", Glyph = "", Page = Music },
+            new() { Group = "Settings", Title = "Settings", Glyph = "", Page = Settings },
         };
         foreach (var n in Items) Controls.PageHeading.NavGlyphs[n.Title] = n.Glyph;
-        NavMain = new System.Windows.Data.CollectionViewSource { Source = Items }.View; NavMain.Filter = o => ((NavItem)o).Title != "Settings";
-        NavFoot = new System.Windows.Data.CollectionViewSource { Source = Items }.View; NavFoot.Filter = o => ((NavItem)o).Title == "Settings";
+        SelectGroupCommand = new RelayCommand(o => { if (o is NavGroup g) Selected = _lastInGroup.TryGetValue(g.Title, out var last) && g.Items.Contains(last) ? last : g.Items[0]; });
+        SelectItemCommand = new RelayCommand(o => { if (o is NavItem n) Selected = n; });
         // TEMPORARY hit-test page: present only when started with --testtab (or NIGHTY_TESTTAB=1). Not in search or the changelog.
         if (Environment.GetCommandLineArgs().Any(a => a.Equals("--testtab", StringComparison.OrdinalIgnoreCase)) || Environment.GetEnvironmentVariable("NIGHTY_TESTTAB") == "1")
-            Items.Add(new NavItem { Title = "Test", Glyph = "", Page = new TestViewModel() });
+            Items.Add(new NavItem { Group = "Tools", Title = "Test", Glyph = "", Page = new TestViewModel() });
         _selected = Items.FirstOrDefault(i => i.Title.Equals(startPage, StringComparison.OrdinalIgnoreCase)) ?? Items[0];
         SyncOwnerPage();
+        BuildGroups();
         OwnerService.Changed += () => Svc.Dispatch(SyncOwnerPage);
 
         BuildSearchIndex();
@@ -176,10 +210,8 @@ public sealed class MainViewModel : ObservableObject
             _index.Add(new SearchHit(page, nav));
             foreach (var l in labels) _index.Add(new SearchHit(l, nav));
         }
-        Add("Combat", "Activation", "Click speed", "Duty cycle", "Hotkey", "Mouse button", "Only while Roblox is focused", "Presets", "Clicker");
-        Add("Gaming", "Game Mode", "Tweaks", "PC tweaks", "FPS", "Cleaner", "Optimizations", "System usage", "What to clean", "Overview", "Plan", "Benchmark", "Diagnostics", "Hardware", "Graphics card", "Frame rate", "Frame time", "Bottleneck", "Recommendations", "Balanced", "Performance profile");
-        Add("Utility", "Brightness", "Movement Helper", "Tracking Helper", "Aim shake", "Shake strength", "Shake speed", "Shake smoothness", "Pointer", "Best DNS", "Apply the fastest automatically", "QoS Policy", "Disable Sticky Keys shortcut",
-            "Disable Filter Keys shortcut", "Disable Toggle Keys shortcut", "Enhance pointer precision", "Fast key repeat", "Pointer speed", "Sensitivity calculator", "Network adapter", "Roblox traffic policy");
+        Add("Combat", "Aim assist", "Tracking Helper", "Pointer", "Slow down in slot 1", "Activation", "Click speed", "Duty cycle", "Hotkey", "Mouse button", "Only while Roblox is focused", "Presets", "Clicker");
+        Add("Gaming", "FPS boost", "Boost FPS", "Game Mode", "FPS", "Frame rate", "FPS cap", "Graphics card", "Power", "Priority", "Throttling", "Game DVR");
         Add("Mods", "Cursors", "Roblox cursor", "Cursor Builder", "Picture to cursor", "Fonts", "Roblox font", "Your mods", "Remove background");
         Add("Extras", "Auto Crossbow", "Hotbar macros", "Auto Whim", "Auto Lasso", "Auto Build Up", "Auto Melody", "Auto fish");
         Add("Ms's", "Milliseconds", "Click timing", "Hold time", "Shot hold", "Equip delay", "Swap delay", "Cooldown");
@@ -213,21 +245,18 @@ public sealed class MainViewModel : ObservableObject
         {
             bool was = _robloxRunning;
             _robloxRunning = Svc.Roblox.IsRunning;   // process scan every 2 s
-            // Auto Game Mode: follow Roblox starting / closing (only transitions, so manual toggling still works).
-            if (Svc.S.Game.AutoGameMode && _robloxRunning != was && (_robloxRunning || _autoStarted))
+            // FPS boost: the Game Mode actions follow Roblox starting / closing (only transitions).
+            if (Svc.Boost.IsOn && _robloxRunning != was && (_robloxRunning || _autoStarted))
             {
                 _autoStarted = _robloxRunning;
                 bool on = _robloxRunning;
                 _ = Task.Run(async () =>
                 {
-                    await Svc.GameMode.SetActiveAsync(on);
-                    Svc.Dispatch(() =>
-                    {
-                        if (on && Svc.GameMode.NeedsPlanApproval) Svc.Toast.Show("Game Mode", "Not started: approve a plan on Gaming > Plan first", false);
-                        else Svc.Toast.Toggled("Game Mode", on);
-                    });
+                    await Svc.Boost.RobloxChangedAsync(on);
+                    Svc.Dispatch(() => Svc.Toast.Toggled("FPS boost", on));
                 });
             }
+            if (Svc.Boost.IsOn) _ = Task.Run(Svc.Boost.Tick);
         }
         RobloxText = _robloxRunning ? "Running" : "Not running";
         RobloxKind = _robloxRunning ? StatusKind.Success : StatusKind.Neutral;
@@ -240,7 +269,7 @@ public sealed class MainViewModel : ObservableObject
         StatusTitle = Svc.Clicker.IsClicking ? "Clicking" : s.Enabled ? "Armed" : "Idle";
         StatusDetail = $"{(s.UseRange ? $"{s.MinCps:0.##}-{s.MaxCps:0.##}" : $"{s.Cps:0.00}")} CPS · {(s.HotkeyVk > 0 ? Hotkeys.Format(s.HotkeyVk, s.HotkeyMods) : "no key")}";
 
-        GameText = Svc.GameMode.IsActive ? "Active" : "Off";
-        GameKind = Svc.GameMode.IsActive ? StatusKind.Success : StatusKind.Neutral;
+        GameText = Svc.GameMode.IsActive ? "Boosting" : Svc.Boost.IsOn ? "Ready" : "Off";
+        GameKind = Svc.GameMode.IsActive ? StatusKind.Success : Svc.Boost.IsOn ? StatusKind.Info : StatusKind.Neutral;
     }
 }

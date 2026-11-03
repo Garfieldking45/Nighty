@@ -6,13 +6,20 @@
         <Grid Margin="0,0,0,20">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <StackPanel>
-                <c:PageHeading Title="Extras" Subtitle="Hotbar macros (crossbow, whim, lasso and more) and Auto fish." Margin="0"/>
+                <c:PageHeading Title="Extras" Subtitle="Open a section to change it." Margin="0"/>
             </StackPanel>
         </Grid>
 
                 <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <c:CardHeader Icon="&#xE7B3;" Title="Auto fish" Subtitle="Casts the rod by holding the mouse, then holds and releases to keep your green box over the moving line (any colour) until the fish is caught. After a catch it waits a second and casts again."/>
+                  <Expander Style="{StaticResource CardExpander}">
+                    <Expander.Header>
+                        <StackPanel>
+                            <TextBlock Text="Auto fish" Style="{StaticResource CardTitle}"/>
+                            <TextBlock Text="Casts the rod, keeps your green box over the moving line until the fish is caught, then casts again." Style="{StaticResource Muted}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Expander.Header>
+                    <StackPanel Margin="0,8,0,0">
+
                         <c:SettingRow Title="Start / stop key" Description="Works from anywhere (default F7). The emergency stop also stops it.">
                             <c:HotkeyBox Vk="{Binding Fishing.HotkeyVk, Mode=TwoWay}" Mods="{Binding Fishing.HotkeyMods, Mode=TwoWay}"/>
                         </c:SettingRow>
@@ -36,21 +43,25 @@
                         <Button Content="{Binding FishButton}" Command="{Binding FishCommand}" HorizontalAlignment="Left" MinWidth="130" Margin="0,14,0,0"/>
                         <TextBlock Text="{Binding FishStatus}" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
                     </StackPanel>
+                  </Expander>
                 </Border>
-        <c:CardHeader Icon="&#xE8FD;" Title="Hotbar macros" Subtitle="One-key macros that swap between your hotbar slots (number keys 1-9). Turn on the ones you want and set their key; the emergency stop cancels them."/>
+        <c:CardHeader Icon="&#xE8FD;" Title="Hotbar macros" Subtitle="One-key macros that swap between your hotbar slots. Tick the ones you want, open one to set its key; the emergency stop cancels them."/>
         <ItemsControl ItemsSource="{Binding QuickMacros}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Border Style="{StaticResource Card}">
-                        <StackPanel>
+                      <Expander Style="{StaticResource CardExpander}">
+                        <Expander.Header>
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <TextBlock Text="{Binding Title}" Style="{StaticResource CardTitle}"/>
-<TextBlock Text="{Binding Description}" Style="{StaticResource Muted}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Description}" Style="{StaticResource Muted}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <CheckBox Grid.Column="1" IsChecked="{Binding Enabled}" VerticalAlignment="Top" Margin="12,2,0,0" AutomationProperties.Name="Enable macro"/>
                             </Grid>
+                        </Expander.Header>
+                        <StackPanel>
                             <StackPanel IsEnabled="{Binding Enabled}">
                                 <c:SettingRow Title="Key" Description="{Binding KeyHint}">
                                     <c:HotkeyBox Vk="{Binding HotkeyVk, Mode=TwoWay}" Mods="{Binding HotkeyMods, Mode=TwoWay}"/>
@@ -105,6 +116,7 @@
                                 </UniformGrid>
                             </StackPanel>
                         </StackPanel>
+                      </Expander>
                     </Border>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>

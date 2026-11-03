@@ -62,11 +62,6 @@ public partial class MainWindow : Window
         if (e.AddedItems.Count == 1 && DataContext is MainViewModel vm) vm.OpenHitCommand.Execute(e.AddedItems[0]);
     }
 
-    private void Nav_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (e.AddedItems.Count > 0 && e.AddedItems[0] is NavItem n && DataContext is MainViewModel vm && vm.Selected != n) vm.Selected = n;
-    }
-
     private void SearchBox_KeyDown(object sender, KeyEventArgs e)
     {
         if (DataContext is not MainViewModel vm) return;

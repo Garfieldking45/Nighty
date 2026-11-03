@@ -16,6 +16,11 @@ public sealed class CombatViewModel : ObservableObject
     private string _presetMessage = "";
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(250) };
 
+    private int _tab;
+    /// <summary>0 Clicker, 1 Aim assist (pointer speed and the slot-1 slowdown).</summary>
+    public int Tab { get => _tab; set => Set(ref _tab, value); }
+    public TrackingViewModel Tracking { get; } = new();
+
     public ClickerSettings Settings => Svc.S.Clicker;
     public ObservableCollection<ClickerPreset> Presets => Svc.S.Presets;
 
@@ -108,6 +113,8 @@ public sealed class CombatViewModel : ObservableObject
 
     public CombatViewModel()
     {
+        // Bursts, time limits, a start delay and several clicks per hit no longer have settings on screen, so make sure none of them is left switched on.
+        Settings.ClicksPerHit = 1; Settings.StopAfterClicks = 0; Settings.TimeLimitSec = 0; Settings.StartDelayMs = 0;
         Calibrate = new RelayCommand(DoCalibrate, () => !IsCalibrating);
         StartCommand = new RelayCommand(() =>
         {

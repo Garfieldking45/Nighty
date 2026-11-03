@@ -226,12 +226,9 @@ public sealed class SettingsViewModel : ObservableObject
         RestoreAllCommand = new AsyncCommand(async () =>
         {
             Svc.StopAllInput();
-            Svc.S.Utility.Socd.Enabled = false;
-            Svc.Tweaks.RevertAll();
-            await Svc.GameMode.SetActiveAsync(false);
-            var m = Svc.Movement.HasBackup ? Svc.Movement.Restore() : null;
+            await Svc.Boost.DisableAsync();
             var p = Svc.Pointer.HasBackup ? Svc.Pointer.Restore() : null;
-            Message = "Restored: Game Mode" + (m != null ? ", keyboard/accessibility" : "") + (p != null ? ", pointer" : "") +
+            Message = "Restored: Game Mode" + (p != null ? ", pointer" : "") +
                       ". DNS, QoS and mods are restored from their own pages because they need separate approval.";
         });
         ExportProfileCommand = new RelayCommand(() =>
@@ -258,7 +255,6 @@ public sealed class SettingsViewModel : ObservableObject
             if (!Dialogs.Confirm("Reset all settings?", "This restores system changes made by Nighty, deletes your presets, macros and overlay layout, and restarts the app.", "Reset", danger: true)) return;
             Svc.StopAllInput();
             Svc.GameMode.RestoreOnExit();
-            if (Svc.Movement.HasBackup) Svc.Movement.Restore();
             if (Svc.Pointer.HasBackup) Svc.Pointer.Restore();
             Svc.Tweaks.RevertAll();
             Svc.Settings.Reset();

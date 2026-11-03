@@ -3,7 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="clr-namespace:Nighty.Controls">
     <StackPanel>
-        <c:PageHeading Title="Combat" Subtitle="Set up the clicker, then start it here or with your hotkey."/>
+        <c:PageHeading Title="Combat" Subtitle="Set up the clicker and your aim assist, then start it here or with your hotkey."/>
+        <Border Style="{StaticResource TabBar}">
+            <StackPanel Orientation="Horizontal">
+                <RadioButton Style="{StaticResource TabButton}" Content="Clicker" GroupName="ctab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}"/>
+                <RadioButton Style="{StaticResource TabButton}" Content="Aim assist" GroupName="ctab" IsChecked="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=1}"/>
+            </StackPanel>
+        </Border>
+        <StackPanel Visibility="{Binding Tab, Converter={StaticResource Eq}, ConverterParameter=0}">
 
         <!-- ===== Hero: state, summary, live numbers, big start button ===== -->
         <Border Style="{StaticResource Card}" Padding="30,26">
@@ -143,9 +150,7 @@
 
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <c:CardHeader Icon="&#xE8B3;" Title="Clicks per hit" Subtitle="How many clicks are sent each time the clicker fires. Leave at 1 unless you need bursts."/>
-                        <c:ValueStepper Value="{Binding ClicksPerHit, Mode=TwoWay}" Minimum="1" Maximum="5" Step="1"/>
-                        <c:SettingRow Title="Randomize" Description="Varies the gap between hits (60-140% of the base) so the rhythm is never exactly even." Margin="0,14,0,0">
+                        <c:SettingRow Title="Randomize" Description="Varies the gap between hits (60-140% of the base) so the rhythm is never exactly even.">
                             <CheckBox IsChecked="{Binding Settings.Jitter}"/>
                         </c:SettingRow>
                     </StackPanel>
@@ -226,55 +231,87 @@
                     </StackPanel>
                 </Border>
 
-                <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <c:CardHeader Icon="&#xE916;" Title="Auto stop" Subtitle="Bursts, time limits and a head start"/>
-                        <TextBlock Text="STOP AFTER (CLICKS)" Style="{StaticResource Label}" Margin="0,0,0,6"/>
-                        <c:ValueStepper Value="{Binding StopAfterClicks, Mode=TwoWay}" Minimum="0" Maximum="1000" Step="1"/>
-                        <TextBlock Text="TIME LIMIT (SECONDS)" Style="{StaticResource Label}" Margin="0,14,0,6"/>
-                        <c:ValueStepper Value="{Binding TimeLimitSec, Mode=TwoWay}" Minimum="0" Maximum="300" Step="1"/>
-                        <TextBlock Text="START DELAY (SECONDS)" Style="{StaticResource Label}" Margin="0,14,0,6"/>
-                        <c:ValueStepper Value="{Binding StartDelaySec, Mode=TwoWay}" Minimum="0" Maximum="10" Step="0.5" Decimals="1"/>
-                        <TextBlock Text="{Binding AutoStopHint}" Style="{StaticResource Muted}" Margin="0,12,0,0"/>
-                    </StackPanel>
-                </Border>
-
-                <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <c:CardHeader Icon="&#xE74E;" Title="Presets" Subtitle="Save this setup and load it any time"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <TextBox Text="{Binding PresetName, UpdateSourceTrigger=PropertyChanged}" MaxLength="40" Padding="12,10" AutomationProperties.Name="Preset name"/>
-                            <Button Grid.Column="1" Content="Save" Command="{Binding SavePreset}" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0" Padding="20,10"/>
-                        </Grid>
-                        <TextBlock Text="{Binding PresetMessage}" Style="{StaticResource Muted}" Margin="0,8,0,0"
-                                   Visibility="{Binding PresetMessage, Converter={StaticResource NullVisible}}"/>
-                        <TextBlock Text="No presets yet. Name the current setup and press Save." Style="{StaticResource Muted}" Margin="0,12,0,0"
-                                   Visibility="{Binding Presets.Count, Converter={StaticResource Eq}, ConverterParameter=0}"/>
-                        <ItemsControl ItemsSource="{Binding Presets}" Margin="0,10,0,0">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,10" Margin="0,0,0,8">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding Summary}" Style="{StaticResource Muted}" FontSize="11.5" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
-                                            </StackPanel>
-                                            <Button Grid.Column="1" Content="Load" Padding="14,6" Margin="8,0,6,0"
-                                                    Command="{Binding DataContext.LoadPreset, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
-                                            <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Delete preset" AutomationProperties.Name="Delete preset"
-                                                    Command="{Binding DataContext.DeletePreset, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
             </StackPanel>
         </Grid>
+        </StackPanel>
+
+        <!-- ================= Aim assist (pointer) ================= -->
+        <StackPanel Visibility="{Binding DataContext.Tab, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Eq}, ConverterParameter=1}" DataContext="{Binding Tracking}">
+            <c:InfoBanner Kind="Info" Text="Aim assist changes how the pointer moves while you aim: a slower pointer in slot 1 while clicking, pointer speed, acceleration and scroll speed. Your original Windows values are saved the first time you apply, and can be restored here."/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:SettingRow Title="Aim assist only in Roblox" Description="On: these values apply only while Roblox is in front, and Windows' own values come back as soon as you leave it.">
+                        <CheckBox IsChecked="{Binding Settings.ApplyOnlyInRoblox}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}" Margin="0,18"/>
+                    <c:SettingRow Title="Slow down in slot 1 while clicking" Description="While Roblox is in front, the Auto Clicker is clicking and hotbar slot 1 is selected (pick it with the 1 key), the pointer uses the slow speed below. In any other slot, or when you are not clicking, it stays at your normal Windows speed (the pointer speed below is not used while this is on).">
+                        <CheckBox IsChecked="{Binding Settings.SlowInSlotOne}"/>
+                    </c:SettingRow>
+                    <TextBlock Text="{Binding LiveText}" Style="{StaticResource Muted}" Margin="0,12,0,0" TextWrapping="Wrap"/>
+                    <TextBlock Text="SLOW SPEED" Style="{StaticResource Label}" Margin="0,10,0,6"/>
+                    <c:ValueStepper Value="{Binding SlowSpeed, Mode=TwoWay}" Minimum="1" Maximum="20" Step="1"/>
+                    <Border Style="{StaticResource Divider}" Margin="0,18"/>
+                    <c:CardHeader Icon="&#xE945;" Title="Pointer speed" Subtitle="Windows pointer speed, 1–20 (10 is the Windows default)."/>
+                    <c:ValueStepper Value="{Binding Speed, Mode=TwoWay}" Minimum="1" Maximum="20" Step="1"/>
+                    <Border Style="{StaticResource Divider}" Margin="0,18"/>
+                    <c:SettingRow Title="Enhance pointer precision" Description="Mouse acceleration. Turn off for 1:1 movement that matches your hand speed.">
+                        <CheckBox IsChecked="{Binding Settings.EnhancePointerPrecision}"/>
+                    </c:SettingRow>
+                    <Border Style="{StaticResource Divider}" Margin="0,18"/>
+                    <c:CardHeader Icon="&#xE945;" Title="Scroll speed" Subtitle="Lines per wheel notch (0 leaves your Windows setting alone)."/>
+                    <c:ValueStepper Value="{Binding ScrollLines, Mode=TwoWay}" Minimum="0" Maximum="100" Step="1"/>
+                    <Border Style="{StaticResource Divider}" Margin="0,18"/>
+                    <c:CardHeader Icon="&#xE945;" Title="Double-click speed" Subtitle="How quickly two clicks must follow to count as a double click, in ms (0 leaves Windows alone)."/>
+                    <c:ValueStepper Value="{Binding DoubleClickMs, Mode=TwoWay}" Minimum="0" Maximum="900" Step="50"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <TextBlock Text="PRESETS" Style="{StaticResource Label}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <Button Content="Slow (6)" Command="{Binding PresetCommand}" CommandParameter="6"/>
+                        <Button Content="Windows default (10)" Command="{Binding PresetCommand}" CommandParameter="10" Margin="8,0,0,0"/>
+                        <Button Content="Fast (14)" Command="{Binding PresetCommand}" CommandParameter="14" Margin="8,0,0,0"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                        <Button Content="Apply" Command="{Binding ApplyCommand}" Style="{StaticResource PrimaryButton}" MinWidth="96"/>
+                        <Button Content="Restore original" Command="{Binding RestoreCommand}" Margin="10,0,0,0"/>
+                        <Button Content="Load current values" Command="{Binding LoadCurrentCommand}" Margin="10,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" Margin="0,12,0,0" Foreground="{Binding Kind, Converter={StaticResource StatusBrush}}"
+                               Visibility="{Binding Message, Converter={StaticResource NullVisible}}"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE946;" Title="Sensitivity calculator" Subtitle="Compare setups: eDPI is your mouse DPI times your in-game sensitivity."/>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="MOUSE DPI" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <c:ValueStepper Value="{Binding Dpi, Mode=TwoWay}" Minimum="100" Maximum="32000" Step="100"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="IN-GAME SENSITIVITY" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                            <c:ValueStepper Value="{Binding Sensitivity, Mode=TwoWay}" Minimum="0.01" Maximum="100" Step="0.05" Decimals="2"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Text="{Binding CalcText}" Margin="0,14,0,0" FontWeight="Medium" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE962;" Title="Mouse test pad" Subtitle="Check how the pointer follows your mouse, and your polling rate"/>
+                    <c:MouseTestPad x:Name="Pad" MouseDpi="{Binding Dpi}"/>
+                    <TextBlock Text="{Binding MultiplierText, ElementName=Pad}" FontWeight="Medium" Margin="2,12,0,0"/>
+                    <TextBlock Text="{Binding AccelText, ElementName=Pad}" Style="{StaticResource Muted}" Margin="2,4,0,0"/>
+                    <TextBlock Text="{Binding DpiText, ElementName=Pad}" Style="{StaticResource Muted}" Margin="2,4,0,0"/>
+                    <TextBlock Text="{Binding PollingText, ElementName=Pad}" Style="{StaticResource Muted}" Margin="2,4,0,0"/>
+                    <TextBlock Style="{StaticResource Muted}" Margin="2,10,0,0" Text="Games with raw input (most shooters) ignore Windows pointer settings and read the mouse directly. For custom acceleration curves you need a separate driver like Raw Accel."/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <c:CardHeader Icon="&#xE946;" Title="Current Windows state" Subtitle="{Binding CurrentText}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
     </StackPanel>
 </UserControl>

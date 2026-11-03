@@ -368,7 +368,7 @@ public sealed class OverlaysViewModel : ObservableObject
         string keep = Settings.PingAdapterId;
         PingAdapters.Clear();
         PingAdapters.Add(new AdapterChoice("", "Automatic (Windows chooses)"));
-        try { foreach (var a in Svc.Dns.GetAdapters()) PingAdapters.Add(new AdapterChoice(a.Id, a.Name)); } catch { }
+        try { foreach (var a in Svc.Adapters.GetAdapters()) PingAdapters.Add(new AdapterChoice(a.Id, a.Name)); } catch { }
         // A saved adapter that is unplugged right now stays selectable, so the choice is not silently forgotten.
         if (keep.Length > 0 && PingAdapters.All(a => a.Id != keep)) PingAdapters.Add(new AdapterChoice(keep, "Saved adapter (not connected)"));
         Settings.PingAdapterId = keep;   // clearing the list made the box write an empty choice back; put the real one back

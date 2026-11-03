@@ -83,6 +83,8 @@ public partial class App : Application
 
         if (splash != null) await splash.StepAsync("Checking Roblox", 0.74);
         Svc.GameMode.RecoverFromCrash();
+        Svc.Boost.Ready = true;
+        if (Svc.S.Game.AutoGameMode) _ = Svc.Boost.EnableAsync();   // the boost was on when Nighty last closed: switch its settings back on
         Svc.Hotkeys.Start();
         Log.Info("Roblox running: " + Svc.Roblox.IsRunning);
 
@@ -172,9 +174,7 @@ public partial class App : Application
                 UpdateService.StopPolling();
                 Svc.Discord.Shutdown();
                 Svc.Recorder.Shutdown();
-                Svc.SoftBrightness.RestoreOnExit();
                 Svc.StopAllInput();
-                Svc.Socd.Stop();
                 Svc.Pointer.RestoreOnExit();     // pointer speed, scroll and double-click back to the Windows originals
                 if (Svc.S.General.RestoreOnClose) Svc.RestoreSystemOnExit();
                 Svc.GameMode.RestoreOnExit();     // always give the user their original system settings back

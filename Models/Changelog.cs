@@ -11,6 +11,19 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.5.0", "2026-11-01", new[]
+        {
+            "Gaming is now one page with one button: \"Click to boost FPS\". It switches on only what measurably helps Roblox on your PC (dedicated graphics card, no 60 FPS cap, maximum-performance power, no Windows throttling, Roblox priority, Windows Game Mode, Game DVR off), shows what each one did or why it was skipped, and \"Undo everything\" puts it all back",
+            "Fixed: the FPS cap and graphics-card settings are now written before Roblox starts and kept while the boost is on, and rewritten when Roblox updates. Before, they were applied after Roblox had already launched and removed when it closed, so with automatic Game Mode they never took effect",
+            "Removed things that did nothing for Roblox or made it worse: slowing other programs (it could lag mouse software and make browser music choppy), trimming memory, the 1 ms timer request, keep-awake, the Windows comfort tweaks, and the Plan, Overview, Benchmark and Cleaner screens. The shader-cache cleaner option is no longer ticked by default because deleting those caches causes stutter",
+            "New look: the sidebar is replaced by a top bar of pills (Combat, Gaming, Tools, Media, Settings) with a second row for the pages inside Tools and Media, a search box (Ctrl K) and a status bar at the bottom that always shows Roblox, the FPS boost and the clicker",
+            "Combat now has an Aim assist tab: the pointer controls that used to be on Utility > Tracking Helper (slow pointer in slot 1 while clicking, pointer speed, acceleration, scroll and double-click speed, sensitivity calculator, mouse test pad). The aim shake was removed",
+            "Removed the whole Utility page (Brightness, Best DNS, QoS Policy, Stretched resolution; the Movement Helper went with it). Nighty no longer changes any of them. If you had applied a DNS, QoS policy or resolution from it, undo it in Windows settings; the Movement Helper's keyboard changes are put back at the next start",
+            "Combat: removed Auto stop, Clicks per hit and Presets. Randomize stays, and bursts, time limits and start delays are switched off so nothing keeps running unseen",
+            "Utility: removed the Movement Helper (left+right / forward+back handling, the Sticky/Filter/Toggle Keys shortcuts and fast key repeat); anything it had changed in Windows is put back at start. Pointer is now part of the Tracking Helper tab, under the aim shake",
+            "Extras: Auto fish and every hotbar macro are now drop-downs, closed by default, with the on/off tick in the header",
+            "The boost is off on a fresh install and starts only when you press the button. If it was on when Nighty last closed, it switches itself back on at start",
+        }),
         new("2.4.0", "2026-10-31", new[]
         {
             "New Editor page: a simple video editor with a timeline for videos, pictures, title cards and music, trim and split, and export to a video file",

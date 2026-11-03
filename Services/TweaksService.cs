@@ -15,40 +15,23 @@ public sealed record TweakInfo(string Id, string Title, string Description);
 public sealed class TweaksService
 {
     private const uint SPI_GETCLIENTAREAANIMATION = 0x1042, SPI_SETCLIENTAREAANIMATION = 0x1043;
-    private const string AnimSubKey = "<spi>", AnimName = "ClientAreaAnimation";
+    /// <summary>Older versions could turn window animations off; kept so that setting can still be put back.</summary>
+    private const string AnimSubKey = "<spi>";
     private const string FlagSubKey = "<flag>", FpsFlag = "DFIntTaskSchedulerTargetFps";
 
-    private enum EditKind { Registry, Animations, RobloxFlag }
+    private enum EditKind { Registry, RobloxFlag }
     private sealed record Edit(EditKind Kind, string SubKey, string Name, object Value);
 
     private SystemBackups B => Svc.S.Backups;
 
     public IReadOnlyList<TweakInfo> All { get; } = new TweakInfo[]
     {
-        new("gamedvr", "Turn off Game DVR background recording",
-            "Stops Windows from recording gameplay in the background, which costs GPU and disk time. Also disables the Game Bar capture hooks."),
         new("gpu", "Run Roblox on the high-performance graphics card",
-            "On PCs with two graphics chips (most gaming laptops), tells Windows to always use the fast one for Roblox. Re-applied automatically after Roblox updates."),
+            "On PCs with two graphics chips (most gaming laptops), tells Windows to always use the fast one for Roblox."),
         new("fpscap", "Remove Roblox's 60 FPS cap",
-            "Roblox renders at 60 FPS unless told otherwise. This raises its frame-rate target (a setting on Roblox's published allowed list) so a fast monitor can be used fully. Re-applied after Roblox updates."),
-        new("menudelay", "Make menus open instantly",
-            "Removes the short delay before Windows menus open (default 400 ms). Sign out and back in for it to take full effect."),
-        new("startdelay", "Skip the startup app delay",
-            "Windows waits a few seconds after sign-in before starting your startup apps. This removes the wait, so the desktop is usable sooner."),
-        new("suggestions", "Turn off Windows suggestions and tips",
-            "Stops Windows from pushing suggested apps, tips and promotions in Start, Settings and the lock screen, which saves a little background work."),
-        new("websearch", "Keep Start search on this PC only",
-            "Stops Start-menu search from also searching the web, so results appear faster and nothing is sent out."),
-        new("visualfx", "Windows visual effects: best performance",
-            "Switches the Windows visual-effects preset to best performance (fewer shadows, fades and smoothing). Sign out and back in to see all of it."),
-        new("transparency", "Turn off window transparency effects",
-            "Removes the blur and see-through effects from Windows, freeing a little GPU power for the game."),
-        new("animations", "Turn off window animations",
-            "Windows stops animating windows and menus, which also makes alt-tabbing feel snappier."),
-        new("bgapps", "Stop apps running in the background",
-            "Prevents Store apps from running when you are not using them, so more CPU and memory are left for the game."),
-        new("toasts", "Silence notification pop-ups",
-            "Stops Windows notifications from appearing over your game and stealing focus. Turn it off again to get them back."),
+            "Roblox renders at 60 FPS unless told otherwise. This raises its frame-rate target (a setting on Roblox's published allowed list)."),
+        new("gamedvr", "Turn off Game DVR background recording",
+            "Stops Windows from recording gameplay in the background, which costs GPU and disk time."),
     };
 
     public bool IsApplied(string id) => B.TweaksApplied.Contains(id);
@@ -69,7 +52,7 @@ public sealed class TweaksService
             B.TweaksApplied.Add(id);
             Svc.Settings.Save();
             Log.Info("Tweak applied: " + id);
-            return new(StatusKind.Success, id is "transparency" or "animations" or "menudelay" or "visualfx" ? "Applied (some windows may need to be reopened)" : "Applied");
+            return new(StatusKind.Success, "Applied");
         }
         catch (Exception ex)
         {
@@ -84,11 +67,18 @@ public sealed class TweaksService
         foreach (var id in B.TweaksApplied.ToList()) { try { Revert(id); } catch (Exception ex) { Log.Error("Reverting tweak failed: " + id, ex); } }
     }
 
-    /// <summary>Roblox lives in a new folder after every update, so redo the per-path tweak at startup.</summary>
+    /// <summary>
+    /// At start-up, puts back the boost's settings if the boost was on when Nighty last closed (Roblox lives in a new folder after
+    /// every update, so the per-path ones are written again). Older versions offered comfort tweaks that did nothing for frame rate;
+    /// they are gone, so anything of theirs still switched on is put back to normal.
+    /// </summary>
     public void Reapply()
     {
-        foreach (var id in B.TweaksToReapply.ToList()) if (!IsApplied(id)) Set(id, true);
+        bool boost = Svc.S.Game.AutoGameMode;
+        foreach (var id in B.TweaksToReapply.ToList())
+            if (boost && BoostService.TweakIds.Contains(id) && !IsApplied(id)) Set(id, true);
         B.TweaksToReapply.Clear();
+        foreach (var id in B.TweaksApplied.Where(i => !BoostService.TweakIds.Contains(i)).ToList()) { try { Revert(id); } catch (Exception ex) { Log.Error("Reverting old tweak failed: " + id, ex); } }
         if (IsApplied("gpu")) Set("gpu", true);
         if (IsApplied("fpscap")) Set("fpscap", true);
     }
@@ -170,20 +160,6 @@ public sealed class TweaksService
             B.TweaksWritten[key] = "S:" + (string)e.Value;
             return;
         }
-        if (e.Kind == EditKind.Animations)
-        {
-            if (!B.Tweaks.ContainsKey(key))
-            {
-                NativeMethods.SystemParametersInfo(SPI_GETCLIENTAREAANIMATION, 0, out int cur, 0);
-                B.Tweaks[key] = "I:" + cur;
-                Svc.Settings.Save();
-            }
-            if (!NativeMethods.SystemParametersInfo(SPI_SETCLIENTAREAANIMATION, 0, (IntPtr)(int)e.Value, NativeMethods.SPIF_UPDATEINIFILE | NativeMethods.SPIF_SENDCHANGE))
-                throw new InvalidOperationException("Windows rejected the setting");
-            B.TweaksWritten[key] = "I:" + (int)e.Value;
-            return;
-        }
-
         using var k = Registry.CurrentUser.CreateSubKey(e.SubKey);
         if (!B.Tweaks.ContainsKey(key))
         {
@@ -233,30 +209,6 @@ public sealed class TweaksService
             case "fpscap":
                 if (FlagFile() == null) { problem = "Roblox isn't installed for this user, so there is nothing to set"; return null; }
                 return new() { new(EditKind.RobloxFlag, FlagSubKey, FpsFlag, "9999") };
-            case "menudelay":
-                return new() { new(EditKind.Registry, @"Control Panel\Desktop", "MenuShowDelay", "0") };
-            case "startdelay":
-                return new() { new(EditKind.Registry, cv + @"Explorer\Serialize", "StartupDelayInMSec", 0) };
-            case "suggestions":
-                return new()
-                {
-                    new(EditKind.Registry, cv + "ContentDeliveryManager", "SystemPaneSuggestionsEnabled", 0),
-                    new(EditKind.Registry, cv + "ContentDeliveryManager", "SubscribedContent-338388Enabled", 0),
-                    new(EditKind.Registry, cv + "ContentDeliveryManager", "SubscribedContent-338389Enabled", 0),
-                    new(EditKind.Registry, cv + "ContentDeliveryManager", "SoftLandingEnabled", 0),
-                };
-            case "websearch":
-                return new() { new(EditKind.Registry, cv + "Search", "BingSearchEnabled", 0) };
-            case "visualfx":
-                return new() { new(EditKind.Registry, cv + @"Explorer\VisualEffects", "VisualFXSetting", 2) };
-            case "transparency":
-                return new() { new(EditKind.Registry, cv + @"Themes\Personalize", "EnableTransparency", 0) };
-            case "animations":
-                return new() { new(EditKind.Animations, AnimSubKey, AnimName, 0) };
-            case "bgapps":
-                return new() { new(EditKind.Registry, cv + "BackgroundAccessApplications", "GlobalUserDisabled", 1) };
-            case "toasts":
-                return new() { new(EditKind.Registry, cv + @"PushNotifications", "ToastEnabled", 0) };
             case "gpu":
             {
                 var folder = Svc.Roblox.FindVersionFolder();

@@ -18,19 +18,13 @@ public static class Svc
     public static CpsMonitor Cps { get; private set; } = null!;
     public static BoosterService Booster { get; private set; } = null!;
     public static GameModeService GameMode { get; private set; } = null!;
+    public static BoostService Boost { get; } = new();
     public static CleanerService Cleaner { get; private set; } = null!;
-    public static BrightnessService Brightness { get; private set; } = null!;
-    public static SoftBrightnessService SoftBrightness { get; } = new();
-    public static ResolutionService Resolution { get; } = new();
     public static MusicService Music { get; } = new();
     public static ServerInfoService Server { get; } = new();
-    public static ShakeService Shake { get; private set; } = null!;
-    public static MovementService Movement { get; private set; } = null!;
-    public static SocdService Socd { get; private set; } = null!;
     public static TweaksService Tweaks { get; private set; } = null!;
     public static PointerService Pointer { get; private set; } = null!;
-    public static DnsService Dns { get; private set; } = null!;
-    public static QosService Qos { get; private set; } = null!;
+    public static NetworkAdapterService Adapters { get; } = new();
     public static PingService Ping { get; private set; } = null!;
     public static FpsService Fps { get; private set; } = null!;
     public static FishingService Fishing { get; } = new();
@@ -81,14 +75,10 @@ public static class Svc
         Bow.StartSlotTracking();
         Cps = new CpsMonitor();
         Cleaner = new CleanerService();
-        Brightness = new BrightnessService();
-        Movement = new MovementService();
-        Socd = new SocdService(S.Utility.Socd);
-        Socd.Sync();
+        // The Movement Helper was removed: give back accessibility settings an older version changed.
+        try { var mv = new MovementService(); if (mv.HasBackup) mv.Restore(); } catch (Exception ex) { Log.Error("Movement restore failed", ex); }
         Tweaks = new TweaksService();
         Pointer = new PointerService();
-        Dns = new DnsService();
-        Qos = new QosService();
         Ping = new PingService();
         Fps = new FpsService();
         Booster = new BoosterService();
@@ -99,19 +89,13 @@ public static class Svc
         Mods = new ModsService();
         Tweaks.Reapply();
         Music.Load();
-        Shake = new ShakeService(S.Utility.Shake) { Clicking = () => Clicker.IsClicking };
-        Shake.Start();
     }
 
     /// <summary>Stops everything that sends input. Used by the emergency-stop hotkey and on exit.</summary>
     /// <summary>Gives Windows its normal settings back. Run when Nighty closes.</summary>
     public static void RestoreSystemOnExit()
     {
-        try { SoftBrightness.RestoreOnExit(); } catch (Exception ex) { Log.Error("Software brightness restore on exit failed", ex); }
-        try { Shake?.Stop(); } catch (Exception ex) { Log.Error("Shake stop on exit failed", ex); }
-        try { Resolution.RestoreOnExit(); } catch (Exception ex) { Log.Error("Resolution restore on exit failed", ex); }
         try { Pointer.RestoreOnExit(); } catch (Exception ex) { Log.Error("Pointer restore on exit failed", ex); }
-        try { if (Movement.HasBackup) Movement.Restore(); } catch (Exception ex) { Log.Error("Movement restore on exit failed", ex); }
         try { Tweaks.RevertAllRemembering(); } catch (Exception ex) { Log.Error("Tweaks restore on exit failed", ex); }
     }
 
