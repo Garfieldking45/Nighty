@@ -114,6 +114,35 @@ public sealed class PointerService
     /// <summary>Applies the values and saves them in Windows (the Apply button).</summary>
     public string Apply(int speed, bool precision) => ApplyCore(speed, precision, persist: true);
 
+    /// <summary>
+    /// The Apply button. It follows the same rules as everything else: with "only in Roblox" on, nothing is written to Windows here (the values
+    /// switch in when Roblox is in front); with the slot-1 slowdown on, the global pointer speed is never touched (only the slow speed is used).
+    /// Any earlier permanent apply that is still in force is undone first.
+    /// </summary>
+    public string ApplySettings()
+    {
+        var t = Svc.S.Utility.Tracking;
+        if (t.ApplyOnlyInRoblox)
+        {
+            lock (_gate)
+            {
+                if (B.HasPointerBackup) { ReleaseSlow(); RestoreCore(persist: true); }
+                _autoApplied = false;
+            }
+            AutoTick();
+            return Svc.Roblox.IsForeground
+                ? "Saved and applied. Windows' own values come back when you leave Roblox. Applied and verified."
+                : "Saved. Windows is untouched: these values apply only while Roblox is in front.";
+        }
+        if (t.SlowInSlotOne)
+        {
+            int normal;
+            lock (_gate) normal = _slowApplied ? _speedBeforeSlow : ReadCurrent().Speed;
+            return ApplyCore(normal, t.EnhancePointerPrecision, persist: true);
+        }
+        return Apply(t.PointerSpeed, t.EnhancePointerPrecision);
+    }
+
     private string ApplyCore(int speed, bool precision, bool persist)
     {
         try

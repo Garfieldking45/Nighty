@@ -59,8 +59,8 @@ public sealed class TrackingViewModel : ObservableObject
     {
         ApplyCommand = new RelayCommand(() =>
         {
-            Message = Svc.Pointer.Apply(Settings.PointerSpeed, Settings.EnhancePointerPrecision);
-            Kind = Message.Contains("verified") ? StatusKind.Success : StatusKind.Warning;
+            Message = Svc.Pointer.ApplySettings();
+            Kind = Message.Contains("verified") || Message.StartsWith("Saved") ? StatusKind.Success : StatusKind.Warning;
             Refresh();
         });
         RestoreCommand = new RelayCommand(() =>

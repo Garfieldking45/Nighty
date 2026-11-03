@@ -11,6 +11,10 @@ public static class Changelog
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new ChangelogEntry[]
     {
+        new("2.5.1", "2026-11-02", new[]
+        {
+            "Fixed: Aim assist > Apply no longer slows your mouse everywhere. It used to write the pointer speed to Windows for good, ignoring \"only in Roblox\" and the slot-1 slowdown. Now, with \"only in Roblox\" on, Apply changes nothing in Windows until Roblox is in front, and with the slot-1 slowdown on it never touches your normal pointer speed. If an earlier Apply left your mouse slow, pressing Apply again puts your original speed back",
+        }),
         new("2.5.0", "2026-11-01", new[]
         {
             "Gaming is now one page with one button: \"Click to boost FPS\". It switches on only what measurably helps Roblox on your PC (dedicated graphics card, no 60 FPS cap, maximum-performance power, no Windows throttling, Roblox priority, Windows Game Mode, Game DVR off), shows what each one did or why it was skipped, and \"Undo everything\" puts it all back",
